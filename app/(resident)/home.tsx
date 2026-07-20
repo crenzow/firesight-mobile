@@ -66,7 +66,7 @@ export default function HomeScreen() {
           contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.brandOrange} />}
         >
-          <Text style={[styles.greetingLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+      {/*    <Text style={[styles.greetingLabel, { color: colors.textMuted, fontSize: typography.size.xs }]}>
             GOOD {getTimeOfDayLabel()}
           </Text>
           <Text style={[styles.greetingName, { color: colors.textPrimary, fontSize: typography.size.xl }]}>
@@ -76,7 +76,7 @@ export default function HomeScreen() {
             <Text style={[styles.addressLine, { color: colors.textSecondary, fontSize: typography.size.sm }]}>
               📍 {user.address.barangay_name ?? 'Brgy. Poblacion'}, {user.address.municipality}
             </Text>
-          ) : null}
+          ) : null}        */}
 
           <View style={{ marginTop: spacing.lg }}>
             <AreaStatusCard

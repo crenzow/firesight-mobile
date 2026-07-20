@@ -22,4 +22,4 @@ export const APP_CONFIG = {
   DEFAULT_MUNICIPALITY: 'Lian',
   DEFAULT_PROVINCE: 'Batangas',
   SUPPORT_EMAIL: 'support@firesight.gov.ph',
-} as const;
+};
