@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "la_firesight_2",
-    "slug": "la_firesight_2",
+    "name": "FireSight",
+    "slug": "firesight-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "lafiresight2",
+    "scheme": "firesightmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -27,6 +27,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-secure-store",
       [
         "expo-splash-screen",
         {
@@ -37,6 +38,18 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "FireSight needs camera access to capture photo evidence for fire reports."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermissionText": "FireSight needs your location to accurately geotag fire reports."
         }
       ]
     ],
