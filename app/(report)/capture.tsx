@@ -40,10 +40,10 @@ export default function CaptureScreen() {
       if (photo?.uri) {
         updateDraft({
           photoUri: photo.uri,
-          location,
+          deviceLocation: location,
           barangayId: user?.address?.barangay_id ?? null,
         });
-        router.push('/(report)/review');
+        router.push('/(report)/preview');
       }
     } finally {
       setIsCapturing(false);
@@ -101,33 +101,36 @@ export default function CaptureScreen() {
 
         <View style={[styles.bottomBar, { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }]}>
           <View style={[styles.locationChip, { borderRadius: radius.md }]}>
-            <MapPin size={14} color={isLocating ? '#C9CDD9' : colors.brandOrange} />
-            <Text style={styles.locationText}>
-              {isLocating
-                ? 'Detecting location…'
-                : location
-                  ? `${location.latitude.toFixed(5)}°, ${location.longitude.toFixed(5)}° · ±${Math.round(location.accuracy ?? 0)}m`
-                  : locationError
-                    ? 'Location unavailable — tap capture to retry'
-                    : user?.address?.barangay_name ?? 'Locating…'}
-            </Text>
+            {isLocating
+              ? <ActivityIndicator size="small" color="#C9CDD9" style={{ marginRight: 4 }} />
+              : <MapPin size={14} color={colors.brandOrange} />}
+            <View style={{ flexShrink: 1 }}>
+              <Text style={styles.locationText} numberOfLines={1}>
+                {isLocating
+                  ? 'Detecting location…'
+                  : location
+                    ? (location.address || user?.address?.barangay_name || 'Location detected')
+                    : locationError
+                      ? 'Location unavailable — tap capture to retry'
+                      : 'Locating…'}
+              </Text>
+              {location && !isLocating ? (
+                <Text style={{ color: '#C9CDD9', fontSize: 10, marginTop: 2 }}>
+                  {`${location.latitude.toFixed(5)}°, ${location.longitude.toFixed(5)}° · ±${Math.round(location.accuracy ?? 0)}m`}
+                </Text>
+              ) : null}
+            </View>
           </View>
 
           <Pressable
             onPress={handleCapture}
-            disabled={isCapturing}
-            style={[styles.shutterOuter, isCapturing && { opacity: 0.6 }]}
+            disabled={isCapturing || isLocating || !location}
+            style={[styles.shutterOuter, (isCapturing || isLocating || !location) && { opacity: 0.6 }]}
           >
-            <View style={[styles.shutterInner, { backgroundColor: colors.brandOrange }]}>
+            <View style={[styles.shutterInner, { backgroundColor: (isLocating || !location) ? colors.textMuted : colors.brandOrange }]}>
               {isCapturing ? <ActivityIndicator color="#FFFFFF" /> : null}
             </View>
           </Pressable>
-
-          <View style={[styles.warningBanner, { backgroundColor: 'rgba(225,66,69,0.9)', borderRadius: radius.md }]}>
-            <Text style={styles.warningText}>
-              Call 160 (BFP) immediately if lives are in danger. This app is for reporting only.
-            </Text>
-          </View>
         </View>
       </SafeAreaView>
     </View>

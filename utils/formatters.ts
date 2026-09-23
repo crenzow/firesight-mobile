@@ -27,3 +27,31 @@ export function formatTime(isoString: string): string {
 export function getInitials(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 }
+
+export function formatFullName(
+  firstName?: string | null,
+  lastName?: string | null,
+  middleName?: string | null,
+  suffix?: string | null
+): string {
+  const parts: string[] = [];
+
+  if (firstName && firstName.trim()) {
+    parts.push(firstName.trim());
+  }
+
+  if (middleName && middleName.trim()) {
+    const initial = middleName.trim().charAt(0).toUpperCase();
+    parts.push(`${initial}.`);
+  }
+
+  if (lastName && lastName.trim()) {
+    parts.push(lastName.trim());
+  }
+
+  if (suffix && suffix.trim()) {
+    parts.push(suffix.trim());
+  }
+
+  return parts.join(' ');
+}

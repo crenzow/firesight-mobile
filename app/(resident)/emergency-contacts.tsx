@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Phone, Flame, Shield, HeartPulse, LifeBuoy, MoreHorizontal } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
 import { contactService } from '../../services/api';
 import { EmergencyContact } from '../../services/api/models';
 
@@ -39,16 +40,9 @@ export default function EmergencyContactsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.size.lg }]}>
-          Emergency Contacts
-        </Text>
-        <View style={{ width: 22 }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SecondaryHeader title="Emergency Contacts" />
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
 
       <FlatList
         data={others}
@@ -111,7 +105,8 @@ export default function EmergencyContactsScreen() {
           );
         }}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 

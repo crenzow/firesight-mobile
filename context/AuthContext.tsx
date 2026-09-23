@@ -4,15 +4,19 @@ import { secureStorage } from '../services/storage/secureStorage';
 import { ApiError } from '../services/api/client';
 import { AppUser, LoginPayload, RegisterPayload } from '../services/api/types';
 
+import { profileService } from '../services/api/profileService';
+
 interface AuthContextValue {
   user: AppUser | null;
   isAuthenticated: boolean;
   isBootstrapping: boolean; // true while we check for a saved session on app launch
   isSubmitting: boolean;
   error: string | null;
-  login: (payload: LoginPayload) => Promise<void>;
+  login: (payload: LoginPayload) => Promise<AppUser>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updatedUser: AppUser) => Promise<void>;
+  refreshUser: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -39,7 +43,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearError = useCallback(() => setError(null), []);
 
-  const login = useCallback(async (payload: LoginPayload) => {
+  const updateUser = useCallback(async (updatedUser: AppUser) => {
+    setUser(updatedUser);
+    await secureStorage.setUser(updatedUser);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const updated = await profileService.get();
+      setUser(updated);
+      await secureStorage.setUser(updated);
+    } catch {
+      // Ignore network errors when refreshing in background
+    }
+  }, []);
+
+  const login = useCallback(async (payload: LoginPayload): Promise<AppUser> => {
     setIsSubmitting(true);
     setError(null);
     try {
@@ -47,6 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await secureStorage.setToken(response.token);
       await secureStorage.setUser(response.user);
       setUser(response.user);
+      return response.user;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Unable to sign in right now. Please try again.');
       throw err;
@@ -91,6 +111,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     register,
     logout,
+    updateUser,
+    refreshUser,
     clearError,
   };
 

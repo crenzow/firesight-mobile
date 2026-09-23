@@ -24,7 +24,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   onChangeText,
   error,
   required,
-  placeholder = '••••••••',
+  placeholder = 'Enter your password',
   helperText,
 }) => {
   const { colors } = useTheme();

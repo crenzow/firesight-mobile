@@ -29,24 +29,32 @@ export default function RegisterStep2() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1, backgroundColor: colors.brandNavy }}>
+      <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']} />
+      
+      <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, paddingBottom: spacing.xl }}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={{ marginBottom: spacing.lg }}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
+          <ArrowLeft size={22} color={colors.textInverse} />
         </Pressable>
 
-        <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.size.xl }]}>
+        <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xl }]}>
           Create Account
         </Text>
         <Text
           style={[
             styles.subtitle,
-            { color: colors.textSecondary, fontSize: typography.size.sm, marginBottom: spacing.lg },
+            { color: 'rgba(255,255,255,0.7)', fontSize: typography.size.sm },
           ]}
         >
           Step 2 of 3 — Address Info
         </Text>
+      </View>
 
+      <View style={{ height: 24, backgroundColor: colors.brandNavy }}>
+        <View style={{ flex: 1, backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xxxl, flexGrow: 1 }} keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background, flex: 1 }}>
         <View style={{ marginBottom: spacing.xl }}>
           <StepProgress currentStep={2} />
         </View>
@@ -108,7 +116,7 @@ export default function RegisterStep2() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

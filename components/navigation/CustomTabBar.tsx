@@ -35,7 +35,7 @@ const VISIBLE_TAB_ORDER = ['home', 'map', 'learn/index', 'profile/index'] as con
  * (report) capture -> review -> success stack.
  */
 export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
-  const { colors, shadow } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   // Only keep the 4 routes we actually want as tabs, in a fixed order —
@@ -72,7 +72,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation })
     <View
       style={[
         styles.container,
-        { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom || 8 },
+        { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom || 9 },
       ]}
     >
       <View style={styles.row}>
@@ -81,12 +81,13 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation })
         <View style={styles.fabSlot}>
           <Pressable
             onPress={() => router.push('/(report)/capture')}
-            style={[styles.fab, { backgroundColor: colors.brandOrange }, shadow.fab]}
+            style={[styles.fab, { backgroundColor: colors.brandOrange }]}
             accessibilityRole="button"
             accessibilityLabel="Report a fire"
           >
-            <Flame size={26} color="#FFFFFF" />
+            <Flame size={24} color="#FFFFFF" />
           </Pressable>
+          <Text style={[styles.tabLabel, { color: colors.tabInactive, marginTop: 2 }]}>Report</Text>
         </View>
 
         {rightRoutes.map((route) => renderTab(route))}
@@ -98,7 +99,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation })
 const styles = StyleSheet.create({
   container: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
+    paddingTop: 9,
   },
   row: {
     flexDirection: 'row',
@@ -121,12 +122,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -28,
+    marginTop: -24,
     borderWidth: 3,
     borderColor: '#FFFFFF',
   },

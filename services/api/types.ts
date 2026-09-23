@@ -10,7 +10,7 @@ export interface AppUser {
   contact_number?: string | null;
   email: string;
   profile_image?: string | null;
-  is_verified: boolean;
+  is_accepted: boolean;
   address?: {
     house_no_street?: string | null;
     barangay_id?: number | null;
@@ -18,6 +18,11 @@ export interface AppUser {
     municipality: string;
     province: string;
   };
+  personnel_details?: {
+    rank: string;
+    station_assigned: string;
+    employee_number: string;
+  } | null;
 }
 
 export interface RegisterPayload {

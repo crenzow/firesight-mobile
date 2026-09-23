@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
 import * as Location from 'expo-location';
+import { reverseGeocode } from '../utils/geocoding';
 
 export interface CapturedLocation {
   latitude: number;
   longitude: number;
   accuracy: number | null;
+  address?: string | null;
 }
 
 interface UseLocationResult {
@@ -38,10 +40,14 @@ export function useLocation(): UseLocationResult {
       setPermissionDenied(false);
 
       const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      
+      const addressStr = await reverseGeocode(position.coords.latitude, position.coords.longitude);
+
       const result: CapturedLocation = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy,
+        address: addressStr === 'Unknown area' ? null : addressStr,
       };
       setLocation(result);
       return result;
@@ -54,4 +60,4 @@ export function useLocation(): UseLocationResult {
   }, []);
 
   return { location, isLoading, error, permissionDenied, requestLocation };
-}
+}

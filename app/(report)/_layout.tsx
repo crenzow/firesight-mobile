@@ -13,6 +13,8 @@ export default function ReportLayout() {
         }}
       >
         <Stack.Screen name="capture" />
+        <Stack.Screen name="preview" />
+        <Stack.Screen name="location" />
         <Stack.Screen name="review" />
         <Stack.Screen name="success" />
       </Stack>

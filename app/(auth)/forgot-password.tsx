@@ -88,7 +88,7 @@ export default function ForgotPasswordScreen() {
                 setEmail(t);
                 if (error) setError(null);
               }}
-              placeholder="your@email.com"
+              placeholder="Enter your email address"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}

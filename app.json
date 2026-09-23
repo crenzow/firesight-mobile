@@ -31,12 +31,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/firesight-logo.png",
+          "imageWidth": 240,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#0F1C3F",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#0F1C3F"
           }
         }
       ],
@@ -51,7 +51,8 @@
         {
           "locationAlwaysAndWhenInUsePermissionText": "FireSight needs your location to accurately geotag fire reports."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

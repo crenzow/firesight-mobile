@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface SelectOption {
-  id: number;
+  id: number | string;
   name: string;
 }
 
@@ -13,9 +13,9 @@ interface SelectFieldProps {
   label: string;
   required?: boolean;
   placeholder?: string;
-  value: number | null;
+  value: number | string | null;
   options: SelectOption[];
-  onSelect: (id: number) => void;
+  onSelect: (id: number | string) => void;
   error?: string;
 }
 

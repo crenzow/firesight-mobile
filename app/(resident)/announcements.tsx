@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Megaphone, AlertOctagon } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
 import { announcementService } from '../../services/api';
 import { Announcement } from '../../services/api/models';
 import { formatRelativeDate } from '../../utils/formatters';
@@ -30,21 +31,9 @@ export default function AnnouncementsScreen() {
   }, [load]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <View
-        style={[
-          styles.header,
-          { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomColor: colors.border },
-        ]}
-      >
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.size.lg }]}>
-          Announcements
-        </Text>
-        <View style={{ width: 22 }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SecondaryHeader title="Announcements" />
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
       <Text
         style={[
           styles.subheader,
@@ -124,7 +113,8 @@ export default function AnnouncementsScreen() {
           );
         }}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 

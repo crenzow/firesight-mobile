@@ -2,15 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, MapPin, Check } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Check, Clock, ShieldCheck, Truck, CheckCircle2, XCircle } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
+import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { reportService } from '../../../services/api/reportService';
 import { CommunityReport, ReportStatus, ReportStatusHistoryEntry } from '../../../services/api/models';
 import { StatusBadge } from '../../../components/home/StatusBadge';
 import { formatFullDate, formatTime } from '../../../utils/formatters';
 import { APP_CONFIG } from '../../../constants/config';
 
-const TIMELINE_STEPS: ReportStatus[] = ['pending', 'verified', 'resolved'];
+const TIMELINE_STEPS: ReportStatus[] = ['pending', 'accepted', 'dispatched', 'resolved'];
+
+const getStepConfig = (step: ReportStatus, colors: any) => {
+  switch (step) {
+    case 'pending': return { Icon: Clock, color: colors.warning, label: 'Under Review' };
+    case 'accepted': return { Icon: ShieldCheck, color: colors.info, label: 'Accepted' };
+    case 'dispatched': return { Icon: Truck, color: colors.brandOrange, label: 'Dispatched' };
+    case 'resolved': return { Icon: CheckCircle2, color: colors.success, label: 'Resolved' };
+    default: return { Icon: Check, color: colors.textMuted, label: step };
+  }
+};
 
 export default function ReportDetailScreen() {
   const { colors, spacing, typography, radius, shadow } = useTheme();
@@ -36,16 +47,9 @@ export default function ReportDetailScreen() {
   const currentStepIndex = report ? TIMELINE_STEPS.indexOf(report.status) : -1;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.size.lg }]}>
-          Report Details
-        </Text>
-        <View style={{ width: 22 }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SecondaryHeader title="Report Details" />
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
 
       {isLoading || !report ? (
         <View style={styles.loadingState}>
@@ -97,10 +101,24 @@ export default function ReportDetailScreen() {
               shadow.card,
             ]}
           >
-            {TIMELINE_STEPS.map((step, index) => {
+            {report.status === 'invalid' ? (
+              <View style={{ alignItems: 'center', padding: spacing.lg }}>
+                <XCircle size={48} color={colors.textMuted} style={{ marginBottom: spacing.md }} />
+                <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700', marginBottom: spacing.xs, textAlign: 'center' }}>
+                  Report Marked as Invalid
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, textAlign: 'center', lineHeight: 20 }}>
+                  This report has been reviewed and marked as invalid by the BFP. It may be a duplicate, a false alarm, or missing crucial information.
+                </Text>
+              </View>
+            ) : (
+              TIMELINE_STEPS.map((step, index) => {
               const isComplete = report.status === 'invalid' ? false : index <= currentStepIndex;
+              const isActive = index === currentStepIndex;
               const entry = history.find((h) => h.status === step);
               const isLast = index === TIMELINE_STEPS.length - 1;
+              const config = getStepConfig(step, colors);
+              const { Icon } = config;
 
               return (
                 <View key={step} style={styles.timelineRow}>
@@ -109,46 +127,69 @@ export default function ReportDetailScreen() {
                       style={[
                         styles.timelineDot,
                         {
-                          backgroundColor: isComplete ? colors.success : colors.border,
-                          borderColor: isComplete ? colors.success : colors.border,
+                          backgroundColor: isComplete ? `${config.color}15` : colors.background,
+                          borderColor: isComplete ? config.color : colors.border,
+                          borderWidth: isActive ? 2 : 1,
+                          width: isActive ? 32 : 28,
+                          height: isActive ? 32 : 28,
+                          borderRadius: isActive ? 16 : 14,
                         },
                       ]}
                     >
-                      {isComplete ? <Check size={12} color="#FFFFFF" /> : null}
+                      <Icon 
+                        size={isActive ? 16 : 14} 
+                        color={isComplete ? config.color : colors.textMuted} 
+                      />
                     </View>
                     {!isLast ? (
-                      <View style={[styles.timelineLine, { backgroundColor: isComplete ? colors.success : colors.border }]} />
+                      <View 
+                        style={[
+                          styles.timelineLine, 
+                          { 
+                            backgroundColor: isComplete && index < currentStepIndex ? config.color : colors.border,
+                            opacity: isComplete && index < currentStepIndex ? 1 : 0.5
+                          }
+                        ]} 
+                      />
                     ) : null}
                   </View>
-                  <View style={{ flex: 1, paddingBottom: isLast ? 0 : spacing.lg }}>
+                  <View style={{ flex: 1, paddingBottom: isLast ? 0 : spacing.xl, justifyContent: 'center' }}>
                     <Text
                       style={{
-                        color: isComplete ? colors.textPrimary : colors.textMuted,
-                        fontSize: typography.size.sm,
-                        fontWeight: '700',
-                        textTransform: 'capitalize',
+                        color: isActive ? colors.textPrimary : isComplete ? colors.textSecondary : colors.textMuted,
+                        fontSize: isActive ? typography.size.md : typography.size.sm,
+                        fontWeight: isActive ? '800' : isComplete ? '600' : '500',
                       }}
                     >
-                      {step}
+                      {config.label}
                     </Text>
                     {entry ? (
-                      <>
-                        <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 2 }}>
-                          {entry.notes}
-                        </Text>
-                        <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 2 }}>
+                      <View style={{ marginTop: 4 }}>
+                        {entry.notes && (
+                           <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, lineHeight: 20, marginBottom: 4 }}>
+                             {entry.notes}
+                           </Text>
+                        )}
+                        <Text style={{ color: colors.textMuted, fontSize: typography.size.xs }}>
                           {formatFullDate(entry.created_at)} · {formatTime(entry.created_at)}
                         </Text>
-                      </>
-                    ) : null}
+                      </View>
+                    ) : (
+                      isActive && (
+                        <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
+                          Currently in this status.
+                        </Text>
+                      )
+                    )}
                   </View>
                 </View>
               );
-            })}
+            }))}
           </View>
-        </ScrollView>
-      )}
-    </SafeAreaView>
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </View>
   );
 }
 

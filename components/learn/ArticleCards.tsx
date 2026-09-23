@@ -2,11 +2,17 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Clock, ChevronRight, Search, Flame, ShieldAlert, Lightbulb } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/ThemeContext';
 import { FireEducationArticle } from '../../services/api/models';
 
 const CATEGORY_ICON = { prevention: Search, emergency_response: Flame, awareness: ShieldAlert } as const;
 const CATEGORY_LABEL = { prevention: 'PREVENTION', emergency_response: 'EMERGENCY RESPONSE', awareness: 'AWARENESS' } as const;
+const CATEGORY_GRADIENT = {
+  prevention: ['#F97316', '#FFB877'],
+  emergency_response: ['#EF4444', '#F87171'],
+  awareness: ['#6D5BD0', '#3B4CCA'],
+} as const;
 
 export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = ({ article }) => {
   const { colors, spacing, radius, typography, shadow } = useTheme();
@@ -42,6 +48,7 @@ export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = 
 export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ article }) => {
   const { colors, spacing, radius, typography, shadow } = useTheme();
   const Icon = CATEGORY_ICON[article.category] ?? Lightbulb;
+  const gradient = CATEGORY_GRADIENT[article.category as keyof typeof CATEGORY_GRADIENT] ?? ['#64748B', '#0F1C3F'];
 
   return (
     <Pressable
@@ -52,12 +59,18 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
         shadow.card,
       ]}
     >
-      <View style={[styles.iconCircle, { backgroundColor: `${colors.brandOrange}14` }]}>
-        <Icon size={18} color={colors.brandOrange} />
+      <View style={styles.iconWrap}>
+        <LinearGradient
+          colors={gradient as [string, string]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <Icon size={18} color="#FFFFFF" />
       </View>
       <View style={{ flex: 1, marginLeft: spacing.sm }}>
         <Text style={{ color: colors.brandOrange, fontSize: typography.size.xs, fontWeight: '700' }}>
-          {CATEGORY_LABEL[article.category]}
+          {CATEGORY_LABEL[article.category] ?? 'GENERAL'}
         </Text>
         <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700', marginTop: 2 }}>
           {article.title}
@@ -80,5 +93,12 @@ const styles = StyleSheet.create({
   featuredBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
   metaRow: { flexDirection: 'row', alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center' },
-  iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  iconWrap: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 14, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    overflow: 'hidden'
+  },
 });

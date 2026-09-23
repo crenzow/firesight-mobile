@@ -34,6 +34,7 @@ export default function ResidentLayout() {
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="announcements" options={{ href: null }} />
       <Tabs.Screen name="emergency-contacts" options={{ href: null }} />
+      <Tabs.Screen name="reports/index" options={{ href: null }} />
       <Tabs.Screen name="reports/[id]" options={{ href: null }} />
     </Tabs>
   );

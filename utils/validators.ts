@@ -51,6 +51,7 @@ export const validateRegisterStep3 = (fields: {
   password: string;
   confirmPassword: string;
   agreedToTerms: boolean;
+  agreedToPrivacy?: boolean;
 }): Record<string, string> => {
   const errors: Record<string, string> = {};
   if (!fields.email.trim()) {
@@ -67,15 +68,21 @@ export const validateRegisterStep3 = (fields: {
     errors.confirmPassword = 'Passwords do not match.';
   }
   if (!fields.agreedToTerms) {
-    errors.agreedToTerms = 'You must agree to the Terms of Service and Privacy Policy.';
+    errors.agreedToTerms = 'You must read and agree to the Terms of Service.';
+  }
+  if (fields.agreedToPrivacy !== undefined && !fields.agreedToPrivacy) {
+    errors.agreedToPrivacy = 'You must read and agree to the Privacy Policy.';
   }
   return errors;
 };
 
 export const validateLogin = (fields: { email: string; password: string }): Record<string, string> => {
   const errors: Record<string, string> = {};
-  if (!fields.email.trim()) errors.email = 'Email address is required.';
-  else if (!isValidEmail(fields.email)) errors.email = 'Enter a valid email address.';
+  if (!fields.email.trim()) {
+    errors.email = 'Email or mobile number is required.';
+  } else if (!isValidEmail(fields.email) && !isValidPHMobile(fields.email)) {
+    errors.email = 'Enter a valid email address or PH mobile number.';
+  }
   if (!fields.password) errors.password = 'Password is required.';
   return errors;
 };

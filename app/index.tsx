@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { APP_CONFIG } from '../constants/config';
-import { EyeLogo } from '../components/ui/EyeLogo';
+
+const firesightLogo = require('../assets/images/firesight-logo.png');
 
 /**
  * First screen shown on launch. Waits for the AuthContext to finish
@@ -13,34 +13,38 @@ import { EyeLogo } from '../components/ui/EyeLogo';
  */
 export default function SplashScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { isAuthenticated, isBootstrapping } = useAuth();
+  const { isAuthenticated, isBootstrapping, user } = useAuth();
 
   useEffect(() => {
+
     if (isBootstrapping) return;
     const timeout = setTimeout(() => {
-      router.replace(isAuthenticated ? '/(resident)/home' : '/(auth)/welcome');
-    }, 900); // brief branded pause instead of an instant jump-cut
+      if (!isAuthenticated) {
+        router.replace('/(auth)/welcome');
+      } else if (user?.role === 'personnel') {
+        router.replace('/(bfp)/dashboard');
+      } else {
+        router.replace('/(resident)/home');
+      }
+    }, 900);
     return () => clearTimeout(timeout);
-  }, [isBootstrapping, isAuthenticated]);
+  }, [isBootstrapping, isAuthenticated, user]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.brandNavy }]}>
-      <View style={[styles.logoCircle, { borderColor: colors.brandOrange }]}>
-        {/* Placeholder eye-shaped logo mark (view-based, no image asset
-            required). Swap for the final logo image later — the surrounding
-            circle badge and layout will not need to change. */}
-        <EyeLogo size={48} />
+
+      {/* Centered brand — mirrors welcome.tsx exactly */}
+      <View style={styles.hero}>
+        <Image source={firesightLogo} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.title}>
+          FIRE<Text style={{ color: colors.brandOrange }}>SIGHT</Text>
+        </Text>
+        <Text style={styles.subtitle}>MUNICIPAL FIRE SAFETY SYSTEM</Text>
+        <View style={{ marginTop: 40 }}>
+          <ActivityIndicator size="large" color={colors.brandOrange} />
+        </View>
       </View>
 
-      <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xxxl }]}>
-        FIRE<Text style={{ color: colors.brandOrange }}>SIGHT</Text>
-      </Text>
-      <Text style={[styles.subtitle, { color: colors.textMuted, marginTop: spacing.xs }]}>
-        Municipal Fire Safety System
-      </Text>
-      <Text style={[styles.tagline, { color: colors.textMuted, marginTop: spacing.md }]}>
-        Official fire reporting & awareness app{'\n'}for {APP_CONFIG.DEFAULT_MUNICIPALITY}, {APP_CONFIG.DEFAULT_PROVINCE}
-      </Text>
     </View>
   );
 }
@@ -49,30 +53,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
   },
-  logoCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 2,
+  hero: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    paddingHorizontal: 32,
+    paddingBottom: 80,
+  },
+  logo: {
+    width: 180,
+    height: 180,
+    marginBottom: -20,
   },
   title: {
+    fontSize: 42,
     fontWeight: '800',
-    letterSpacing: 1,
+    color: '#FFFFFF',
+    letterSpacing: 2,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 12,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  tagline: {
-    fontSize: 13,
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.38)',
+    letterSpacing: 3,
     textAlign: 'center',
-    lineHeight: 19,
+    marginTop: 8,
+  },
+  footer: {
+    width: '100%',
+    paddingBottom: 48,
+    paddingHorizontal: 40,
+    alignItems: 'center',
   },
 });
+

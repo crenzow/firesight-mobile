@@ -27,47 +27,49 @@ export default function LoginScreen() {
     if (Object.keys(validationErrors).length > 0) return;
 
     try {
-      await login({ email: email.trim(), password });
-      router.replace('/(resident)/home');
+      const loggedInUser = await login({ email: email.trim(), password });
+      // Route to the correct home screen based on the user's role
+      if (loggedInUser && loggedInUser.role === 'personnel') {
+        router.replace('/(bfp)/dashboard');
+      } else {
+        router.replace('/(resident)/home');
+      }
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Unable to sign in. Please try again.');
     }
   };
 
-  // Simple backend bypass for testing layout and home screen
-  const handleBypassLogin = () => {
-    router.replace('/(resident)/home');
-  };
-
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: colors.brandNavy }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <ScrollView contentContainerStyle={{ padding: spacing.xl, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <Text style={[styles.brand, { color: colors.brandOrange, fontSize: typography.size.sm }]}>FIRESIGHT</Text>
-          <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.size.xxl }]}>
-            Welcome back
-          </Text>
-          <Text
-            style={[
-              styles.subtitle,
-              { color: colors.textSecondary, fontSize: typography.size.base, marginBottom: spacing.xl },
-            ]}
-          >
-            Sign in to access fire safety services
-          </Text>
+      <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']} />
+      
+      <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xl }}>
+        <Text style={[styles.brand, { color: colors.brandOrange }]}>FIRESIGHT</Text>
+        <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xxl }]}>
+          Welcome back
+        </Text>
+        <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: typography.size.base, marginTop: 4 }}>
+          Sign in to access fire safety services
+        </Text>
+      </View>
 
-          <Input
-            label="Email Address"
+      <View style={{ height: 24, backgroundColor: colors.brandNavy }}>
+        <View style={{ flex: 1, backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xxxl, flexGrow: 1 }} keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background, flex: 1 }}>
+        <Input
+            label="Email or Mobile Number"
             required
             value={email}
             onChangeText={(t) => {
               setEmail(t);
               if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
             }}
-            placeholder="your@email.com"
+            placeholder="Email or mobile number"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -83,6 +85,7 @@ export default function LoginScreen() {
               setPassword(t);
               if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
             }}
+            placeholder="Enter your password"
             error={errors.password}
           />
 
@@ -106,14 +109,6 @@ export default function LoginScreen() {
           {/* Action Buttons Section */}
           <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
             <Button label="Sign In" onPress={handleSignIn} loading={isSubmitting} />
-            
-            {/* Dev Mode Bypass Button */}
-      {/*      <Button 
-              label="Bypass Login (Dev Mode)" 
-              variant="outline" 
-              onPress={handleBypassLogin} 
-              style={{ borderColor: colors.brandOrange }}
-            />       */}
           </View>
 
           <View style={[styles.dividerRow, { marginVertical: spacing.xl }]}>
@@ -145,16 +140,16 @@ export default function LoginScreen() {
             </Pressable>
           </View>
         </ScrollView>
-      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   brand: {
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1.5,
-    marginBottom: 6,
+    letterSpacing: 2,
+    marginBottom: 10,
   },
   title: {
     fontWeight: '700',

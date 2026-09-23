@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider, useTheme } from '../theme/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
+import { NotificationProvider } from '../context/NotificationContext';
 
 /**
  * Renders the status bar style based on the resolved theme (light content on
@@ -32,6 +33,7 @@ const RootNavigator: React.FC = () => {
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(resident)" />
+        <Stack.Screen name="(bfp)" />
         <Stack.Screen name="(report)" options={{ presentation: 'fullScreenModal' }} />
       </Stack>
     </>
@@ -44,7 +46,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <RootNavigator />
+            <NotificationProvider>
+              <RootNavigator />
+            </NotificationProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

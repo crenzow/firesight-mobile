@@ -1,42 +1,41 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
+import { router, usePathname } from 'expo-router';
 import { Bell } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
+import { useNotifications } from '../../context/NotificationContext';
+
+const firesightLogo = require('../../assets/images/firesight-logo.png');
 
 interface AppHeaderProps {
-  unreadCount?: number;
-  variant?: 'dark' | 'light'; // dark = navy background (Home), light = surface background (other screens)
+  variant?: 'dark' | 'light';
 }
 
-/**
- * Global header used across resident screens.
- * Per the master prompt: shows the "FIRESIGHT" wordmark top-left instead of
- * the resident's name (the name is shown in the Home body greeting instead),
- * and the notification bell is the single entry point into alerts — there is
- * no separate "Alerts" tab.
- */
-export const AppHeader: React.FC<AppHeaderProps> = ({ unreadCount = 0, variant = 'dark' }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ variant = 'dark' }) => {
   const { colors, spacing, typography } = useTheme();
+  const { unreadCount } = useNotifications();
+  const pathname = usePathname();
+
   const isDark = variant === 'dark';
   const backgroundColor = isDark ? colors.brandNavy : colors.surface;
   const textColor = isDark ? colors.textInverse : colors.textPrimary;
+  const bellBg = isDark ? 'rgba(255,255,255,0.1)' : colors.background;
 
   return (
     <SafeAreaView style={{ backgroundColor }} edges={['top']}>
       <View style={[styles.row, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}>
-        <Text style={[styles.wordmark, { color: textColor, fontSize: typography.size.lg }]}>
-          FIRE<Text style={{ color: colors.brandOrange }}>SIGHT</Text>
-        </Text>
+        <View style={styles.brandContainer}>
+          <Image source={firesightLogo} style={styles.headerLogo} resizeMode="contain" />
+          <Text style={[styles.wordmark, { color: textColor, fontSize: 20 }]}>
+            FIRE<Text style={{ color: colors.brandOrange }}>SIGHT</Text>
+          </Text>
+        </View>
 
         <Pressable
-          onPress={() => router.push('/(resident)/notifications')}
+          onPress={() => router.push({ pathname: '/(resident)/notifications', params: { from: pathname } } as any)}
           hitSlop={10}
-          style={[
-            styles.bellButton,
-            { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : colors.background },
-          ]}
+          style={[styles.bellButton, { backgroundColor: bellBg }]}
         >
           <Bell size={20} color={textColor} />
           {unreadCount > 0 ? (
@@ -56,7 +55,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerLogo: {
+    width: 34,
+    height: 34,
+    marginRight: 1,
+  },
   wordmark: {
+    fontSize: 20,
     fontWeight: '800',
     letterSpacing: 1,
   },

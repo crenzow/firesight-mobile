@@ -1,18 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { CheckCircle2, ShieldCheck, Truck, BellRing } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { Button } from '../../components/ui/Button';
 
 const NEXT_STEPS = [
   { icon: ShieldCheck, text: 'BFP personnel has been alerted' },
-  { icon: Truck, text: 'Units will be dispatched if verified' },
+  { icon: Truck, text: 'Units will be dispatched if accepted' },
   { icon: BellRing, text: "You'll receive status updates via alerts" },
 ];
 
 export default function ReportSuccessScreen() {
+  const navigation = useNavigation();
   const { colors, spacing, typography, radius, shadow } = useTheme();
   const { reportId, createdAt } = useLocalSearchParams<{ reportId?: string; createdAt?: string }>();
 
@@ -68,7 +69,7 @@ export default function ReportSuccessScreen() {
         </View>
 
         <View style={{ marginTop: spacing.xl, width: '100%' }}>
-          <Button label="Back to Home" onPress={() => router.replace('/(resident)/home')} />
+          <Button label="Done" onPress={() => navigation.getParent()?.goBack()} />
         </View>
       </View>
     </SafeAreaView>

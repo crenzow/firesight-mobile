@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Clock } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
+import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { educationService } from '../../../services/api';
 import { FireEducationArticle } from '../../../services/api/models';
 
@@ -27,19 +28,9 @@ export default function LearnArticleScreen() {
   }, [id]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <View
-        style={[
-          styles.header,
-          { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomColor: colors.border },
-        ]}
-      >
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.size.md }]}>Article</Text>
-        <View style={{ width: 22 }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SecondaryHeader title="Article" onBack={() => router.navigate('/(resident)/learn')} />
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
 
       {isLoading || !article ? (
         <View style={styles.center}>
@@ -78,7 +69,8 @@ export default function LearnArticleScreen() {
           </Text>
         </ScrollView>
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 

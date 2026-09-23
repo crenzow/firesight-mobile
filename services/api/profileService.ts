@@ -3,10 +3,11 @@ import { AppUser } from './types';
 
 export interface UpdateProfilePayload {
   first_name?: string;
-  middle_name?: string;
+  middle_name?: string | null;
   last_name?: string;
-  suffix?: string;
+  suffix?: string | null;
   contact_number?: string;
+  password?: string;
   house_no_street?: string;
   barangay_id?: number;
 }

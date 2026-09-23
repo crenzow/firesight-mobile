@@ -19,6 +19,12 @@ export const reportService = {
     formData.append('description', payload.description);
     formData.append('latitude', String(payload.latitude));
     formData.append('longitude', String(payload.longitude));
+    if (payload.device_latitude != null) {
+      formData.append('device_latitude', String(payload.device_latitude));
+    }
+    if (payload.device_longitude != null) {
+      formData.append('device_longitude', String(payload.device_longitude));
+    }
     if (payload.location_accuracy_m != null) {
       formData.append('location_accuracy_m', String(payload.location_accuracy_m));
     }

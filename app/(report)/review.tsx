@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, Pressable, ScrollView, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { ArrowLeft, MapPin, AlertTriangle, RefreshCw } from 'lucide-react-native';
+import { router, useNavigation } from 'expo-router';
+import { ArrowLeft, MapPin, AlertTriangle, RefreshCw, Maximize2, X } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
 import { Button } from '../../components/ui/Button';
@@ -12,17 +12,26 @@ import { ApiError } from '../../services/api/client';
 export default function ReviewScreen() {
   const { colors, spacing, typography, radius, shadow } = useTheme();
   const { draft, updateDraft, resetDraft } = useReportDraft();
+  const navigation = useNavigation();
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const handleRetake = () => {
-    router.back();
+    // Go all the way back to capture so the user retakes the photo
+    router.push('/(report)/capture');
+  };
+
+  const handleCancelReport = () => {
+    resetDraft();
+    navigation.getParent()?.goBack();
   };
 
   const handleSubmit = async () => {
-    if (!draft.photoUri || !draft.location || !draft.barangayId) {
-      setSubmitError('Missing photo, location, or barangay information. Please retake the photo.');
+    if (!draft.photoUri || !draft.incidentLocation || !draft.barangayId) {
+      setIsConfirmVisible(false);
+      setSubmitError('Missing photo, pinned location, or barangay information. Please retake the photo or location.');
       return;
     }
     setIsSubmitting(true);
@@ -30,13 +39,16 @@ export default function ReviewScreen() {
     try {
       const created = await reportService.create({
         description: draft.description,
-        latitude: draft.location.latitude,
-        longitude: draft.location.longitude,
-        location_accuracy_m: draft.location.accuracy ?? undefined,
+        latitude: draft.incidentLocation.latitude,
+        longitude: draft.incidentLocation.longitude,
+        device_latitude: draft.deviceLocation?.latitude,
+        device_longitude: draft.deviceLocation?.longitude,
+        location_accuracy_m: draft.deviceLocation?.accuracy ?? undefined,
         barangay_id: draft.barangayId,
         photoUri: draft.photoUri,
       });
       resetDraft();
+      setIsConfirmVisible(false);
       router.replace({
         pathname: '/(report)/success',
         params: { reportId: String(created.report_id), createdAt: created.created_at },
@@ -52,22 +64,32 @@ export default function ReviewScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomColor: colors.border }]}>
-        <Pressable onPress={handleRetake} hitSlop={8}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
           <ArrowLeft size={22} color={colors.textPrimary} />
         </Pressable>
         <View>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.size.lg }]}>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: 20, fontWeight: '800' }]}>
             Review Report
           </Text>
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs }}>Confirm details before submitting</Text>
+          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, textAlign: 'center' }}>Confirm details before submitting</Text>
         </View>
-        <View style={{ width: 22 }} />
+        <Pressable onPress={handleCancelReport} hitSlop={8}>
+          <Text style={{ color: colors.danger, fontWeight: '600', fontSize: typography.size.sm }}>Cancel</Text>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
         {draft.photoUri ? (
           <View>
-            <Image source={{ uri: draft.photoUri }} style={[styles.photo, { borderRadius: radius.lg }]} resizeMode="cover" />
+            <Pressable onPress={() => setFullscreen(true)}>
+              <Image source={{ uri: draft.photoUri }} style={[styles.photo, { borderRadius: radius.lg }]} resizeMode="cover" />
+            </Pressable>
+            <Pressable
+              onPress={() => setFullscreen(true)}
+              style={[styles.expandChip, { backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: radius.full }]}
+            >
+              <Maximize2 size={12} color="#FFFFFF" />
+            </Pressable>
             <Pressable
               onPress={handleRetake}
               style={[styles.retakeChip, { backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: radius.full }]}
@@ -81,11 +103,9 @@ export default function ReviewScreen() {
         <View style={[styles.locationRow, { marginTop: spacing.lg }]}>
           <MapPin size={16} color={colors.brandOrange} />
           <View style={{ marginLeft: spacing.sm, flex: 1 }}>
-            <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>Location</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 1 }}>
-              {draft.location
-                ? `${draft.location.latitude.toFixed(5)}°N, ${draft.location.longitude.toFixed(5)}°E · ±${Math.round(draft.location.accuracy ?? 0)}m accuracy`
-                : 'Location not detected'}
+            <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>Incident Location</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, marginTop: 2 }}>
+              {draft.incidentPlaceName ?? (draft.incidentLocation ? 'Location pinned on map' : 'Location not pinned')}
             </Text>
           </View>
         </View>
@@ -101,7 +121,7 @@ export default function ReviewScreen() {
         <TextInput
           value={draft.description}
           onChangeText={(t) => updateDraft({ description: t })}
-          placeholder="Briefly describe what you see — building size, type of fire, people nearby…"
+          placeholder="Briefly describe what you see."
           placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={4}
@@ -116,18 +136,6 @@ export default function ReviewScreen() {
             },
           ]}
         />
-
-        <View
-          style={[
-            styles.warningCard,
-            { backgroundColor: `${colors.danger}14`, borderColor: `${colors.danger}40`, borderRadius: radius.md, marginTop: spacing.lg },
-          ]}
-        >
-          <AlertTriangle size={16} color={colors.danger} />
-          <Text style={{ color: colors.textPrimary, fontSize: typography.size.xs, marginLeft: spacing.sm, flex: 1, lineHeight: 16 }}>
-            If there is immediate danger to life, call 160 (BFP) or 911 before submitting this report.
-          </Text>
-        </View>
 
         {submitError ? (
           <Text style={{ color: colors.danger, fontSize: typography.size.sm, marginTop: spacing.md }}>{submitError}</Text>
@@ -170,6 +178,22 @@ export default function ReviewScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Fullscreen photo viewer modal */}
+      <Modal visible={fullscreen} transparent animationType="fade" onRequestClose={() => setFullscreen(false)}>
+        <View style={styles.modalBg}>
+          <Image
+            source={{ uri: draft.photoUri || '' }}
+            style={styles.modalImage}
+            resizeMode="contain"
+          />
+          <SafeAreaView style={styles.modalClose} edges={['top']}>
+            <Pressable onPress={() => setFullscreen(false)} style={styles.closeButton}>
+              <X size={22} color="#FFFFFF" />
+            </Pressable>
+          </SafeAreaView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -178,14 +202,25 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitle: { fontWeight: '700', textAlign: 'center' },
   photo: { width: '100%', height: 220 },
-  retakeChip: {
+  expandChip: {
     position: 'absolute',
     top: 12,
     right: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    width: 30,
+    height: 30,
+  },
+  retakeChip: {
+    position: 'absolute',
+    top: 12,
+    right: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
+    height: 30,
     gap: 4,
   },
   retakeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
@@ -197,4 +232,29 @@ const styles = StyleSheet.create({
   modalCard: { width: '100%', alignItems: 'center' },
   modalIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
   modalActions: { flexDirection: 'row', gap: 12, width: '100%' },
+
+  // Fullscreen modal
+  modalBg: {
+    flex: 1,
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
+  },
+  modalClose: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+  },
+  closeButton: {
+    alignSelf: 'flex-end',
+    margin: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 10,
+    borderRadius: 20,
+  },
 });

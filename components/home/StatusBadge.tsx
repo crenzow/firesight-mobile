@@ -5,7 +5,8 @@ import { ReportStatus } from '../../services/api/models';
 
 const STATUS_LABEL: Record<ReportStatus, string> = {
   pending: 'Under Review',
-  verified: 'Verified',
+  accepted: 'Accepted',
+  dispatched: 'Dispatched',
   resolved: 'Resolved',
   invalid: 'Invalid',
 };
@@ -16,20 +17,22 @@ export const StatusBadge: React.FC<{ status: ReportStatus }> = ({ status }) => {
   const color =
     status === 'resolved'
       ? colors.success
-      : status === 'verified'
+      : status === 'accepted'
         ? colors.info
-        : status === 'invalid'
-          ? colors.textMuted
-          : colors.warning;
+        : status === 'dispatched'
+          ? colors.brandOrange
+          : status === 'invalid'
+            ? colors.textMuted
+            : colors.warning; // pending
 
   return (
     <View
       style={[
         styles.badge,
-        { backgroundColor: `${color}1A`, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 3 },
+        { backgroundColor: `${color}22`, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 3 },
       ]}
     >
-      <Text style={[styles.text, { color, fontSize: typography.size.xs }]}>{STATUS_LABEL[status]}</Text>
+      <Text style={[styles.text, { color, fontSize: typography.size.xs }]}>{STATUS_LABEL[status] || status || 'Unknown'}</Text>
     </View>
   );
 };

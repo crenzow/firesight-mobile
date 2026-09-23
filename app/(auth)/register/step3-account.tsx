@@ -14,6 +14,7 @@ import { Button } from '../../../components/ui/Button';
 import { StepProgress } from '../../../components/ui/StepProgress';
 import { validateRegisterStep3 } from '../../../utils/validators';
 import { ApiError } from '../../../services/api/client';
+import { LegalModal, LegalDocType } from '../../../components/ui/LegalModal';
 
 export default function RegisterStep3() {
   const { colors, spacing, typography } = useTheme();
@@ -22,13 +23,22 @@ export default function RegisterStep3() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Document reading tracking states
+  const [hasReadTerms, setHasReadTerms] = useState(false);
+  const [hasReadPrivacy, setHasReadPrivacy] = useState(false);
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
+
+  const [legalDocType, setLegalDocType] = useState<LegalDocType | null>(null);
+
   const handleCreateAccount = async () => {
     const validationErrors = validateRegisterStep3({
       email: form.email,
       password: form.password,
       confirmPassword: form.confirmPassword,
       agreedToTerms: form.agreedToTerms,
+      agreedToPrivacy: agreedToPrivacy,
     });
+    
     setErrors(validationErrors);
     setFormError(null);
     if (Object.keys(validationErrors).length > 0) return;
@@ -54,25 +64,65 @@ export default function RegisterStep3() {
     }
   };
 
+  const handleToggleTermsCheckbox = () => {
+    if (!hasReadTerms) {
+      // Open modal to force reading to bottom
+      setLegalDocType('terms');
+    } else {
+      updateForm({ agreedToTerms: !form.agreedToTerms });
+      if (errors.agreedToTerms) setErrors((prev) => ({ ...prev, agreedToTerms: '' }));
+    }
+  };
+
+  const handleTogglePrivacyCheckbox = () => {
+    if (!hasReadPrivacy) {
+      // Open modal to force reading to bottom
+      setLegalDocType('privacy');
+    } else {
+      setAgreedToPrivacy(!agreedToPrivacy);
+      if (errors.agreedToPrivacy) setErrors((prev) => ({ ...prev, agreedToPrivacy: '' }));
+    }
+  };
+
+  const handleReadComplete = () => {
+    if (legalDocType === 'terms') {
+      setHasReadTerms(true);
+      updateForm({ agreedToTerms: true });
+      if (errors.agreedToTerms) setErrors((prev) => ({ ...prev, agreedToTerms: '' }));
+    } else if (legalDocType === 'privacy') {
+      setHasReadPrivacy(true);
+      setAgreedToPrivacy(true);
+      if (errors.agreedToPrivacy) setErrors((prev) => ({ ...prev, agreedToPrivacy: '' }));
+    }
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1, backgroundColor: colors.brandNavy }}>
+      <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']} />
+      
+      <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, paddingBottom: spacing.xl }}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={{ marginBottom: spacing.lg }}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
+          <ArrowLeft size={22} color={colors.textInverse} />
         </Pressable>
 
-        <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.size.xl }]}>
+        <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xl }]}>
           Create Account
         </Text>
         <Text
           style={[
             styles.subtitle,
-            { color: colors.textSecondary, fontSize: typography.size.sm, marginBottom: spacing.lg },
+            { color: 'rgba(255,255,255,0.7)', fontSize: typography.size.sm },
           ]}
         >
           Step 3 of 3 — Account Info
         </Text>
+      </View>
 
+      <View style={{ height: 24, backgroundColor: colors.brandNavy }}>
+        <View style={{ flex: 1, backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xxxl, flexGrow: 1 }} keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background, flex: 1 }}>
         <View style={{ marginBottom: spacing.xl }}>
           <StepProgress currentStep={3} />
         </View>
@@ -97,7 +147,7 @@ export default function RegisterStep3() {
             updateForm({ email: t });
             if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
           }}
-          placeholder="juan@email.com"
+          placeholder="Enter email address"
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
@@ -113,7 +163,7 @@ export default function RegisterStep3() {
             updateForm({ password: t });
             if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
           }}
-          placeholder="At least 8 characters"
+          placeholder="Create password (min. 8)"
           error={errors.password}
         />
         <PasswordStrengthMeter password={form.password} />
@@ -126,22 +176,40 @@ export default function RegisterStep3() {
             updateForm({ confirmPassword: t });
             if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: '' }));
           }}
+          placeholder="Confirm password"
           error={errors.confirmPassword}
         />
 
-        <Checkbox
-          checked={form.agreedToTerms}
-          onToggle={() => {
-            updateForm({ agreedToTerms: !form.agreedToTerms });
-            if (errors.agreedToTerms) setErrors((prev) => ({ ...prev, agreedToTerms: '' }));
-          }}
-          error={errors.agreedToTerms}
-        >
-          I agree to the{' '}
-          <Text style={{ color: colors.brandOrange, fontWeight: '600' }}>Terms of Service</Text> and{' '}
-          <Text style={{ color: colors.brandOrange, fontWeight: '600' }}>Privacy Policy</Text> of FIRESIGHT
-          Municipal Fire Safety System.
-        </Checkbox>
+        {/* Clean & Premium Checkboxes */}
+        <View style={{ marginTop: spacing.lg, gap: spacing.md }}>
+          <Checkbox
+            checked={form.agreedToTerms}
+            onToggle={handleToggleTermsCheckbox}
+            error={errors.agreedToTerms}
+          >
+            I agree to the{' '}
+            <Text
+              onPress={() => setLegalDocType('terms')}
+              style={{ color: colors.brandOrange, fontWeight: '600', textDecorationLine: 'underline' }}
+            >
+              Terms of Service
+            </Text>
+          </Checkbox>
+
+          <Checkbox
+            checked={agreedToPrivacy}
+            onToggle={handleTogglePrivacyCheckbox}
+            error={errors.agreedToPrivacy}
+          >
+            I agree to the{' '}
+            <Text
+              onPress={() => setLegalDocType('privacy')}
+              style={{ color: colors.brandOrange, fontWeight: '600', textDecorationLine: 'underline' }}
+            >
+              Privacy Policy
+            </Text>
+          </Checkbox>
+        </View>
 
         {formError ? (
           <Text style={{ color: colors.danger, fontSize: typography.size.sm, marginTop: spacing.md }}>
@@ -158,7 +226,15 @@ export default function RegisterStep3() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+
+      <LegalModal
+        visible={!!legalDocType}
+        type={legalDocType ?? 'terms'}
+        onClose={() => setLegalDocType(null)}
+        onReadComplete={handleReadComplete}
+        alreadyRead={legalDocType === 'terms' ? hasReadTerms : hasReadPrivacy}
+      />
+    </View>
   );
 }
 

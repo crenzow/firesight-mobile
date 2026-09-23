@@ -88,27 +88,13 @@ export default function LearnScreen() {
     useState<FireEducationArticle[]>(FALLBACK_ARTICLES);
   const [category, setCategory] = useState<LearnCategory>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const load = () => {
     educationService
       .list()
       .then((data) => data.length > 0 && setArticles(data))
-      .catch(() => {
-        // Keep fallback articles — the Learn tab should never render empty.
-      })
+      .catch(() => {})
       .finally(() => setIsRefreshing(false));
-
-    // Load unread notification count
-    notificationService
-      .list()
-      .then((notifications) => {
-        const unread = notifications.filter(
-          (n: Notification) => !n.is_read,
-        ).length;
-        setUnreadCount(unread);
-      })
-      .catch(() => {});
   };
 
   useEffect(() => {
@@ -131,7 +117,7 @@ export default function LearnScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader unreadCount={unreadCount} variant="light" />
+      <AppHeader variant="dark" />
       <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
         <ScrollView
           contentContainerStyle={{
@@ -168,7 +154,7 @@ export default function LearnScreen() {
             Safety tips & prevention guides
           </Text>
 
-          {featured && category === "all" ? (
+          {featured ? (
             <View style={{ marginTop: spacing.lg }}>
               <FeaturedArticleCard article={featured} />
             </View>

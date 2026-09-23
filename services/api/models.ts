@@ -14,12 +14,25 @@ export interface IncidentMarker {
   barangay_name: string;
   latitude: number;
   longitude: number;
-  incident_type: 'fire' | 'medical' | 'other';
+  incident_type: 'residential_fire' | 'commercial_fire' | 'vehicular_fire' | 'storage_fire' | 'rubbish_fire' | 'others';
   severity_level: 'low' | 'medium' | 'high' | 'critical';
   data_time: string;
+  cause_of_fire?: string | null;
+  casualties?: number | null;
+  notes?: string | null;
 }
 
-export type ReportStatus = 'pending' | 'verified' | 'resolved' | 'invalid';
+/** Richer incident marker used only on the BFP map — includes reporter PII and full investigation fields. */
+export interface BFPIncidentMarker extends IncidentMarker {
+  report_id: number;
+  reporter_name: string | null;
+  contact_number: string | null;
+  description: string;
+  status: 'accepted' | 'dispatched' | 'resolved';
+  created_at: string;
+}
+
+export type ReportStatus = 'pending' | 'accepted' | 'dispatched' | 'resolved' | 'invalid';
 export type RiskLevel = 'low' | 'moderate' | 'high';
 
 export interface CommunityReport {
@@ -28,6 +41,8 @@ export interface CommunityReport {
   report_image: string | null;
   latitude: number;
   longitude: number;
+  device_latitude?: number | null;
+  device_longitude?: number | null;
   barangay_id: number;
   barangay_name?: string;
   status: ReportStatus;
@@ -45,6 +60,8 @@ export interface CreateReportPayload {
   description: string;
   latitude: number;
   longitude: number;
+  device_latitude?: number;
+  device_longitude?: number;
   location_accuracy_m?: number;
   barangay_id: number;
   photoUri: string;
@@ -65,6 +82,9 @@ export interface Notification {
   notification_type: 'alert' | 'update' | 'system';
   is_read: boolean;
   created_at: string;
+  report_id?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface Announcement {

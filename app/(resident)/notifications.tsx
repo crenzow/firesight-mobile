@@ -1,17 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Bell, AlertTriangle, RefreshCw, Info } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
+import { useNotifications } from '../../context/NotificationContext';
 import { notificationService } from '../../services/api';
 import { Notification } from '../../services/api/models';
 import { formatRelativeDate } from '../../utils/formatters';
+import { ShinyCard } from '../../components/ui/ShinyCard';
 
 const ICONS = { alert: AlertTriangle, update: RefreshCw, system: Info } as const;
 
 export default function NotificationsScreen() {
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const { colors, spacing, typography, radius } = useTheme();
+  const { markAllRead } = useNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -20,13 +25,15 @@ export default function NotificationsScreen() {
     try {
       const data = await notificationService.list();
       setNotifications(data);
+      // Clear the global badge now that the user has seen the list
+      markAllRead();
     } catch {
-      // Non-fatal — leave list empty, resident can pull to refresh.
+      // Non-fatal
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [markAllRead]);
 
   useEffect(() => {
     load();
@@ -48,14 +55,12 @@ export default function NotificationsScreen() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.size.lg }]}>Alerts</Text>
-        <View style={{ width: 22 }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SecondaryHeader 
+        title="Alerts" 
+        onBack={() => from ? router.replace(from as any) : router.back()} 
+      />
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
 
       <Text style={[styles.subheader, { color: colors.textMuted, fontSize: typography.size.sm, paddingHorizontal: spacing.lg, marginTop: spacing.sm }]}>
         {unreadCount} unread notification{unreadCount === 1 ? '' : 's'}
@@ -89,41 +94,39 @@ export default function NotificationsScreen() {
           const Icon = ICONS[item.notification_type];
           const iconColor = item.notification_type === 'alert' ? colors.danger : colors.brandOrange;
           return (
-            <Pressable
-              onPress={() => handlePress(item)}
-              style={[
-                styles.row,
-                {
-                  backgroundColor: item.is_read ? colors.surface : colors.surfaceElevated,
-                  borderRadius: radius.md,
-                  padding: spacing.md,
-                  marginBottom: spacing.sm,
-                  borderColor: colors.border,
-                },
-              ]}
+            <ShinyCard
+              variant="default"
+              style={[styles.rowOuter, { marginBottom: spacing.sm, opacity: item.is_read ? 0.75 : 1 }]}
+              padding={spacing.md}
             >
-              <View style={[styles.iconCircle, { backgroundColor: `${iconColor}14` }]}>
-                <Icon size={16} color={iconColor} />
-              </View>
-              <View style={{ flex: 1, marginLeft: spacing.sm }}>
-                <View style={styles.titleRow}>
-                  <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.size.sm }]}>
-                    {item.title}
-                  </Text>
-                  {!item.is_read ? <View style={[styles.dot, { backgroundColor: colors.brandOrange }]} /> : null}
+              <Pressable
+                onPress={() => handlePress(item)}
+                style={styles.rowInner}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: `${iconColor}14` }]}>
+                  <Icon size={16} color={iconColor} />
                 </View>
-                <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 2 }}>
-                  {item.message}
-                </Text>
-                <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
-                  {formatRelativeDate(item.created_at)}
-                </Text>
-              </View>
-            </Pressable>
+                <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.size.sm }]}>
+                      {item.title}
+                    </Text>
+                    {!item.is_read ? <View style={[styles.dot, { backgroundColor: colors.brandOrange }]} /> : null}
+                  </View>
+                  <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 2 }}>
+                    {item.message}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
+                    {formatRelativeDate(item.created_at)}
+                  </Text>
+                </View>
+              </Pressable>
+            </ShinyCard>
           );
         }}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -137,6 +140,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontWeight: '700' },
   subheader: {},
   row: { flexDirection: 'row', borderWidth: StyleSheet.hairlineWidth },
+  rowOuter: {},
+  rowInner: { flexDirection: 'row', alignItems: 'flex-start', width: '100%' },
   iconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontWeight: '700', flex: 1 },

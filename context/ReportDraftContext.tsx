@@ -3,14 +3,18 @@ import { CapturedLocation } from '../hooks/useLocation';
 
 export interface ReportDraft {
   photoUri: string | null;
-  location: CapturedLocation | null;
+  deviceLocation: CapturedLocation | null;
+  incidentLocation: { latitude: number; longitude: number } | null;
+  incidentPlaceName: string | null;
   barangayId: number | null;
   description: string;
 }
 
 const initialDraft: ReportDraft = {
   photoUri: null,
-  location: null,
+  deviceLocation: null,
+  incidentLocation: null,
+  incidentPlaceName: null,
   barangayId: null,
   description: '',
 };

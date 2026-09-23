@@ -1,44 +1,43 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Smartphone, Sun, Moon, MoonStar } from 'lucide-react-native';
 import { useTheme, ThemePreference } from '../../../theme/ThemeContext';
+import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { RadioOptionRow } from '../../../components/profile/RadioOptionRow';
 import { APP_CONFIG } from '../../../constants/config';
 
-const THEME_OPTIONS: { key: ThemePreference; title: string; subtitle: string; icon: React.ComponentType<{ size: number; color: string }> }[] = [
-  { key: 'system', title: 'System Default', subtitle: 'Follows your device appearance', icon: Smartphone },
-  { key: 'light', title: 'Light Mode', subtitle: 'Official application theme', icon: Sun },
-  { key: 'blackDark', title: 'Black Dark Mode', subtitle: 'Pure black — high contrast', icon: Moon },
-  { key: 'dimDark', title: 'Dim Dark Mode', subtitle: 'Soft dark — easier on eyes', icon: MoonStar },
+const THEME_OPTIONS: { key: ThemePreference; title: string; subtitle: string; icon: React.ComponentType<{ size: number; color: string }>; gradient: [string, string] }[] = [
+  { key: 'system', title: 'System Default', subtitle: 'Follows your device appearance', icon: Smartphone, gradient: ['#64748B', '#0F1C3F'] },
+  { key: 'light', title: 'Light Mode', subtitle: 'Official application theme', icon: Sun, gradient: ['#F97316', '#FFB877'] },
+  { key: 'blackDark', title: 'Black Dark Mode', subtitle: 'Pure black', icon: Moon, gradient: ['#1A2340', '#000000'] },
+  { key: 'dimDark', title: 'Dim Dark Mode', subtitle: 'Soft dark', icon: MoonStar, gradient: ['#6D5BD0', '#3B4CCA'] },
 ];
 
 export default function SettingsScreen() {
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const { colors, spacing, typography, preference, setPreference } = useTheme();
 
   const [pushNotifications, setPushNotifications] = useState(true);
   const [alertSounds, setAlertSounds] = useState(true);
-  const [locationAccess, setLocationAccess] = useState(true);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.size.md }]}>Settings</Text>
-        <View style={{ width: 22 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SecondaryHeader 
+        title="Settings" 
+        onBack={() => from ? router.replace(from as any) : router.back()} 
+      />
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
         <Text style={[styles.sectionTitle, { color: colors.textMuted, fontSize: typography.size.xs, marginBottom: spacing.sm }]}>
           APPEARANCE
         </Text>
-        {THEME_OPTIONS.map(({ key, title, subtitle, icon: Icon }) => (
+        {THEME_OPTIONS.map(({ key, title, subtitle, icon: Icon, gradient }) => (
           <RadioOptionRow
             key={key}
-            icon={<Icon size={18} color={preference === key ? colors.brandOrange : colors.textMuted} />}
+            icon={<Icon size={18} color="#FFFFFF" />}
+            gradient={gradient}
             title={title}
             subtitle={subtitle}
             selected={preference === key}
@@ -68,13 +67,6 @@ export default function SettingsScreen() {
             value={alertSounds}
             onValueChange={setAlertSounds}
           />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <ToggleRow
-            title="Location Access"
-            subtitle="Required for fire reporting"
-            value={locationAccess}
-            onValueChange={setLocationAccess}
-          />
         </View>
 
         <View style={[styles.footerCard, { marginTop: spacing.xl }]}>
@@ -88,8 +80,9 @@ export default function SettingsScreen() {
             Bureau of Fire Protection · {APP_CONFIG.DEFAULT_MUNICIPALITY}, {APP_CONFIG.DEFAULT_PROVINCE}
           </Text>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -120,7 +113,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitle: { fontWeight: '700' },
   sectionTitle: { fontWeight: '700', letterSpacing: 0.5 },
-  toggleCard: { borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  toggleCard: { borderWidth: 1, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center' },
   divider: { height: StyleSheet.hairlineWidth },
   footerCard: { alignItems: 'center' },
