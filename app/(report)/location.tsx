@@ -31,8 +31,12 @@ export default function LocationScreen() {
     setCurrentLat(draft.deviceLocation.latitude);
     setCurrentLng(draft.deviceLocation.longitude);
     // Initial geocode
+    setIsGeocodingLoading(true);
     setPlaceName('Locating…');
-    reverseGeocode(draft.deviceLocation.latitude, draft.deviceLocation.longitude).then(setPlaceName);
+    reverseGeocode(draft.deviceLocation.latitude, draft.deviceLocation.longitude).then((name) => {
+      setPlaceName(name);
+      setIsGeocodingLoading(false);
+    });
   }, [draft.deviceLocation]);
 
   const handleLocationChange = useCallback((lat: number, lng: number) => {
@@ -172,6 +176,7 @@ export default function LocationScreen() {
             <Button
               label="Confirm Location"
               onPress={handleConfirm}
+              disabled={isGeocodingLoading || currentLat === null || currentLng === null}
               icon={<Check size={18} color="#FFFFFF" />}
               iconPosition="left"
             />

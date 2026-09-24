@@ -8,7 +8,6 @@ import {
   CalendarDays,
   MapPinned,
   ChevronRight,
-  ClipboardPlus,
 } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -19,14 +18,15 @@ import { IncidentListItem } from '../../components/bfp/IncidentListItem';
 import { InteractiveCard } from '../../components/bfp/InteractiveCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { incidentService } from '../../services/api/incidentService';
-import { notificationService } from '../../services/api';
 import { BFPIncident, DashboardAnalytics } from '../../services/api/bfpModels';
+import { useNotifications } from '../../context/NotificationContext';
 
 
 
 export default function DashboardScreen() {
   const { colors, spacing, typography, radius, shadow, isDark } = useTheme();
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
 
   const [analytics, setAnalytics] = useState<DashboardAnalytics>({
     active_incidents: 0,
@@ -35,21 +35,16 @@ export default function DashboardScreen() {
     total_this_month: 0,
   });
   const [recentIncidents, setRecentIncidents] = useState<BFPIncident[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const [analyticsResult, incidentsResult, notificationsResult] = await Promise.allSettled([
+    const [analyticsResult, incidentsResult] = await Promise.allSettled([
       incidentService.getDashboardAnalytics(),
       incidentService.list(),
-      notificationService.list(),
     ]);
 
     if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value);
     if (incidentsResult.status === 'fulfilled') setRecentIncidents(incidentsResult.value.slice(0, 5));
-    if (notificationsResult.status === 'fulfilled') {
-      setUnreadCount(notificationsResult.value.filter((n) => !n.is_read).length);
-    }
     setIsRefreshing(false);
   }, []);
 
@@ -59,11 +54,9 @@ export default function DashboardScreen() {
     }, [load])
   );
 
-  const rankLabel = user?.role === 'personnel' ? 'Fire Officer' : 'BFP Lian';
-
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <GlassHeader subtitle={`${rankLabel} · Operations`} unreadCount={unreadCount} />
+      <GlassHeader unreadCount={unreadCount} />
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }}
@@ -81,10 +74,6 @@ export default function DashboardScreen() {
         <Text style={{ color: colors.textPrimary, fontSize: typography.size.xxl, fontWeight: '900' }}>
           Good {getTimeOfDayLabel()}, {user?.first_name ?? 'Officer'}
         </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, marginTop: 4, fontWeight: '500' }}>
-          Here's what's happening across Lian right now.
-        </Text>
-
         {/* Analytics overview */}
         <View style={[styles.statsGrid, { marginTop: spacing.lg, gap: spacing.md }]}>
           <View style={{ flexDirection: 'row', gap: spacing.md }}>
@@ -111,7 +100,7 @@ export default function DashboardScreen() {
             <StatTile
               icon={<CalendarDays size={18} color={colors.info} />}
               value={analytics.total_this_month}
-              label="This Month"
+              label="Resolved this Month"
               accentColor={colors.info}
             />
           </View>
@@ -131,10 +120,10 @@ export default function DashboardScreen() {
               </View>
               <View style={{ flex: 1, marginLeft: spacing.md }}>
                 <Text style={{ color: '#FFFFFF', fontSize: typography.size.md, fontWeight: '800' }}>
-                  GIS Risk & Incident Map
+                  Risk & Incident Map
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: typography.size.xs, marginTop: 2, fontWeight: '500' }}>
-                  Monitor fire-prone zones and live incidents
+                  Monitor fire-prone zones and incident records
                 </Text>
               </View>
               <ChevronRight size={20} color="rgba(255,255,255,0.5)" />
@@ -142,7 +131,8 @@ export default function DashboardScreen() {
           </LinearGradient>
         </InteractiveCard>
 
-        {/* Quick action: manual entry */}
+        {/* Temporarily disabled manual record creation card. */}
+        {/*
         <InteractiveCard onPress={() => router.push('/(bfp)/incidents/create?from=dashboard')} style={{ marginTop: spacing.md }}>
           <LinearGradient
             colors={[colors.brandOrange, colors.brandOrangeDeep]}
@@ -166,6 +156,7 @@ export default function DashboardScreen() {
             </View>
           </LinearGradient>
         </InteractiveCard>
+        */}
 
         {/* Real-time incident list */}
         <View style={[styles.sectionHeader, { marginTop: spacing.xl, marginBottom: spacing.sm }]}>

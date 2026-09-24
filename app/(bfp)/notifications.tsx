@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
 import { Bell, AlertTriangle, RefreshCw, Info } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { GlassHeader } from '../../components/glass/GlassHeader';
 import { GlassCard } from '../../components/glass/GlassCard';
-import { notificationService } from '../../services/api';
 import { Notification } from '../../services/api/models';
 import { formatRelativeDate, formatFullDate, formatTime } from '../../utils/formatters';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useNotifications } from '../../context/NotificationContext';
 
 const ICONS = { alert: AlertTriangle, update: RefreshCw, system: Info } as const;
 
@@ -49,34 +49,26 @@ const PersonnelNotification: React.FC<{
 export default function BFPNotificationsScreen() {
   const { colors, spacing, typography } = useTheme();
   const { from } = useLocalSearchParams<{ from?: string }>();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { notifications, refresh, markRead, markAllRead } = useNotifications();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const load = useCallback(() => {
-    notificationService
-      .list()
-      .then((data) => data.length > 0 && setNotifications(data))
-      .catch(() => {
-        // Keep fallback / last successful data.
-      })
-      .finally(() => setIsRefreshing(false));
-  }, []);
+  const load = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refresh();
+      await markAllRead();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refresh, markAllRead]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     load();
-    const poller = setInterval(load, 10000);
-
-    return () => clearInterval(poller);
-  }, [load]);
+  }, [load]));
 
   const handlePress = async (notification: Notification) => {
     if (notification.is_read) return;
-    setNotifications((prev) => prev.map((n) => (n.notification_id === notification.notification_id ? { ...n, is_read: true } : n)));
-    try {
-      await notificationService.markRead(notification.notification_id);
-    } catch {
-      // Optimistic update stands regardless.
-    }
+    await markRead(notification.notification_id);
   };
 
   const handleBack = () => {

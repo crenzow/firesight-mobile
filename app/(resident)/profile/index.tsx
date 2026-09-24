@@ -146,25 +146,19 @@ export default function ProfileScreen() {
           </Text>
           <View style={{ marginHorizontal: spacing.lg }}>
             <ShinyCard padding={spacing.lg}>
-              <InfoRow label="USERNAME" icon={<User size={12} color={colors.textMuted} />}>
+              <InfoRow label="USERNAME" icon={<User size={18} color="#FFFFFF" />}>
                 {user.email.split('@')[0]}
               </InfoRow>
 
-              <View style={[styles.divider, { backgroundColor: colors.border, marginVertical: spacing.sm }]} />
-
-              <InfoRow label="EMAIL" icon={<Mail size={12} color={colors.textMuted} />}>
+              <InfoRow label="EMAIL" icon={<Mail size={18} color="#FFFFFF" />}>
                 {user.email}
               </InfoRow>
 
-              <View style={[styles.divider, { backgroundColor: colors.border, marginVertical: spacing.sm }]} />
-
-              <InfoRow label="MOBILE" icon={<Phone size={12} color={colors.textMuted} />}>
+              <InfoRow label="MOBILE" icon={<Phone size={18} color="#FFFFFF" />}>
                 {user.contact_number ?? 'Not set'}
               </InfoRow>
 
-              <View style={[styles.divider, { backgroundColor: colors.border, marginVertical: spacing.sm }]} />
-
-              <InfoRow label="ADDRESS" icon={<MapPin size={12} color={colors.textMuted} />}>
+              <InfoRow label="ADDRESS" icon={<MapPin size={18} color="#FFFFFF" />} isLast>
                 {user.address
                   ? `${user.address.house_no_street ? user.address.house_no_street + ', ' : ''}${user.address.barangay_name ?? ''}, ${user.address.municipality}`
                   : 'Not set'}
@@ -262,28 +256,32 @@ function InfoRow({
   label,
   icon,
   children,
+  isLast,
 }: {
   label: string;
   icon?: React.ReactNode;
   children: string;
+  isLast?: boolean;
 }) {
-  const { colors, typography } = useTheme();
+  const { colors, spacing, typography } = useTheme();
   return (
-    <View>
-      <View style={styles.infoLabelRow}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isLast ? 0 : spacing.md }}>
+      <LinearGradient
+        colors={['#64748B', '#0F1C3F']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.infoIcon}
+      >
         {icon}
-        <Text
-          style={[
-            styles.infoLabel,
-            { color: colors.textMuted, fontSize: typography.size.xs, marginLeft: icon ? 4 : 0 },
-          ]}
-        >
+      </LinearGradient>
+      <View style={{ flex: 1, marginLeft: spacing.md }}>
+        <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', letterSpacing: 0.3 }}>
           {label}
         </Text>
+        <Text style={[styles.infoValue, { color: colors.textPrimary, fontSize: typography.size.sm }]}>
+          {children}
+        </Text>
       </View>
-      <Text style={[styles.infoValue, { color: colors.textPrimary, fontSize: typography.size.sm }]}>
-        {children}
-      </Text>
     </View>
   );
 }
@@ -418,9 +416,16 @@ const styles = StyleSheet.create({
     color: '#FED7AA',
   },
 
+  infoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+
   // Info rows
-  infoLabelRow: { flexDirection: 'row', alignItems: 'center' },
-  infoLabel: { fontWeight: '700', letterSpacing: 0.3 },
   infoValue: { fontWeight: '600', marginTop: 2 },
 
   // Divider

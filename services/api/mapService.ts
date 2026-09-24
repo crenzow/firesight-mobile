@@ -13,8 +13,8 @@ export const mapService = {
   getIncidents: () => apiClient.get<IncidentMarker[]>('/map/incidents.php', false),
 
   /**
-   * BFP map incidents — requires personnel auth, returns full investigation data:
-   * reporter info, cause, casualties, estimated damage, response time, notes.
+  * BFP map incidents — requires personnel auth and returns only reports that
+  * have an incident_record, with full investigation data.
    * Optional params: year (number), status ('accepted'|'dispatched'|'resolved')
    */
   getBFPIncidents: (filters?: { year?: number; status?: string }) => {

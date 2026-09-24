@@ -122,13 +122,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fab: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -24,
+    marginTop: -28,
     borderWidth: 3,
     borderColor: '#FFFFFF',
+    // Soft simple glow effect
+    shadowColor: '#F4622B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
 });

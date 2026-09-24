@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
 const LEGEND_ITEMS = [
+  { label: 'Critical', key: 'critical' as const },
   { label: 'High', key: 'high' as const },
   { label: 'Medium', key: 'moderate' as const },
   { label: 'Low', key: 'low' as const },
@@ -36,6 +37,7 @@ export const RiskLegend: React.FC = () => {
 
 function capitalize(value: string): string {
   if (value === 'moderate') return 'Moderate';
+  if (value === 'critical') return 'Critical';
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 

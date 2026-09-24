@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LocateFixed, Filter } from 'lucide-react-native';
+import { Filter } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { LeafletMapView } from '../../components/map/LeafletMapView';
 import { MapTypeSelector, MapType } from '../../components/map/MapTypeSelector';
@@ -18,14 +18,13 @@ const firesightLogo = require('../../assets/images/firesight-logo.png');
 const LIAN_CENTER = { lat: 14.0065, lng: 120.6425 };
 
 export default function MapScreen() {
-  const { colors, spacing, typography, shadow } = useTheme();
-  const { location, requestLocation } = useLocation();
+  const { colors, spacing, typography } = useTheme();
+  const { location } = useLocation();
 
   const [mapType, setMapType] = useState<MapType>('standard');
   const [barangays, setBarangays] = useState<BarangayRiskFeature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLocationActive, setIsLocationActive] = useState(false);
-  const [mapKey, setMapKey] = useState(0);
 
   // Filter state
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -40,11 +39,12 @@ export default function MapScreen() {
     });
   }, []);
 
-  const handleLocateMe = async () => {
-    setIsLocationActive(true);
-    await requestLocation();
-    setMapKey((k) => k + 1);
-  };
+  // Temporarily disabled while the resident map location control is being reviewed.
+  // const handleLocateMe = async () => {
+  //   setIsLocationActive(true);
+  //   await requestLocation();
+  //   setMapKey((k) => k + 1);
+  // };
 
   const handleMapDragged = () => {
     // When user pans/drags away, automatically deactivate location mode
@@ -115,7 +115,7 @@ export default function MapScreen() {
           </View>
         ) : (
           <LeafletMapView
-            key={`${mapKey}-${selectedRisk}`}
+            key={selectedRisk}
             mode="risk"
             mapType={mapType}
             barangays={filteredBarangays}
@@ -134,25 +134,16 @@ export default function MapScreen() {
         <View style={[styles.controlsColumn, { top: spacing.md }]}>
           <MapTypeSelector mapType={mapType} onChange={setMapType} />
 
-          {/* Simple, clean location button card matching map controls */}
+          {/* Temporarily disabled current-location button. */}
+          {/*
           <Pressable
             onPress={handleLocateMe}
-            style={[
-              styles.locateButton,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-              },
-              shadow.card,
-            ]}
+            style={[styles.locateButton, { backgroundColor: colors.surface, borderColor: colors.border }, shadow.card]}
             accessibilityLabel="Locate current location"
           >
-            <LocateFixed
-              size={18}
-              color={isLocationActive ? colors.brandOrange : colors.textMuted}
-              strokeWidth={isLocationActive ? 2.3 : 1.8}
-            />
+            <LocateFixed size={18} color={isLocationActive ? colors.brandOrange : colors.textMuted} />
           </Pressable>
+          */}
         </View>
       </View>
 

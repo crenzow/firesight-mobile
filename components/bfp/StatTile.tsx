@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, Platform, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/ThemeContext';
 import { InteractiveCard } from './InteractiveCard';
 
@@ -12,47 +11,43 @@ interface StatTileProps {
 }
 
 export const StatTile: React.FC<StatTileProps> = ({ icon, value, label, accentColor }) => {
-  const { colors, spacing, typography, radius, isDark } = useTheme();
+  const { colors, radius, isDark } = useTheme();
   const tint = accentColor ?? colors.brandOrange;
-
   const cardBg = isDark ? colors.surfaceElevated : '#FFFFFF';
 
   return (
     <InteractiveCard style={[styles.shadowOuter, { flex: 1, borderRadius: radius.lg, backgroundColor: cardBg }]}>
       <View
-        style={{
-          flex: 1,
-          borderRadius: radius.lg,
-          backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
-          borderWidth: 1,
-          borderColor: isDark ? colors.border : 'rgba(0,0,0,0.055)',
-          overflow: 'hidden',
-          padding: spacing.md,
-        }}
+        style={[
+          styles.inner,
+          {
+            borderRadius: radius.lg,
+            backgroundColor: cardBg,
+            borderColor: isDark ? colors.border : 'rgba(0,0,0,0.055)',
+          },
+        ]}
       >
-        <LinearGradient
-          colors={[`${tint}33`, `${tint}05`]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.iconWrap, { borderColor: `${tint}33`, borderRadius: 12 }]}
-        >
-          {icon}
-        </LinearGradient>
-        <View style={{ marginTop: spacing.sm }}>
-          <Text style={{ color: colors.textPrimary, fontSize: typography.size.xxl, fontWeight: '900' }}>
+        {/* Number and icon on the same row — number dominates, icon is the quiet accent */}
+        <View style={styles.topRow}>
+          <Text
+            style={[styles.value, { color: colors.textPrimary }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             {value}
           </Text>
-          <Text
-            style={{
-              color: isDark ? 'rgba(255,255,255,0.75)' : colors.textSecondary,
-              fontSize: typography.size.xs,
-              marginTop: 2,
-              fontWeight: '700',
-            }}
-          >
-            {label}
-          </Text>
+          <View style={[styles.iconWrap, { backgroundColor: `${tint}15` }]}>
+            {icon}
+          </View>
         </View>
+
+        {/* Label — small, muted, below */}
+        <Text
+          style={[styles.label, { color: isDark ? 'rgba(255,255,255,0.45)' : colors.textSecondary }]}
+          numberOfLines={2}
+        >
+          {label}
+        </Text>
       </View>
     </InteractiveCard>
   );
@@ -67,16 +62,41 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 10,
       },
-      android: {
-        elevation: 3,
-      },
+      android: { elevation: 3 },
     }),
   },
+  inner: {
+    flex: 1,
+    borderWidth: 1,
+    overflow: 'hidden',
+    padding: 14,
+  },
+
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  value: {
+    fontSize: 36,
+    fontWeight: '900',
+    letterSpacing: -1.5,
+    lineHeight: 40,
+    flex: 1,
+  },
   iconWrap: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    marginLeft: 8,
+  },
+
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 15,
   },
 });

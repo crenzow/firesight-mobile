@@ -14,8 +14,8 @@ export interface IncidentMarker {
   barangay_name: string;
   latitude: number;
   longitude: number;
-  incident_type: 'residential_fire' | 'commercial_fire' | 'vehicular_fire' | 'storage_fire' | 'rubbish_fire' | 'others';
-  severity_level: 'low' | 'medium' | 'high' | 'critical';
+  incident_type: 'residential_fire' | 'commercial_fire' | 'vehicular_fire' | 'storage_fire' | 'rubbish_fire' | 'others' | null;
+  severity_level: 'low' | 'moderate' | 'high' | 'critical' | null;
   data_time: string;
   cause_of_fire?: string | null;
   casualties?: number | null;
@@ -33,7 +33,7 @@ export interface BFPIncidentMarker extends IncidentMarker {
 }
 
 export type ReportStatus = 'pending' | 'accepted' | 'dispatched' | 'resolved' | 'invalid';
-export type RiskLevel = 'low' | 'moderate' | 'high';
+export type RiskLevel = 'low' | 'moderate' | 'high' | 'critical';
 
 export interface CommunityReport {
   report_id: number;
@@ -63,6 +63,7 @@ export interface CreateReportPayload {
   device_latitude?: number;
   device_longitude?: number;
   location_accuracy_m?: number;
+  location_name?: string;
   barangay_id: number;
   photoUri: string;
 }

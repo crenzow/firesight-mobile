@@ -35,6 +35,7 @@ export interface ColorTokens {
   riskLow: string;
   riskModerate: string;
   riskHigh: string;
+  riskCritical: string;
 
   // Misc
   overlay: string;
@@ -52,8 +53,9 @@ const shared = {
   danger: '#E14245',
   info: '#3B82C4',
   riskLow: '#2FA65A',
-  riskModerate: '#E8A33D',
-  riskHigh: '#E14245',
+  riskModerate: '#EAB308',
+  riskHigh: '#F97316',
+  riskCritical: '#EF4444',
 };
 
 export const lightColors: ColorTokens = {

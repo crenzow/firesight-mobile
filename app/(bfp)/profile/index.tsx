@@ -122,9 +122,9 @@ export default function BFPProfileScreen() {
         </Text>
         <View style={{ marginHorizontal: spacing.lg }}>
           <GlassCard>
-            <InfoRow icon={<IdCard size={14} color={colors.brandOrange} />} label="RANK" value="Fire Officer II" />
-            <InfoRow icon={<Building2 size={14} color={colors.brandOrange} />} label="STATION" value="BFP Lian Fire Station" />
-            <InfoRow icon={<Phone size={14} color={colors.brandOrange} />} label="CONTACT" value={user.contact_number ?? 'Not set'} isLast />
+            <InfoRow icon={<IdCard size={18} color="#FFFFFF" />} label="RANK" value="Fire Officer II" />
+            <InfoRow icon={<Building2 size={18} color="#FFFFFF" />} label="STATION" value="BFP Lian Fire Station" />
+            <InfoRow icon={<Phone size={18} color="#FFFFFF" />} label="CONTACT" value={user.contact_number ?? 'Not set'} isLast />
           </GlassCard>
         </View>
 
@@ -185,7 +185,14 @@ const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: string; i
   const { colors, spacing, typography } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isLast ? 0 : spacing.md }}>
-      <View style={[styles.infoIcon, { backgroundColor: `${colors.brandOrange}14` }]}>{icon}</View>
+      <LinearGradient
+        colors={['#64748B', '#0F1C3F']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.infoIcon}
+      >
+        {icon}
+      </LinearGradient>
       <View style={{ marginLeft: spacing.sm }}>
         <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700' }}>{label}</Text>
         <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '600', marginTop: 1 }}>{value}</Text>
@@ -313,5 +320,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FED7AA',
   },
-  infoIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  infoIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });

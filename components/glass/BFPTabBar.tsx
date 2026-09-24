@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Home, FileText, Map as MapIcon, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,7 +27,7 @@ const LABELS: Record<string, string> = {
 const VISIBLE_TAB_ORDER = ['dashboard', 'incidents/index', 'map', 'profile/index'] as const;
 
 export const BFPTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   const visibleRoutes = VISIBLE_TAB_ORDER.map((name) => state.routes.find((r) => r.name === name)).filter(
@@ -36,15 +35,13 @@ export const BFPTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) =>
   );
 
   return (
-    <BlurView
-      intensity={80}
-      tint={isDark ? 'dark' : 'light'}
+    <View
       style={[
         styles.container,
         {
           paddingBottom: insets.bottom || 9,
-          borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,28,63,0.08)',
-          backgroundColor: isDark ? 'rgba(10,15,30,0.55)' : 'rgba(255,255,255,0.6)',
+          borderTopColor: colors.border,
+          backgroundColor: colors.surface,
         },
       ]}
     >
@@ -73,7 +70,7 @@ export const BFPTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) =>
           );
         })}
       </View>
-    </BlurView>
+    </View>
   );
 };
 

@@ -8,6 +8,7 @@ interface NotificationContextValue {
   unreadCount: number;
   notifications: Notification[];
   refresh: () => Promise<void>;
+  markRead: (notificationId: number) => Promise<void>;
   markAllRead: () => Promise<void>;
 }
 
@@ -40,6 +41,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   }, []);
 
+  const markRead = useCallback(async (notificationId: number) => {
+    setNotifications((prev) => prev.map((n) =>
+      n.notification_id === notificationId ? { ...n, is_read: true } : n
+    ));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+    try {
+      await notificationService.markRead(notificationId);
+    } catch {
+      // The next refresh will restore the server state if the request fails.
+    }
+  }, []);
+
   useEffect(() => {
     // Only fetch if authenticated
     if (isAuthenticated) {
@@ -67,7 +80,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [refresh, isAuthenticated]);
 
   return (
-    <NotificationContext.Provider value={{ unreadCount, notifications, refresh, markAllRead }}>
+    <NotificationContext.Provider value={{ unreadCount, notifications, refresh, markRead, markAllRead }}>
       {children}
     </NotificationContext.Provider>
   );

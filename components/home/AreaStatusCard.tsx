@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AlertTriangle, ShieldCheck, TrendingUp } from 'lucide-react-native';
-import { useTheme } from '../../theme/ThemeContext';
+import { Flame } from 'lucide-react-native';
 import { RiskLevel } from '../../services/api/models';
+import { APP_CONFIG } from '../../constants/config';
 
 interface AreaStatusCardProps {
   barangayName: string;
@@ -13,9 +13,10 @@ interface AreaStatusCardProps {
 }
 
 const RISK_CONFIG: Record<RiskLevel, { label: string; color: string; sublabel: string }> = {
-  low:      { label: 'Normal',       color: '#10B981', sublabel: 'No active advisories' },
-  moderate: { label: 'Elevated',     color: '#F59E0B', sublabel: 'Exercise caution' },
-  high:     { label: 'High Risk',    color: '#EF4444', sublabel: 'Active advisory in effect' },
+  low:      { label: 'Normal',    color: '#2FA65A', sublabel: 'No active fire advisories' },
+  moderate: { label: 'Elevated',  color: '#EAB308', sublabel: 'Elevated risk — stay alert' },
+  high:     { label: 'High Risk', color: '#F97316', sublabel: 'Active advisory in effect' },
+  critical: { label: 'Critical',  color: '#EF4444', sublabel: 'Immediate danger — evacuate if advised' },
 };
 
 export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
@@ -24,60 +25,45 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
   incidentsThisMonth,
   advisoryText,
 }) => {
-  const { colors, spacing, typography } = useTheme();
   const risk = RISK_CONFIG[riskLevel];
+  const locality = `${APP_CONFIG.DEFAULT_MUNICIPALITY}, ${APP_CONFIG.DEFAULT_PROVINCE}`;
 
   return (
     <View style={styles.shadow}>
       <View style={styles.card}>
-        {/* Gradient background */}
         <LinearGradient
-          colors={['#0F1C3F', '#1B2A5A', 'rgba(244,98,43,0.45)']}
+          colors={['#0F1C3F', '#1B2A5A', 'rgba(244,98,43,0.4)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
 
-        {/* Eyebrow */}
-        <View style={styles.eyebrowRow}>
-          <View style={styles.eyebrowPill}>
-            <ShieldCheck size={11} color="rgba(255,255,255,0.85)" />
-            <Text style={styles.eyebrowText}>AREA STATUS</Text>
+        {/* Section label */}
+        <Text style={styles.eyebrow}>AREA STATUS</Text>
+
+        {/* Body row: risk status left, location right */}
+        <View style={styles.bodyRow}>
+          <View style={styles.riskBlock}>
+            <Text style={[styles.riskLabel, { color: risk.color }]}>{risk.label}</Text>
+            <Text style={styles.sublabel}>{advisoryText ?? risk.sublabel}</Text>
           </View>
-          <Text style={styles.barangayLabel}>{barangayName.toUpperCase()}</Text>
+
+          <View style={styles.locationBlock}>
+            <Text style={styles.barangayName}>{barangayName}</Text>
+            <Text style={styles.locality}>{locality}</Text>
+          </View>
         </View>
 
-        {/* Risk status row */}
-        <View style={[styles.riskRow, { marginTop: spacing.sm }]}>
-          <Text style={[styles.riskLabel, { color: risk.color }]}>{risk.label}</Text>
-        </View>
-        <Text style={styles.riskSublabel}>
-          {advisoryText ?? risk.sublabel}
-        </Text>
+        {/* Divider */}
+        <View style={styles.divider} />
 
-        {/* Stats row */}
-        <View style={styles.statsStrip}>
-          {/* Incidents this month */}
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{incidentsThisMonth}</Text>
-            <Text style={styles.statLabel}>Incidents{'\n'}this month</Text>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          {/* Risk level indicator */}
-          <View style={styles.statItem}>
-            <View style={[styles.riskDot, { backgroundColor: risk.color }]} />
-            <Text style={styles.statLabel}>Risk{'\n'}Level</Text>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          {/* Trend placeholder */}
-          <View style={styles.statItem}>
-            <TrendingUp size={18} color="rgba(255,255,255,0.8)" />
-            <Text style={styles.statLabel}>Monitoring{'\n'}Active</Text>
-          </View>
+        {/* Incidents stat */}
+        <View style={styles.incidentRow}>
+          <Flame size={13} color="rgba(255,255,255,0.4)" />
+          <Text style={styles.incidentText}>
+            <Text style={styles.incidentCount}>{incidentsThisMonth}</Text>
+            {' '}fire incident{incidentsThisMonth !== 1 ? 's' : ''} recorded this month
+          </Text>
         </View>
       </View>
     </View>
@@ -86,107 +72,99 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
 
 const styles = StyleSheet.create({
   shadow: {
-    borderRadius: 28,
+    borderRadius: 24,
     backgroundColor: '#0F1C3F',
     ...Platform.select({
       ios: {
-        shadowColor: '#0F1C3F',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.3,
-        shadowRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.35,
+        shadowRadius: 20,
       },
       android: { elevation: 8 },
     }),
   },
   card: {
-    borderRadius: 28,
-    padding: 22,
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 18,
+    paddingBottom: 16,
     overflow: 'hidden',
   },
 
-  eyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  eyebrowPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.22)',
-  },
-  eyebrowText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.85)',
-    letterSpacing: 0.8,
-  },
-  barangayLabel: {
+  eyebrow: {
     fontSize: 10,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.55)',
-    letterSpacing: 0.6,
+    letterSpacing: 1.4,
+    color: 'rgba(255,255,255,0.38)',
+    marginBottom: 12,
   },
 
-  riskRow: {
+  bodyRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 14,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+
+  /* Left: risk status */
+  riskBlock: {
+    flex: 1,
+    paddingRight: 16,
   },
   riskLabel: {
     fontSize: 26,
     fontWeight: '900',
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
+    lineHeight: 30,
   },
-  riskSublabel: {
+  sublabel: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.5)',
     fontWeight: '500',
     marginTop: 4,
-    marginBottom: 20,
+    lineHeight: 17,
   },
 
-  statsStrip: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 18,
-    paddingVertical: 14,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.16)',
-    alignItems: 'center',
+  /* Right: location */
+  locationBlock: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingTop: 3,           // nudge to align with risk label cap-height
   },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 20,
+  barangayName: {
+    fontSize: 14,
     fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: -0.3,
+    textAlign: 'right',
   },
-  statLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.55)',
-    fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 14,
+  locality: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.38)',
+    marginTop: 3,
+    textAlign: 'right',
   },
-  statDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    marginBottom: 12,
   },
-  riskDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+
+  incidentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  incidentText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: '500',
+  },
+  incidentCount: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
   },
 });

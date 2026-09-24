@@ -24,7 +24,7 @@ const INCIDENT_TYPES: { id: IncidentType; name: string }[] = [
   { id: 'others', name: 'Others' },
 ];
 
-const SEVERITY_OPTIONS: SeverityLevel[] = ['low', 'medium', 'high', 'critical'];
+const SEVERITY_OPTIONS: SeverityLevel[] = ['low', 'moderate', 'high', 'critical'];
 
 export default function CreateManualIncidentScreen() {
   const { colors, spacing, typography, radius } = useTheme();
@@ -32,8 +32,8 @@ export default function CreateManualIncidentScreen() {
   const { location, isLoading: isLocating, requestLocation } = useLocation();
 
   const [barangayId, setBarangayId] = useState<number | null>(null);
-  const [incidentType, setIncidentType] = useState<IncidentType>('residential_fire');
-  const [severity, setSeverity] = useState<SeverityLevel>('low');
+  const [incidentType, setIncidentType] = useState<IncidentType | null>(null);
+  const [severity, setSeverity] = useState<SeverityLevel | null>(null);
   const [description, setDescription] = useState('');
   const [causeOfFire, setCauseOfFire] = useState('');
   const [casualties, setCasualties] = useState('0');
@@ -79,6 +79,10 @@ export default function CreateManualIncidentScreen() {
     }
     if (!description.trim()) {
       Alert.alert('Missing description', 'Please provide a brief description of the incident.');
+      return;
+    }
+    if (!incidentType || !severity) {
+      Alert.alert('Missing incident details', 'Please select the incident type and severity level.');
       return;
     }
 

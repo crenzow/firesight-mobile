@@ -28,6 +28,9 @@ export const reportService = {
     if (payload.location_accuracy_m != null) {
       formData.append('location_accuracy_m', String(payload.location_accuracy_m));
     }
+    if (payload.location_name) {
+      formData.append('location_name', payload.location_name);
+    }
     formData.append('barangay_id', String(payload.barangay_id));
 
     const filename = payload.photoUri.split('/').pop() ?? 'report.jpg';

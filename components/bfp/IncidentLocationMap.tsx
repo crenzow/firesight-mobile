@@ -9,6 +9,7 @@ export interface GPSUpdate {
   longitude: number;
   heading?: number | null;
   speed?: number | null; // m/s from expo-location
+  accuracy?: number | null;
 }
 
 interface IncidentLocationMapProps {
@@ -77,11 +78,10 @@ export const IncidentLocationMap: React.FC<IncidentLocationMapProps> = ({
   useEffect(() => {
     if (!currentGPS || !isNavigating || !webViewRef.current) return;
     const { latitude: lat, longitude: lng } = currentGPS;
-    const heading = currentGPS.heading ?? 0;
     // expo-location gives speed in m/s; convert to km/h for display
     const speedKmh = Math.round((currentGPS.speed ?? 0) * 3.6);
     webViewRef.current.injectJavaScript(
-      `window.onGPSUpdate && window.onGPSUpdate(${lat},${lng},${heading},${speedKmh}); true;`
+      `window.onGPSUpdate && window.onGPSUpdate(${lat},${lng},0,${speedKmh},${currentGPS.accuracy ?? 999}); true;`
     );
   }, [currentGPS, isNavigating]);
 
@@ -266,8 +266,8 @@ var map=new maplibregl.Map({
   container:'map',
   style:styleSpec,
   center:[DEST_LNG,DEST_LAT],
-  zoom: IS_NAV ? 17 : (HAS_ROUTE ? 13 : 15),
-  pitch: IS_NAV ? 55 : 0,
+  zoom: IS_NAV ? 16 : (HAS_ROUTE ? 13 : 15),
+  pitch: 0,
   bearing:0,
   attributionControl:false,
   antialias:true
@@ -279,10 +279,11 @@ var navSteps=[];       // OSRM step objects
 var cumDistEnd=[];     // Cumulative distance from each coord to end (m)
 var stepBounds=[];     // {start:coordIdx, stepIdx} for each step
 var lastSnapIdx=0;
-var lastBearing=0;
 var gpsMarkerEl=null;
 var gpsMarker=null;
 var gpsReceived=false;
+var lastGps=null;
+var MIN_MOVE_METERS=10;
 var totalDist=0, totalDur=0;
 
 /* ── Markers ── */
@@ -437,34 +438,22 @@ async function fetchRoute(){
    injectJavaScript every time expo-location fires.
    This is the ONLY thing that moves the camera.
    ───────────────────────────────────────────────── */
-window.onGPSUpdate=function(lat,lng,heading,speedKmh){
+window.onGPSUpdate=function(lat,lng,heading,speedKmh,accuracy){
   if(!IS_NAV)return;
+
+  if(!isFinite(accuracy)||accuracy>50)return;
+  var moved=lastGps?getDist([lastGps.lng,lastGps.lat],[lng,lat]):Infinity;
+  if(lastGps && moved<MIN_MOVE_METERS)return;
+  lastGps={lng:lng,lat:lat};
 
   /* First update: hide "waiting" indicator */
   if(!gpsReceived){
     gpsReceived=true;
     document.getElementById('gps-wait').style.display='none';
-    /* Initial camera fly-in to actual GPS position */
-    map.flyTo({center:[lng,lat],zoom:17.5,pitch:55,bearing:heading||0,duration:1200});
   }
 
   /* Move the blue GPS arrow */
   if(gpsMarker)gpsMarker.setLngLat([lng,lat]);
-  if(gpsMarkerEl)gpsMarkerEl.style.transform='rotate('+heading+'deg)';
-
-  /* Calculate smooth bearing from movement if heading unreliable */
-  var br=heading||lastBearing;
-  lastBearing=br;
-
-  /* Smoothly follow GPS with 3D tilt — duration intentionally short (camera = live feed) */
-  map.easeTo({
-    center:[lng,lat],
-    bearing:br,
-    pitch:55,
-    zoom:17.5,
-    duration:900,
-    easing:function(t){return t*(2-t);}  /* ease-out */
-  });
 
   /* Snap position to nearest route coordinate */
   if(routeCoords.length>0){
@@ -504,8 +493,8 @@ map.on('load',async function(){
         document.getElementById('hud').style.display='flex';
         document.getElementById('gps-wait').style.display='flex';
         mkGPSArrow(ORIGIN_LNG,ORIGIN_LAT);
-        /* Initial nav camera at origin */
-        map.easeTo({center:[ORIGIN_LNG,ORIGIN_LAT],zoom:17.5,pitch:55,bearing:0,duration:1000});
+        /* Keep the initial camera fixed at the route origin. */
+        map.jumpTo({center:[ORIGIN_LNG,ORIGIN_LAT],zoom:16,pitch:0,bearing:0});
         /* Populate HUD with full-route info while waiting */
         document.getElementById('stat-rem').textContent=fmtD(totalDist);
         document.getElementById('stat-eta').textContent=fmtT(totalDur);

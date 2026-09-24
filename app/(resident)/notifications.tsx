@@ -1,12 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Bell, AlertTriangle, RefreshCw, Info } from 'lucide-react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Bell, AlertTriangle, RefreshCw, Info } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
 import { useNotifications } from '../../context/NotificationContext';
-import { notificationService } from '../../services/api';
 import { Notification } from '../../services/api/models';
 import { formatRelativeDate } from '../../utils/formatters';
 import { ShinyCard } from '../../components/ui/ShinyCard';
@@ -15,40 +14,29 @@ const ICONS = { alert: AlertTriangle, update: RefreshCw, system: Info } as const
 
 export default function NotificationsScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
-  const { colors, spacing, typography, radius } = useTheme();
-  const { markAllRead } = useNotifications();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { colors, spacing, typography } = useTheme();
+  const { notifications, refresh, markRead, markAllRead } = useNotifications();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = useCallback(async () => {
+    setIsRefreshing(true);
     try {
-      const data = await notificationService.list();
-      setNotifications(data);
-      // Clear the global badge now that the user has seen the list
-      markAllRead();
+      await refresh();
+      await markAllRead();
     } catch {
       // Non-fatal
     } finally {
-      setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [markAllRead]);
+  }, [refresh, markAllRead]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     load();
-  }, [load]);
+  }, [load]));
 
   const handlePress = async (notification: Notification) => {
     if (!notification.is_read) {
-      setNotifications((prev) =>
-        prev.map((n) => (n.notification_id === notification.notification_id ? { ...n, is_read: true } : n))
-      );
-      try {
-        await notificationService.markRead(notification.notification_id);
-      } catch {
-        // Optimistic update stands even if the sync call fails.
-      }
+      await markRead(notification.notification_id);
     }
   };
 
@@ -81,14 +69,12 @@ export default function NotificationsScreen() {
           />
         }
         ListEmptyComponent={
-          !isLoading ? (
-            <View style={styles.emptyState}>
+          <View style={styles.emptyState}>
               <Bell size={32} color={colors.textMuted} />
               <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, marginTop: spacing.sm }}>
-                You're all caught up — no notifications yet.
+                You&apos;re all caught up — no notifications yet.
               </Text>
-            </View>
-          ) : null
+          </View>
         }
         renderItem={({ item }) => {
           const Icon = ICONS[item.notification_type];

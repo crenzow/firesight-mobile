@@ -1,14 +1,14 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, RefreshControl, Pressable } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import { Search, Plus, ClipboardList } from 'lucide-react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, RefreshControl } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { Search, ClipboardList } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { GlassHeader } from '../../../components/glass/GlassHeader';
 import { SegmentedControl } from '../../../components/glass/SegmentedControl';
 import { IncidentListItem } from '../../../components/bfp/IncidentListItem';
 import { incidentService } from '../../../services/api/incidentService';
 import { BFPIncident } from '../../../services/api/bfpModels';
-import { notificationService } from '../../../services/api';
+import { useNotifications } from '../../../context/NotificationContext';
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All' },
@@ -18,13 +18,20 @@ const STATUS_FILTERS = [
   { key: 'resolved', label: 'Resolved' },
 ];
 
+const STATUS_PRIORITY: Record<string, number> = {
+  'pending': 1,
+  'accepted': 2,
+  'dispatched': 3,
+  'resolved': 4,
+  'invalid': 5,
+};
 
 export default function IncidentsListScreen() {
-  const { colors, spacing, typography, radius, shadow } = useTheme();
+  const { colors, spacing, typography, radius } = useTheme();
+  const { unreadCount } = useNotifications();
   const [incidents, setIncidents] = useState<BFPIncident[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = useCallback(() => {
@@ -36,10 +43,6 @@ export default function IncidentsListScreen() {
       })
       .finally(() => setIsRefreshing(false));
 
-    notificationService
-      .list()
-      .then((data) => setUnreadCount(data.filter((n) => !n.is_read).length))
-      .catch(() => {});
   }, []);
 
   useFocusEffect(
@@ -49,7 +52,7 @@ export default function IncidentsListScreen() {
   );
 
   const filtered = useMemo(() => {
-    return incidents.filter((incident) => {
+    const result = incidents.filter((incident) => {
       const matchesStatus = statusFilter === 'all' || incident.status === statusFilter;
       const query = search.trim().toLowerCase();
       const matchesSearch =
@@ -58,6 +61,17 @@ export default function IncidentsListScreen() {
         incident.description.toLowerCase().includes(query) ||
         (incident.reporter_name ?? '').toLowerCase().includes(query);
       return matchesStatus && matchesSearch;
+    });
+
+    // Sort: prioritize by status priority, then fallback to descending date (latest first)
+    return result.sort((a, b) => {
+      const pA = STATUS_PRIORITY[a.status] ?? 99;
+      const pB = STATUS_PRIORITY[b.status] ?? 99;
+      
+      if (pA !== pB) {
+        return pA - pB; // lower number = higher priority
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [incidents, statusFilter, search]);
 
@@ -112,12 +126,15 @@ export default function IncidentsListScreen() {
         renderItem={({ item }) => <IncidentListItem incident={item} />}
       />
 
+      {/* Temporarily disabled manual incident creation button. */}
+      {/*
       <Pressable
         onPress={() => router.push('/(bfp)/incidents/create?from=incidents')}
         style={[styles.fab, { backgroundColor: colors.brandOrange, borderRadius: radius.full }, shadow.fab]}
       >
         <Plus size={26} color="#FFFFFF" />
       </Pressable>
+      */}
     </View>
   );
 }

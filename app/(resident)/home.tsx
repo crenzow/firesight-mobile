@@ -82,7 +82,7 @@ export default function HomeScreen() {
           }
         >
           {/* Area Status Hero */}
-          <View style={{ marginTop: 8 }}>
+          <View>
             <AreaStatusCard
               barangayName={areaStatus?.barangay_name ?? user?.address?.barangay_name ?? 'Your Barangay'}
               riskLevel={areaStatus?.risk_level ?? 'low'}
@@ -96,57 +96,59 @@ export default function HomeScreen() {
             <QuickActionsRow />
           </View>
 
-
           {/* Recent Reports */}
-          <View style={[styles.sectionHeader, { marginTop: spacing.xl, marginBottom: spacing.sm }]}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.size.md }]}>
-              My Recent Reports
-            </Text>
-            <Pressable
-              onPress={() => router.push({ pathname: '/(resident)/reports', params: { from: pathname } } as any)}
-              style={({ pressed }) => [styles.seeAllRow, { opacity: pressed ? 0.6 : 1 }]}
-            >
-              <Text style={{ color: colors.brandOrange, fontSize: typography.size.sm, fontWeight: '600' }}>
-                See all
+          <View style={{ marginTop: spacing.xl }}>
+            <View style={[styles.sectionHeader, { marginBottom: spacing.sm }]}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.size.md }]}>
+                My Recent Reports
               </Text>
-              <ChevronRight size={14} color={colors.brandOrange} />
-            </Pressable>
+              <Pressable
+                onPress={() => router.push({ pathname: '/(resident)/reports', params: { from: pathname } } as any)}
+                style={({ pressed }) => [styles.seeAllRow, { opacity: pressed ? 0.6 : 1 }]}
+              >
+                <Text style={{ color: colors.brandOrange, fontSize: typography.size.sm, fontWeight: '600' }}>
+                  See all
+                </Text>
+                <ChevronRight size={14} color={colors.brandOrange} />
+              </Pressable>
+            </View>
+
+            <ShinyCard style={styles.reportsCard} padding={0}>
+              {isLoading ? (
+                <View style={styles.stateBox}>
+                  <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>Loading…</Text>
+                </View>
+              ) : recentReports.length === 0 ? (
+                <View style={styles.stateBox}>
+                  <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, textAlign: 'center', lineHeight: 20 }}>
+                    No reports yet. Tap the action button to submit an incident.
+                  </Text>
+                </View>
+              ) : (
+                recentReports.map((report, index) => (
+                  <View
+                    key={report.report_id}
+                    style={[
+                      { paddingHorizontal: spacing.md },
+                      index < recentReports.length - 1
+                        ? { borderBottomWidth: 1, borderBottomColor: colors.border }
+                        : undefined,
+                    ]}
+                  >
+                    <ReportListItem report={report} />
+                  </View>
+                ))
+              )}
+            </ShinyCard>
           </View>
 
-          {/* Reports card */}
-          <ShinyCard style={styles.reportsCard} padding={0}>
-            {isLoading ? (
-              <View style={styles.stateBox}>
-                <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>Loading…</Text>
-              </View>
-            ) : recentReports.length === 0 ? (
-              <View style={styles.stateBox}>
-                <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, textAlign: 'center', lineHeight: 20 }}>
-                  No reports yet. Tap the action button to submit an incident.
-                </Text>
-              </View>
-            ) : (
-              recentReports.map((report, index) => (
-                <View
-                  key={report.report_id}
-                  style={[
-                    { paddingHorizontal: spacing.md },
-                    index < recentReports.length - 1
-                      ? { borderBottomWidth: 1, borderBottomColor: colors.border }
-                      : undefined,
-                  ]}
-                >
-                  <ReportListItem report={report} />
-                </View>
-              ))
-            )}
-          </ShinyCard>
-
           {/* Safety Tip */}
-          <DailyTipCard
-            title="Never leave cooking unattended"
-            tip="Unattended kitchen equipment is the leading cause of residential fires in Lian."
-          />
+          <View style={{ marginTop: spacing.xl }}>
+            <DailyTipCard
+              title="Never leave cooking unattended"
+              tip="Unattended kitchen equipment is the leading cause of residential fires in Lian."
+            />
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>

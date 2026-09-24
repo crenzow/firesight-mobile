@@ -2,11 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
-export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
+export type SeverityLevel = 'low' | 'moderate' | 'high' | 'critical';
 
 const SEVERITY_LABEL: Record<SeverityLevel, string> = {
   low: 'Low',
-  medium: 'Medium',
+  moderate: 'Moderate',
   high: 'High',
   critical: 'Critical',
 };
@@ -15,7 +15,7 @@ export const SeverityBadge: React.FC<{ severity: SeverityLevel }> = ({ severity 
   const { colors, spacing, radius, typography } = useTheme();
 
   const color =
-    severity === 'critical' ? colors.danger : severity === 'high' ? colors.brandOrange : severity === 'medium' ? colors.warning : colors.success;
+    severity === 'critical' ? colors.danger : severity === 'high' ? colors.brandOrange : severity === 'moderate' ? colors.warning : colors.success;
 
   return (
     <View

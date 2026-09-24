@@ -44,6 +44,7 @@ export default function ReviewScreen() {
         device_latitude: draft.deviceLocation?.latitude,
         device_longitude: draft.deviceLocation?.longitude,
         location_accuracy_m: draft.deviceLocation?.accuracy ?? undefined,
+        location_name: draft.incidentPlaceName ?? undefined,
         barangay_id: draft.barangayId,
         photoUri: draft.photoUri,
       });

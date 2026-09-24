@@ -31,8 +31,9 @@ export const MapFilterModal: React.FC<MapFilterModalProps> = ({
 
   const riskOptions: { key: 'all' | RiskLevel; label: string; color?: string }[] = [
     { key: 'all', label: 'All Risk Levels' },
-    { key: 'high', label: 'High Risk', color: '#E14245' },
-    { key: 'moderate', label: 'Moderate Risk', color: '#E8A33D' },
+    { key: 'critical', label: 'Critical Risk', color: '#EF4444' },
+    { key: 'high', label: 'High Risk', color: '#F97316' },
+    { key: 'moderate', label: 'Moderate Risk', color: '#EAB308' },
     { key: 'low', label: 'Low Risk', color: '#2FA65A' },
   ];
 

@@ -14,7 +14,7 @@ export const DailyTipCard: React.FC<DailyTipCardProps> = ({ title, tip }) => {
   const { colors, spacing, typography, isDark } = useTheme();
 
   return (
-    <Card style={{ marginTop: spacing.xl }} padding={spacing.md}>
+    <Card padding={spacing.md}>
       <View style={styles.container}>
         <View style={[styles.iconWrap, { backgroundColor: isDark ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.1)' }]}>
           <Lightbulb size={18} color="#3B82F6" />

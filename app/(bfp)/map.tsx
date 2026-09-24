@@ -1,68 +1,84 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Flame, MapPin } from 'lucide-react-native';
+import { MapPin, Filter } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { LeafletMapView } from '../../components/map/LeafletMapView';
 import { MapTypeSelector, MapType } from '../../components/map/MapTypeSelector';
 import { RiskLegend } from '../../components/map/RiskLegend';
 import { SegmentedControl } from '../../components/glass/SegmentedControl';
-import { YearFilterRow } from '../../components/bfp/YearFilterRow';
+import { MapFilterModal } from '../../components/map/MapFilterModal';
 import { mapService } from '../../services/api/mapService';
-import { BFPIncidentMarker, BarangayRiskFeature } from '../../services/api/models';
+import { BFPIncidentMarker, BarangayRiskFeature, RiskLevel } from '../../services/api/models';
 
 const firesightLogo = require('../../assets/images/firesight-logo.png');
 const LIAN_CENTER = { lat: 14.0065, lng: 120.6425 };
 
 export default function BFPMapScreen() {
-  const { colors, spacing, typography, shadow } = useTheme();
+  const { colors, spacing, typography } = useTheme();
   const [mode, setMode] = useState<'risk' | 'incidents'>('risk');
   const [mapType, setMapType] = useState<MapType>('standard');
-  const [yearFilter, setYearFilter] = useState<number | 'all'>('all');
   const [incidents, setIncidents] = useState<BFPIncidentMarker[]>([]);
   const [barangays, setBarangays] = useState<BarangayRiskFeature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Filter state
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [selectedRisk, setSelectedRisk] = useState<'all' | RiskLevel>('all');
+
   useEffect(() => {
     setIsLoading(true);
-    const filters = yearFilter !== 'all' ? { year: yearFilter } : {};
     Promise.allSettled([
       mapService.getBarangayRisk(),
-      mapService.getBFPIncidents(filters),
+      mapService.getBFPIncidents(),
     ]).then(([riskResult, incidentResult]) => {
       if (riskResult.status === 'fulfilled') setBarangays(riskResult.value);
       if (incidentResult.status === 'fulfilled') setIncidents(incidentResult.value);
       setIsLoading(false);
     });
-  }, [yearFilter]);
+  }, []);
 
-  // availableYears derived from loaded incidents (shown in year filter UI)
-  const availableYears = useMemo(() => {
-    const years = new Set(
-      incidents.map((i) => {
-        const timeString = i.data_time || new Date().toISOString();
-        return new Date(timeString.replace(' ', 'T')).getFullYear();
-      })
-    );
-    return Array.from(years).sort((a, b) => b - a);
-  }, [incidents]);
+  const filteredBarangays = useMemo(() => {
+    return barangays.filter((b) => {
+      return selectedRisk === 'all' || b.risk_level === selectedRisk;
+    });
+  }, [barangays, selectedRisk]);
 
-  // When yearFilter is 'all', server already returns all; filteredIncidents === incidents
-  const filteredIncidents = incidents;
+  const isFilterActive = selectedRisk !== 'all';
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0F1C3F' }}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#0F1C3F' }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Image source={firesightLogo} style={{ width: 34, height: 34, marginRight: 1 }} resizeMode="contain" />
-            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '800', letterSpacing: 1 }}>
-              FIRE<Text style={{ color: colors.brandOrange }}>SIGHT</Text><Text style={{ color: '#FFFFFF' }}> MAP</Text>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={firesightLogo} style={{ width: 34, height: 34, marginRight: 1 }} resizeMode="contain" />
+              <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '800', letterSpacing: 1 }}>
+                FIRE<Text style={{ color: colors.brandOrange }}>SIGHT</Text><Text style={{ color: '#FFFFFF' }}> MAP</Text>
+              </Text>
+            </View>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: typography.size.xs, marginTop: 1 }}>
+              Fire-prone areas · Lian, Batangas
             </Text>
           </View>
-          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: typography.size.xs, marginTop: 1 }}>
-            Fire-prone areas · Lian, Batangas
-          </Text>
+
+          {/* Filter Button (Only show in risk mode) */}
+          {mode === 'risk' && (
+            <Pressable
+              onPress={() => setIsFilterModalOpen(true)}
+              style={[
+                styles.filterButton,
+                {
+                  backgroundColor: isFilterActive ? colors.brandOrange : 'rgba(255,255,255,0.12)',
+                  borderColor: isFilterActive ? colors.brandOrange : 'rgba(255,255,255,0.2)',
+                },
+              ]}
+            >
+              <Filter size={15} color="#FFFFFF" />
+              <Text style={styles.filterButtonText}>Filter</Text>
+              {isFilterActive && <View style={styles.activeDot} />}
+            </Pressable>
+          )}
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md }}>
@@ -76,18 +92,16 @@ export default function BFPMapScreen() {
           />
         </View>
 
-        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md, marginBottom: spacing.sm }}>
-          <YearFilterRow years={availableYears} value={yearFilter} onChange={setYearFilter} />
-        </View>
       </SafeAreaView>
 
       <View style={styles.mapContainer}>
         {!isLoading ? (
           <LeafletMapView
+            key={`${mode}-${selectedRisk}`}
             mode={mode}
             mapType={mapType}
-            barangays={barangays}
-            incidents={filteredIncidents}
+            barangays={filteredBarangays}
+            incidents={incidents}
             userLocation={null}
             centerLat={LIAN_CENTER.lat}
             centerLng={LIAN_CENTER.lng}
@@ -100,7 +114,7 @@ export default function BFPMapScreen() {
         ) : (
           <View style={[styles.legendCard, { backgroundColor: 'rgba(10,15,30,0.7)' }]}>
             <MapPin size={12} color="#F4622B" />
-            <Text style={styles.legendText}>{filteredIncidents.length} incident{filteredIncidents.length === 1 ? '' : 's'}</Text>
+            <Text style={styles.legendText}>{incidents.length} incident{incidents.length === 1 ? '' : 's'}</Text>
           </View>
         )}
 
@@ -108,12 +122,46 @@ export default function BFPMapScreen() {
           <MapTypeSelector mapType={mapType} onChange={setMapType} />
         </View>
       </View>
+
+      <MapFilterModal
+        visible={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        selectedRisk={selectedRisk}
+        onSelectRisk={setSelectedRisk}
+        onReset={() => setSelectedRisk('all')}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   mapContainer: { flex: 1, position: 'relative' },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
+    position: 'relative',
+  },
+  filterButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  activeDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#F4622B',
+  },
   legendCard: {
     position: 'absolute',
     bottom: 16,

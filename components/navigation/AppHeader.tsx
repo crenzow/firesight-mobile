@@ -24,7 +24,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ variant = 'dark' }) => {
 
   return (
     <SafeAreaView style={{ backgroundColor }} edges={['top']}>
-      <View style={[styles.row, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}>
+      <View style={[styles.row, { height: 64, paddingHorizontal: spacing.lg }]}>
         <View style={styles.brandContainer}>
           <Image source={firesightLogo} style={styles.headerLogo} resizeMode="contain" />
           <Text style={[styles.wordmark, { color: textColor, fontSize: 20 }]}>

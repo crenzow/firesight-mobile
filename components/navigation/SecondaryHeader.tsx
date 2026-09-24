@@ -23,7 +23,7 @@ export const SecondaryHeader: React.FC<SecondaryHeaderProps> = ({ title, onBack 
 
   return (
     <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']}>
-      <View style={[styles.row, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}>
+      <View style={[styles.row, { height: 64, paddingHorizontal: spacing.lg }]}>
         <Pressable onPress={handleBack} hitSlop={12}>
           <ArrowLeft size={22} color={colors.textInverse} />
         </Pressable>

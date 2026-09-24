@@ -37,6 +37,7 @@ import {
   Map,
   PlayCircle,
   StopCircle,
+  CheckCircle2,
 } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { GlassHeader } from '../../../components/glass/GlassHeader';
@@ -53,8 +54,9 @@ import { BFPIncident, BFPIncidentStatusHistoryEntry, IncidentType } from '../../
 import { BFPIncidentStatus } from '../../../components/bfp/IncidentStatusBadge';
 import { formatFullDate, formatTime } from '../../../utils/formatters';
 import { FIRE_STATION } from '../../../constants/fireStation';
+import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
 
-const SEVERITY_OPTIONS: SeverityLevel[] = ['low', 'medium', 'high', 'critical'];
+const SEVERITY_OPTIONS: SeverityLevel[] = ['low', 'moderate', 'high', 'critical'];
 const INCIDENT_TYPE_OPTIONS: { id: IncidentType; name: string }[] = [
   { id: 'residential_fire', name: 'Residential Fire' },
   { id: 'commercial_fire', name: 'Commercial Fire' },
@@ -252,13 +254,21 @@ export default function IncidentDetailScreen() {
   const [history, setHistory] = useState<BFPIncidentStatusHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActing, setIsActing] = useState(false);
+  const [dialog, setDialog] = useState<{
+    type: 'success' | 'confirm' | 'danger' | 'info';
+    title: string;
+    message: string;
+    confirmText: string;
+    icon: React.ReactNode;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [causeOfFire, setCauseOfFire] = useState('');
   const [casualties, setCasualties] = useState('0');
   const [notes, setNotes] = useState('');
-  const [severity, setSeverity] = useState<SeverityLevel>('low');
-  const [incidentType, setIncidentType] = useState<IncidentType>('residential_fire');
+  const [severity, setSeverity] = useState<SeverityLevel | null>(null);
+  const [incidentType, setIncidentType] = useState<IncidentType | null>(null);
 
   // Route / Map state
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -288,8 +298,8 @@ export default function IncidentDetailScreen() {
       const sub = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Highest,
-          timeInterval: 1000,
-          distanceInterval: 3,
+          timeInterval: 2000,
+          distanceInterval: 5,
         },
         (loc) => {
           setCurrentGPS({
@@ -297,6 +307,7 @@ export default function IncidentDetailScreen() {
             longitude: loc.coords.longitude,
             heading: loc.coords.heading,
             speed: loc.coords.speed,
+            accuracy: loc.coords.accuracy,
           });
         }
       );
@@ -345,8 +356,8 @@ export default function IncidentDetailScreen() {
         setCauseOfFire(detail.cause_of_fire ?? '');
         setCasualties(String(detail.casualties ?? 0));
         setNotes(detail.notes ?? '');
-        setSeverity(detail.severity_level ?? 'low');
-        setIncidentType(detail.incident_type ?? 'residential_fire');
+        setSeverity(detail.severity_level ?? null);
+        setIncidentType(detail.incident_type ?? null);
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
@@ -378,64 +389,76 @@ export default function IncidentDetailScreen() {
       : null;
 
   const handleVerify = () => {
-    Alert.alert('Verify Incident', 'Confirm this report as a genuine fire incident?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Verify',
-        onPress: async () => {
-          setIsActing(true);
-          try {
-            const updated = await incidentService.verify(reportId);
-            setIncident(updated);
-            load();
-          } catch {
-            Alert.alert('Unable to verify', 'Please try again once the backend endpoint is available.');
-          } finally { setIsActing(false); }
-        },
+    setDialog({
+      type: 'confirm',
+      title: 'Verify Incident',
+      message: 'Confirm this report as a genuine fire incident?',
+      confirmText: 'Verify Incident',
+      icon: <ShieldCheck size={28} color="#FFFFFF" strokeWidth={2.5} />,
+      onConfirm: async () => {
+        setIsActing(true);
+        try {
+          const updated = await incidentService.verify(reportId);
+          setIncident(updated);
+          load();
+          setDialog(null);
+        } catch {
+          Alert.alert('Unable to verify', 'Please try again once the backend endpoint is available.');
+        } finally { setIsActing(false); }
       },
-    ]);
+    });
   };
 
   const handleMarkInvalid = () => {
-    Alert.alert('Mark as False Report', 'This will close the report as invalid. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Mark Invalid',
-        style: 'destructive',
-        onPress: async () => {
-          setIsActing(true);
-          try {
-            const updated = await incidentService.markInvalid(reportId, 'Unable to confirm active incident.');
-            setIncident(updated);
-            load();
-          } catch {
-            Alert.alert('Unable to update', 'Please try again once the backend endpoint is available.');
-          } finally { setIsActing(false); }
-        },
+    setDialog({
+      type: 'danger',
+      title: 'Mark as False Report',
+      message: 'This will close the report as invalid and remove it from active response work.',
+      confirmText: 'Mark Invalid',
+      icon: <ShieldX size={28} color="#FFFFFF" strokeWidth={2.5} />,
+      onConfirm: async () => {
+        setIsActing(true);
+        try {
+          const updated = await incidentService.markInvalid(reportId, 'Unable to confirm active incident.');
+          setIncident(updated);
+          load();
+          setDialog(null);
+        } catch {
+          Alert.alert('Unable to update', 'Please try again once the backend endpoint is available.');
+        } finally { setIsActing(false); }
       },
-    ]);
+    });
   };
 
   const handleAdvanceStatus = (nextStatus: BFPIncidentStatus) => {
-    Alert.alert('Update Status', `Move this incident to "${nextStatus}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: async () => {
-          setIsActing(true);
-          try {
-            const updated = await incidentService.updateStatus(reportId, nextStatus);
-            setIncident(updated);
-            load();
-          } catch {
-            Alert.alert('Unable to update', 'Please try again once the backend endpoint is available.');
-          } finally { setIsActing(false); }
-        },
+    const statusLabel = nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1);
+    setDialog({
+      type: nextStatus === 'resolved' ? 'success' : 'confirm',
+      title: `${statusLabel} Incident`,
+      message: `Move this incident to ${statusLabel.toLowerCase()} and notify the response team?`,
+      confirmText: `Mark ${statusLabel}`,
+      icon: nextStatus === 'resolved'
+        ? <CheckCircle2 size={28} color="#FFFFFF" strokeWidth={2.5} />
+        : <Navigation2 size={28} color="#FFFFFF" strokeWidth={2.5} />,
+      onConfirm: async () => {
+        setIsActing(true);
+        try {
+          const updated = await incidentService.updateStatus(reportId, nextStatus);
+          setIncident(updated);
+          load();
+          setDialog(null);
+        } catch {
+          Alert.alert('Unable to update', 'Please try again once the backend endpoint is available.');
+        } finally { setIsActing(false); }
       },
-    ]);
+    });
   };
 
   const handleSaveDetails = async () => {
+    if (!incidentType || !severity) {
+      Alert.alert('Missing incident details', 'Please select the incident type and severity level before saving.');
+      return;
+    }
     setIsActing(true);
     try {
       const updated = await incidentService.updateDetails(reportId, {
@@ -547,6 +570,7 @@ export default function IncidentDetailScreen() {
                 mainPhoto={incident.report_image}
                 evidencePhotos={incident.evidence_photos ?? []}
                 onAddEvidence={handleAddEvidence}
+                canAdd={incident.status === 'resolved'}
               />
             </Card>
           </View>
@@ -1024,6 +1048,18 @@ export default function IncidentDetailScreen() {
           )}
         </View>
       </Modal>
+
+      <ConfirmationDialog
+        visible={dialog !== null}
+        type={dialog?.type}
+        title={dialog?.title ?? ''}
+        message={dialog?.message ?? ''}
+        confirmText={dialog?.confirmText}
+        icon={dialog?.icon}
+        loading={isActing}
+        onConfirm={() => dialog?.onConfirm()}
+        onCancel={() => setDialog(null)}
+      />
     </View>
   );
 }

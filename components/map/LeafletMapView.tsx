@@ -7,8 +7,9 @@ import LianGeoJson from '../../boundaries/barangay_boundaries_lian.json';
 
 const RISK_HEX: Record<RiskLevel, string> = {
   low: '#2FA65A',
-  moderate: '#E8A33D',
-  high: '#E14245',
+  moderate: '#EAB308',
+  high: '#F97316',
+  critical: '#EF4444',
 };
 
 const DB_TO_GEOJSON_MAP: Record<string, string> = {
@@ -241,7 +242,7 @@ function buildMapHtml({
       });
     } else {
       incidents.forEach((i) => {
-        const color = i.severity === 'critical' || i.severity === 'high' ? '#E14245' : i.severity === 'medium' ? '#E8A33D' : '#3B82C4';
+        const color = i.severity === 'critical' || i.severity === 'high' ? '#E14245' : i.severity === 'moderate' ? '#E8A33D' : '#3B82C4';
         const marker = L.circleMarker([i.lat, i.lng], {
           radius: 8,
           color: '#FFFFFF',
@@ -254,7 +255,7 @@ function buildMapHtml({
         if (isBFP) {
           const fmt = function(v) { return v != null && v !== '' ? v : '-'; };
           const dateLabel = new Date(timeString.replace(' ', 'T')).toLocaleString();
-          const sc = i.severity === 'critical' ? '#E14245' : i.severity === 'high' ? '#E8A33D' : i.severity === 'medium' ? '#E8A33D' : '#3B82C4';
+          const sc = i.severity === 'critical' ? '#E14245' : i.severity === 'high' ? '#E8A33D' : i.severity === 'moderate' ? '#E8A33D' : '#3B82C4';
           const stc = i.status === 'resolved' ? '#2FA65A' : i.status === 'dispatched' ? '#E8A33D' : '#3B82C4';
           popupHtml =
             '<div style="font-family:-apple-system,Roboto,sans-serif;min-width:220px;max-width:280px">' +

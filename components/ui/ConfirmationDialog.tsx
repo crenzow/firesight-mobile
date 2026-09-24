@@ -16,6 +16,7 @@ export interface ConfirmationDialogProps {
   cancelText?: string;
   onConfirm: () => void;
   onCancel?: () => void;
+  onClose?: () => void;
   loading?: boolean;
   icon?: React.ReactNode;
   showCancel?: boolean;
@@ -30,6 +31,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   cancelText = 'Cancel',
   onConfirm,
   onCancel,
+  onClose,
   loading = false,
   icon,
   showCancel = true,
@@ -88,7 +90,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onCancel ?? onConfirm}
+      onRequestClose={onClose ?? onCancel ?? onConfirm}
     >
       <View style={styles.backdrop}>
         <View
@@ -113,9 +115,9 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
           </View>
 
           {/* Close button if optional */}
-          {onCancel && (
+          {(onClose || onCancel) && (
             <Pressable
-              onPress={onCancel}
+              onPress={onClose ?? onCancel}
               hitSlop={12}
               style={[styles.closeButton, { backgroundColor: colors.surfaceElevated }]}
             >

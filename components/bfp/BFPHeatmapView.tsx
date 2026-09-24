@@ -10,7 +10,7 @@ interface BFPHeatmapViewProps {
   centerLng: number;
 }
 
-const SEVERITY_WEIGHT: Record<string, number> = { low: 0.3, medium: 0.5, high: 0.8, critical: 1.0 };
+const SEVERITY_WEIGHT: Record<string, number> = { low: 0.3, moderate: 0.5, high: 0.8, critical: 1.0 };
 
 /**
  * Risk Mapping module map — two modes:
@@ -36,7 +36,7 @@ export const BFPHeatmapView: React.FC<BFPHeatmapViewProps> = ({ mode, incidents,
 
 function buildHtml({ mode, incidents, centerLat, centerLng }: BFPHeatmapViewProps): string {
   const heatPoints = JSON.stringify(
-    incidents.map((i) => [i.latitude, i.longitude, SEVERITY_WEIGHT[i.severity_level] ?? 0.4])
+    incidents.map((i) => [i.latitude, i.longitude, i.severity_level ? SEVERITY_WEIGHT[i.severity_level] ?? 0.4 : 0.4])
   );
   const markerData = JSON.stringify(
     incidents.map((i) => ({
@@ -81,7 +81,7 @@ function buildHtml({ mode, incidents, centerLat, centerLng }: BFPHeatmapViewProp
       }
     } else {
       markers.forEach((m) => {
-        const color = m.severity === 'critical' || m.severity === 'high' ? '#E14245' : m.severity === 'medium' ? '#E8A33D' : '#3B82C4';
+        const color = m.severity === 'critical' || m.severity === 'high' ? '#E14245' : m.severity === 'moderate' ? '#E8A33D' : '#3B82C4';
         const marker = L.circleMarker([m.lat, m.lng], { radius: 8, color: '#FFFFFF', weight: 2, fillColor: color, fillOpacity: 0.9 }).addTo(map);
         const dateLabel = new Date(m.date.replace(' ', 'T')).toLocaleDateString();
         marker.bindPopup('<b>' + m.barangay + '</b><br/>' + m.type + ' &middot; ' + m.severity + '<br/>' + dateLabel);

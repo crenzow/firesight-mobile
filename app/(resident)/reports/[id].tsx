@@ -10,6 +10,7 @@ import { CommunityReport, ReportStatus, ReportStatusHistoryEntry } from '../../.
 import { StatusBadge } from '../../../components/home/StatusBadge';
 import { formatFullDate, formatTime } from '../../../utils/formatters';
 import { APP_CONFIG } from '../../../constants/config';
+import { reverseGeocode } from '../../../utils/geocoding';
 
 const TIMELINE_STEPS: ReportStatus[] = ['pending', 'accepted', 'dispatched', 'resolved'];
 
@@ -29,6 +30,7 @@ export default function ReportDetailScreen() {
   const [report, setReport] = useState<CommunityReport | null>(null);
   const [history, setHistory] = useState<ReportStatusHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [locationName, setLocationName] = useState('Loading location…');
 
   useEffect(() => {
     if (!id) return;
@@ -43,6 +45,20 @@ export default function ReportDetailScreen() {
       })
       .finally(() => setIsLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!report) return;
+    let isMounted = true;
+    setLocationName(report.barangay_name ?? 'Loading location…');
+    reverseGeocode(report.latitude, report.longitude).then((name) => {
+      if (isMounted) {
+        setLocationName(name !== 'Unknown area' ? name : (report.barangay_name ?? 'Unknown location'));
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [report]);
 
   const currentStepIndex = report ? TIMELINE_STEPS.indexOf(report.status) : -1;
 
@@ -79,7 +95,7 @@ export default function ReportDetailScreen() {
           <View style={[styles.infoRow, { marginTop: spacing.md }]}>
             <MapPin size={16} color={colors.textMuted} />
             <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, marginLeft: 6, fontWeight: '600' }}>
-              {report.barangay_name ?? 'Brgy. Poblacion'}
+              {locationName}
             </Text>
           </View>
           <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 2, marginLeft: 22 }}>

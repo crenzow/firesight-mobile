@@ -54,7 +54,7 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
 
   const innerContent = (
     <SafeAreaView edges={['top']}>
-      <View style={[styles.row, { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }]}>
+      <View style={[styles.row, { height: 54, paddingHorizontal: spacing.lg }]}>
         {showBack ? (
           <Pressable onPress={() => onBack ? onBack() : router.back()} hitSlop={10} style={styles.backButton}>
             <ArrowLeft size={22} color={textColor} />
