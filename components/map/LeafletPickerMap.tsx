@@ -37,30 +37,45 @@ export const LeafletPickerMap: React.FC<LeafletPickerMapProps> = ({
   onReady,
 }) => {
   const webviewRef = useRef<WebView>(null);
+  const isLoadedRef = useRef(false);
+
+  const initialLatRef = useRef(initialLat);
+  const initialLngRef = useRef(initialLng);
+  const initialZoomRef = useRef(zoom);
+  const initialMapTypeRef = useRef(mapType);
 
   const pan = useCallback((lat: number, lng: number) => {
     webviewRef.current?.injectJavaScript(
-      `map.flyTo([${lat}, ${lng}], 17, { animate: true, duration: 1.0 }); true;`
+      `if (typeof map !== 'undefined' && map && map.flyTo) { map.flyTo([${lat}, ${lng}], 17, { animate: true, duration: 1.0 }); } true;`
     );
   }, []);
 
   const handleLoad = useCallback(() => {
+    isLoadedRef.current = true;
     onReady?.(pan);
   }, [onReady, pan]);
 
   // Switch tile layer live without reloading the WebView
   React.useEffect(() => {
-    webviewRef.current?.injectJavaScript(
-      `if (window.switchLayer) { window.switchLayer('${mapType}'); } true;`
-    );
+    if (webviewRef.current) {
+      webviewRef.current.injectJavaScript(
+        `if (window.switchLayer) { window.switchLayer('${mapType}'); } true;`
+      );
+    }
   }, [mapType]);
 
   const html = useMemo(
-    () => buildMapHtml(initialLat, initialLng, zoom, mapType),
-    // Only rebuild on initial mount — tile switches happen via injection
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () =>
+      buildMapHtml(
+        initialLatRef.current,
+        initialLngRef.current,
+        initialZoomRef.current,
+        initialMapTypeRef.current
+      ),
     []
   );
+
+  const source = useMemo(() => ({ html }), [html]);
 
   const handleMessage = (event: any) => {
     try {
@@ -79,7 +94,7 @@ export const LeafletPickerMap: React.FC<LeafletPickerMapProps> = ({
       <WebView
         ref={webviewRef}
         originWhitelist={['*']}
-        source={{ html }}
+        source={source}
         style={styles.webview}
         javaScriptEnabled
         domStorageEnabled
@@ -149,11 +164,14 @@ function buildMapHtml(lat: number, lng: number, zoom: number, initialMapType: Pi
 
     /* Switch tile layer from React Native without reloading */
     window.switchLayer = function(type) {
-      map.removeLayer(currentLayer);
+      if (!TILES[type]) return;
+      if (currentLayer) {
+        map.removeLayer(currentLayer);
+      }
       currentLayer = L.tileLayer(TILES[type], {
         maxZoom: 19,
         subdomains: type === 'standard' ? 'abc' : '',
-        attribution: ATTR[type]
+        attribution: ATTR[type] || ''
       }).addTo(map);
     };
 

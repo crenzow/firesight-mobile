@@ -3,6 +3,7 @@ import { View, StyleSheet, Text, Pressable, ActivityIndicator } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ChevronLeft, Check, AlertTriangle, LocateFixed, Layers, Globe } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
 import { Button } from '../../components/ui/Button';
@@ -52,8 +53,18 @@ export default function LocationScreen() {
     }, 800);
   }, []);
 
+  const handleMapReady = useCallback((pan: (lat: number, lng: number) => void) => {
+    panToRef.current = pan;
+  }, []);
+
+  const handleChangeMapType = useCallback((nextType: PickerMapType) => {
+    Haptics.selectionAsync().catch(() => {});
+    setMapType(nextType);
+  }, []);
+
   const handleLocateMe = useCallback(() => {
     if (!draft.deviceLocation) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setIsLocating(true);
     panToRef.current?.(draft.deviceLocation.latitude, draft.deviceLocation.longitude);
     // Update state to reflect new position
@@ -99,7 +110,7 @@ export default function LocationScreen() {
         initialLng={draft.deviceLocation.longitude}
         mapType={mapType}
         onLocationChange={handleLocationChange}
-        onReady={(pan) => { panToRef.current = pan; }}
+        onReady={handleMapReady}
       />
 
       {/* Back button — top left */}
@@ -134,7 +145,7 @@ export default function LocationScreen() {
               <React.Fragment key={item.key}>
                 {i > 0 && <View style={[styles.mapTypeDivider, { backgroundColor: colors.border }]} />}
                 <Pressable
-                  onPress={() => setMapType(item.key)}
+                  onPress={() => handleChangeMapType(item.key)}
                   style={({ pressed }) => [
                     styles.mapTypeBtn,
                     (isActive || pressed) && { backgroundColor: pressed ? colors.brandOrange : `${colors.brandOrange}12` },

@@ -1,4 +1,6 @@
 import React from 'react';
+import { LogBox } from 'react-native';
+import * as KeepAwake from 'expo-keep-awake';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -6,6 +8,20 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider, useTheme } from '../theme/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import { NotificationProvider } from '../context/NotificationContext';
+
+// Suppress benign Android Activity keep-awake race condition on reload
+LogBox.ignoreLogs(['Unable to activate keep awake']);
+
+const origActivate = KeepAwake.activateKeepAwakeAsync;
+if (origActivate) {
+  (KeepAwake as any).activateKeepAwakeAsync = async (tag?: string) => {
+    try {
+      await origActivate(tag);
+    } catch {
+      // Silently catch Android native activity race condition during reload
+    }
+  };
+}
 
 /**
  * Renders the status bar style based on the resolved theme (light content on

@@ -53,11 +53,11 @@ const shared = {
   warning: '#E8A33D',
   danger: '#E14245',
   info: '#3B82C4',
-  riskMild: '#EAB308',       // Yellow
-  riskModerate: '#F4622B',   // Orange
-  riskHigh: '#EF4444',       // Red
+  riskMild: '#EAB308',       // Warm Golden Yellow (user preferred)
+  riskModerate: '#F97316',   // True Vibrant Orange (clearly distinct between yellow & red)
+  riskHigh: '#EF4444',       // Crimson Red
   riskLow: '#EAB308',        // Yellow alias
-  riskCritical: '#EF4444',   // Red alias
+  riskCritical: '#DC2626',   // Deep Crimson Red alias
 };
 
 export const lightColors: ColorTokens = {

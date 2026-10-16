@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import Svg, { Rect, Path } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { MapType } from './MapTypeSelector';
 
@@ -28,8 +29,8 @@ export const MapTypeModal: React.FC<MapTypeModalProps> = ({
   const { colors } = useTheme();
 
   const handleSelect = (type: MapType) => {
+    Haptics.selectionAsync().catch(() => {});
     onChange(type);
-    onClose();
   };
 
   return (

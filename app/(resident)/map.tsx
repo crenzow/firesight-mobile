@@ -1,48 +1,70 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, usePathname } from 'expo-router';
+import {
+  Bell,
+  ChevronRight,
+} from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
-import { AppHeader } from '../../components/navigation/AppHeader';
-import { LeafletMapView } from '../../components/map/LeafletMapView';
+import { LeafletMapView, LeafletMapRef } from '../../components/map/LeafletMapView';
 import { MapType } from '../../components/map/MapTypeSelector';
 import { MapFloatingControls } from '../../components/map/MapFloatingControls';
 import { MapTypeModal } from '../../components/map/MapTypeModal';
 import { RiskLegend } from '../../components/map/RiskLegend';
-import { MapFilterModal } from '../../components/map/MapFilterModal';
+import { BarangayDetailCard } from '../../components/map/BarangayDetailCard';
+import { BarangayDirectorySheet } from '../../components/map/BarangayDirectorySheet';
 import { mapService } from '../../services/api/mapService';
 import { BarangayRiskFeature, RiskLevel } from '../../services/api/models';
 import { useLocation } from '../../hooks/useLocation';
+import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 
-// Lian, Batangas municipal centroid — used as default center
+// Lian, Batangas municipal centroid
 const LIAN_CENTER = { lat: 14.0065, lng: 120.6425 };
+const EMPTY_INCIDENTS: any[] = [];
 
 export default function MapScreen() {
-  const { colors, spacing } = useTheme();
-  const { location } = useLocation();
+  const { colors, spacing, radius, typography, isDark, shadow } = useTheme();
+  const { location, requestLocation, isLoading: isLocating } = useLocation();
+  const { user } = useAuth();
+  const { unreadCount } = useNotifications();
+  const pathname = usePathname();
+
+  const mapRef = useRef<LeafletMapRef>(null);
 
   const [mapType, setMapType] = useState<MapType>('standard');
   const [barangays, setBarangays] = useState<BarangayRiskFeature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLocationActive, setIsLocationActive] = useState(false);
+  const [isLegendVisible, setIsLegendVisible] = useState(false);
+
+  // Selected barangay for the detail card
+  const [selectedBarangay, setSelectedBarangay] = useState<BarangayRiskFeature | null>(null);
 
   // Modals state
   const [isMapTypeModalOpen, setIsMapTypeModalOpen] = useState(false);
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState<'all' | RiskLevel>('all');
 
   useEffect(() => {
-    mapService.getBarangayRisk().then((data) => {
-      setBarangays(data);
-      setIsLoading(false);
-    }).catch(() => {
-      setIsLoading(false);
-    });
+    mapService
+      .getBarangayRisk()
+      .then((data) => {
+        setBarangays(data);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setIsLoading(false);
+      });
   }, []);
-
-  const handleMapDragged = () => {
-    if (isLocationActive) {
-      setIsLocationActive(false);
-    }
-  };
 
   const filteredBarangays = useMemo(() => {
     return barangays.filter((b) => {
@@ -50,91 +72,584 @@ export default function MapScreen() {
     });
   }, [barangays, selectedRisk]);
 
-  const center = useMemo(() => {
-    if (isLocationActive && location) {
-      return { lat: location.latitude, lng: location.longitude };
+  // Risk counts for the interactive pills
+  const riskCounts = useMemo(() => {
+    let high = 0;
+    let moderate = 0;
+    let mild = 0;
+    barangays.forEach((b) => {
+      if (b.risk_level === 'high') high++;
+      else if (b.risk_level === 'moderate') moderate++;
+      else mild++;
+    });
+    return { high, moderate, mild, total: barangays.length };
+  }, [barangays]);
+
+  // User's home barangay feature (if registered)
+  const userBarangayName = user?.address?.barangay_name;
+  const userBarangayFeature = useMemo(() => {
+    if (!userBarangayName || !barangays.length) return null;
+    return (
+      barangays.find((b) =>
+        b.barangay_name.toLowerCase().includes(userBarangayName.toLowerCase())
+      ) || null
+    );
+  }, [barangays, userBarangayName]);
+
+  const handleLocateMe = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (location) {
+      mapRef.current?.panToUserLocation(location.latitude, location.longitude);
+      return;
     }
-    return LIAN_CENTER;
-  }, [isLocationActive, location]);
+    const freshLoc = await requestLocation();
+    if (freshLoc) {
+      mapRef.current?.panToUserLocation(freshLoc.latitude, freshLoc.longitude);
+    }
+  };
 
-  const isFilterActive = selectedRisk !== 'all';
+  const handleSelectBarangayByName = (name: string) => {
+    if (!name) {
+      setSelectedBarangay((prev) => {
+        if (prev) {
+          Haptics.selectionAsync().catch(() => {});
+        }
+        return null;
+      });
+      return;
+    }
+    const found = barangays.find(
+      (b) => b.barangay_name.toLowerCase() === name.toLowerCase()
+    );
+    if (found) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      // Select the barangay to display the detail card without zooming or moving the camera
+      setSelectedBarangay(found);
+    }
+  };
 
-  const handleResetFilters = () => {
-    setSelectedRisk('all');
+  const handleSelectFromDirectory = (feature: BarangayRiskFeature) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setSelectedBarangay(feature);
+    mapRef.current?.focusBarangay(feature.barangay_name);
+  };
+
+  const handleChangeRiskFilter = (nextRisk: 'all' | RiskLevel) => {
+    Haptics.selectionAsync().catch(() => {});
+    setSelectedRisk(nextRisk);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.brandNavy }}>
-      {/* Universal Top Header matching Home, Learn, and Profile */}
-      <AppHeader variant="dark" />
-
-      <View style={[styles.mapContainer, { backgroundColor: colors.background }]}>
-        {isLoading ? (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator color={colors.brandOrange} />
-          </View>
-        ) : (
-          <LeafletMapView
-            key={selectedRisk}
-            mode="risk"
-            mapType={mapType}
-            barangays={filteredBarangays}
-            incidents={[]}
-            userLocation={location}
-            centerLat={center.lat}
-            centerLng={center.lng}
-            zoom={isLocationActive ? 15 : 12}
-            onMapDragged={handleMapDragged}
-          />
-        )}
-
-        <RiskLegend />
-
-        {/* Map Floating Controls - Vertically stacked Layers & Filter */}
-        <View style={[styles.controlsColumn, { top: spacing.md }]}>
-          <MapFloatingControls
-            onOpenMapType={() => setIsMapTypeModalOpen(true)}
-            onOpenFilter={() => setIsFilterModalOpen(true)}
-            isFilterActive={isFilterActive}
-          />
+    <View style={styles.screen}>
+      {/* 1. Edge-to-Edge Live Map Background */}
+      {isLoading ? (
+        <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.brandOrange} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Loading Lian Fire Hazard Map…
+          </Text>
         </View>
+      ) : (
+        <LeafletMapView
+          ref={mapRef}
+          key={selectedRisk}
+          mode="risk"
+          mapType={mapType}
+          barangays={filteredBarangays}
+          selectedBarangayName={selectedBarangay?.barangay_name || null}
+          incidents={EMPTY_INCIDENTS}
+          userLocation={location}
+          centerLat={LIAN_CENTER.lat}
+          centerLng={LIAN_CENTER.lng}
+          zoom={12}
+          onSelectBarangay={handleSelectBarangayByName}
+        />
+      )}
+
+      {/* 2. Apple Maps Floating Frosted Glass Header */}
+      <SafeAreaView edges={['top']} pointerEvents="box-none" style={styles.headerSafeArea}>
+        <View
+          style={[
+            styles.floatingHeader,
+            {
+              backgroundColor: isDark ? 'rgba(15, 28, 63, 0.92)' : 'rgba(255, 255, 255, 0.94)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+            },
+            shadow.card,
+          ]}
+        >
+          {/* Top Row: Title, Scope, and Notifications */}
+          <View style={styles.headerTopRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+                Fire Hazard Map
+              </Text>
+              <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+                Lian, Batangas · 19 Barangays
+              </Text>
+            </View>
+
+            {/* Notifications Bell */}
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/(resident)/notifications',
+                  params: { from: pathname },
+                } as any)
+              }
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.bellButton,
+                {
+                  backgroundColor: pressed
+                    ? colors.brandOrange
+                    : isDark
+                    ? 'rgba(255,255,255,0.08)'
+                    : '#F1F5F9',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+            >
+              {({ pressed }) => (
+                <>
+                  <Bell size={18} color={pressed ? '#FFFFFF' : colors.textPrimary} />
+                  {unreadCount > 0 ? (
+                    <View style={[styles.bellBadge, { backgroundColor: colors.brandOrange }]}>
+                      <Text style={styles.bellBadgeText}>
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Text>
+                    </View>
+                  ) : null}
+                </>
+              )}
+            </Pressable>
+          </View>
+
+          {/* Quick-Filter Metric Pills (Apple Weather-Style) */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.pillsScrollContainer}
+            style={styles.pillsScrollView}
+          >
+            {/* All Pill */}
+            <Pressable
+              onPress={() => handleChangeRiskFilter('all')}
+              style={[
+                styles.pill,
+                selectedRisk === 'all'
+                  ? { backgroundColor: colors.brandOrange, borderColor: colors.brandOrange }
+                  : {
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                      borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.pillText,
+                  { color: selectedRisk === 'all' ? '#FFFFFF' : colors.textPrimary },
+                ]}
+              >
+                All ({riskCounts.total})
+              </Text>
+            </Pressable>
+
+            {/* High Risk Pill */}
+            <Pressable
+              onPress={() => handleChangeRiskFilter(selectedRisk === 'high' ? 'all' : 'high')}
+              style={[
+                styles.pill,
+                selectedRisk === 'high'
+                  ? { backgroundColor: colors.riskHigh, borderColor: colors.riskHigh }
+                  : {
+                      backgroundColor: isDark ? `${colors.riskHigh}1F` : `${colors.riskHigh}14`,
+                      borderColor: isDark ? `${colors.riskHigh}4D` : `${colors.riskHigh}33`,
+                    },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.pillText,
+                  { color: selectedRisk === 'high' ? '#FFFFFF' : colors.riskHigh },
+                ]}
+              >
+                High ({riskCounts.high})
+              </Text>
+            </Pressable>
+
+            {/* Moderate Risk Pill */}
+            <Pressable
+              onPress={() => handleChangeRiskFilter(selectedRisk === 'moderate' ? 'all' : 'moderate')}
+              style={[
+                styles.pill,
+                selectedRisk === 'moderate'
+                  ? { backgroundColor: colors.riskModerate, borderColor: colors.riskModerate }
+                  : {
+                      backgroundColor: isDark ? `${colors.riskModerate}1F` : `${colors.riskModerate}14`,
+                      borderColor: isDark ? `${colors.riskModerate}4D` : `${colors.riskModerate}33`,
+                    },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.pillText,
+                  { color: selectedRisk === 'moderate' ? '#FFFFFF' : colors.riskModerate },
+                ]}
+              >
+                Moderate ({riskCounts.moderate})
+              </Text>
+            </Pressable>
+
+            {/* Mild Risk Pill */}
+            <Pressable
+              onPress={() => handleChangeRiskFilter(selectedRisk === 'mild' ? 'all' : 'mild')}
+              style={[
+                styles.pill,
+                selectedRisk === 'mild'
+                  ? { backgroundColor: colors.riskMild, borderColor: colors.riskMild }
+                  : {
+                      backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : 'rgba(234, 179, 8, 0.08)',
+                      borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : 'rgba(234, 179, 8, 0.2)',
+                    },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.pillText,
+                  { color: selectedRisk === 'mild' ? '#FFFFFF' : colors.riskMild },
+                ]}
+              >
+                Mild ({riskCounts.mild})
+              </Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+
+      {/* 3. Floating Action Island (Right Side) */}
+      <View style={styles.floatingControlsIsland}>
+        <MapFloatingControls
+          onOpenMapType={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setIsMapTypeModalOpen(true);
+          }}
+          onLocateUser={handleLocateMe}
+          isLocating={isLocating}
+          onToggleLegend={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setIsLegendVisible((prev) => !prev);
+          }}
+          isLegendVisible={isLegendVisible}
+        />
       </View>
 
-      {/* Map Type Bottom Sheet (Google Maps Style) */}
+      {/* 4. Hazard Risk Legend (Collapsible) */}
+      {isLegendVisible && (
+        <RiskLegend
+          style={styles.riskLegendPosition}
+          onClose={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setIsLegendVisible(false);
+          }}
+        />
+      )}
+
+      {/* 5. Apple Maps-Style Bottom Peek Drawer or Detail Card */}
+      {selectedBarangay ? (
+        <BarangayDetailCard
+          barangay={selectedBarangay}
+          onClose={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setSelectedBarangay(null);
+          }}
+        />
+      ) : (
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setIsDirectoryOpen(true);
+          }}
+          style={({ pressed }) => [
+            styles.bottomPeekCard,
+            {
+              backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.96)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+              transform: [{ scale: pressed ? 0.985 : 1 }],
+            },
+            shadow.card,
+          ]}
+        >
+          {/* Apple-style Grab Handle */}
+          <View style={styles.peekHandle}>
+            <View
+              style={[
+                styles.peekBar,
+                { backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)' },
+              ]}
+            />
+          </View>
+
+          <View style={styles.peekContent}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.peekCategory, { color: colors.textMuted }]}>
+                {userBarangayFeature ? 'YOUR BARANGAY' : 'MUNICIPALITY'}
+              </Text>
+              <Text style={[styles.peekTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                {userBarangayFeature?.barangay_name || 'Lian, Batangas'}
+              </Text>
+            </View>
+
+            {userBarangayFeature ? (
+              <View
+                style={[
+                  styles.peekRiskBadge,
+                  {
+                    backgroundColor:
+                      userBarangayFeature.risk_level === 'high'
+                        ? `${colors.riskHigh}18`
+                        : userBarangayFeature.risk_level === 'moderate'
+                        ? `${colors.riskModerate}18`
+                        : `${colors.riskMild}18`,
+                    borderColor:
+                      userBarangayFeature.risk_level === 'high'
+                        ? colors.riskHigh
+                        : userBarangayFeature.risk_level === 'moderate'
+                        ? colors.riskModerate
+                        : colors.riskMild,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.peekRiskDot,
+                    {
+                      backgroundColor:
+                        userBarangayFeature.risk_level === 'high'
+                          ? colors.riskHigh
+                          : userBarangayFeature.risk_level === 'moderate'
+                          ? colors.riskModerate
+                          : colors.riskMild,
+                    },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.peekRiskText,
+                    {
+                      color:
+                        userBarangayFeature.risk_level === 'high'
+                          ? colors.riskHigh
+                          : userBarangayFeature.risk_level === 'moderate'
+                          ? colors.riskModerate
+                          : colors.riskMild,
+                    },
+                  ]}
+                >
+                  {userBarangayFeature.risk_level.toUpperCase()} RISK
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.peekBrowseAction}>
+              <Text style={[styles.browseText, { color: colors.brandOrange }]}>
+                All 19
+              </Text>
+              <ChevronRight size={16} color={colors.brandOrange} />
+            </View>
+          </View>
+        </Pressable>
+      )}
+
+      {/* 6. Apple-Style Barangay Directory Sheet */}
+      <BarangayDirectorySheet
+        visible={isDirectoryOpen}
+        onClose={() => setIsDirectoryOpen(false)}
+        barangays={barangays}
+        onSelectBarangay={handleSelectFromDirectory}
+        selectedBarangayName={selectedBarangay?.barangay_name}
+      />
+
+      {/* 7. Map Type Modal */}
       <MapTypeModal
         visible={isMapTypeModalOpen}
         onClose={() => setIsMapTypeModalOpen(false)}
         mapType={mapType}
         onChange={setMapType}
       />
-
-      {/* Map Filter Modal */}
-      <MapFilterModal
-        visible={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        selectedRisk={selectedRisk}
-        onSelectRisk={setSelectedRisk}
-        onReset={handleResetFilters}
-      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mapContainer: { flex: 1, position: 'relative' },
-  loadingOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  controlsColumn: {
-    position: 'absolute',
-    right: 16,
-    alignItems: 'center',
-    gap: 10,
+  screen: {
+    flex: 1,
+    position: 'relative',
   },
-  locateButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1,
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  headerSafeArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  floatingHeader: {
+    marginHorizontal: 16,
+    marginTop: 6,
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingTop: 12,
+    paddingBottom: 10,
+    paddingHorizontal: 14,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.1,
+  },
+  headerSubtitle: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  bellButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  bellBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 8.5,
+    fontWeight: '800',
+  },
+  pillsScrollView: {
+    marginTop: 10,
+  },
+  pillsScrollContainer: {
+    gap: 6,
+    paddingRight: 4,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5.5,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  pillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  floatingControlsIsland: {
+    position: 'absolute',
+    right: 16,
+    top: 154,
+    zIndex: 10,
+  },
+  riskLegendPosition: {
+    position: 'absolute',
+    top: 154,
+    left: 16,
+    zIndex: 10,
+  },
+  bottomPeekCard: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 12,
+    zIndex: 10,
+  },
+  peekHandle: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  peekBar: {
+    width: 32,
+    height: 4,
+    borderRadius: 2,
+  },
+  peekContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  peekCategory: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  peekTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 1,
+  },
+  peekRiskBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginRight: 10,
+    gap: 4,
+  },
+  peekRiskDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  peekRiskText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  peekBrowseAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  browseText: {
+    fontSize: 12.5,
+    fontWeight: '700',
   },
 });
