@@ -1,36 +1,105 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Image,
+  Modal,
+  BackHandler,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, MapPin, Check, Clock, ShieldCheck, Truck, CheckCircle2, XCircle } from 'lucide-react-native';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import {
+  MapPin,
+  Clock,
+  ShieldCheck,
+  Truck,
+  CheckCircle2,
+  XCircle,
+  ZoomIn,
+  X,
+  Calendar,
+  AlertCircle,
+  Check,
+} from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
-import { reportService } from '../../../services/api/reportService';
-import { CommunityReport, ReportStatus, ReportStatusHistoryEntry } from '../../../services/api/models';
 import { StatusBadge } from '../../../components/home/StatusBadge';
+import { reportService } from '../../../services/api/reportService';
+import {
+  CommunityReport,
+  ReportStatus,
+  ReportStatusHistoryEntry,
+} from '../../../services/api/models';
 import { formatFullDate, formatTime } from '../../../utils/formatters';
 import { APP_CONFIG } from '../../../constants/config';
 import { reverseGeocode } from '../../../utils/geocoding';
 
-const TIMELINE_STEPS: ReportStatus[] = ['pending', 'accepted', 'dispatched', 'resolved'];
+interface StepDefinition {
+  key: ReportStatus;
+  label: string;
+  defaultDescription: string;
+  Icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+  color: string;
+}
 
-const getStepConfig = (step: ReportStatus, colors: any) => {
-  switch (step) {
-    case 'pending': return { Icon: Clock, color: colors.warning, label: 'Under Review' };
-    case 'accepted': return { Icon: ShieldCheck, color: colors.info, label: 'Accepted' };
-    case 'dispatched': return { Icon: Truck, color: colors.brandOrange, label: 'Dispatched' };
-    case 'resolved': return { Icon: CheckCircle2, color: colors.success, label: 'Resolved' };
-    default: return { Icon: Check, color: colors.textMuted, label: step };
-  }
-};
+const TIMELINE_STEPS: StepDefinition[] = [
+  {
+    key: 'pending',
+    label: 'Pending',
+    defaultDescription: 'Report received. Awaiting station review and assessment.',
+    Icon: Clock,
+    color: '#D97706',
+  },
+  {
+    key: 'accepted',
+    label: 'Accepted',
+    defaultDescription: 'Report verified by BFP station. Units being organized.',
+    Icon: ShieldCheck,
+    color: '#2563EB',
+  },
+  {
+    key: 'dispatched',
+    label: 'Dispatched',
+    defaultDescription: 'Fire responder units have been dispatched and are en route.',
+    Icon: Truck,
+    color: '#EA580C',
+  },
+  {
+    key: 'resolved',
+    label: 'Resolved',
+    defaultDescription: 'Incident has been controlled and marked resolved by responding units.',
+    Icon: CheckCircle2,
+    color: '#059669',
+  },
+];
 
 export default function ReportDetailScreen() {
-  const { colors, spacing, typography, radius, shadow } = useTheme();
+  const { colors, spacing, typography, radius, shadow, isDark } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [report, setReport] = useState<CommunityReport | null>(null);
   const [history, setHistory] = useState<ReportStatusHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [locationName, setLocationName] = useState('Loading location…');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (isPreviewOpen) {
+          setIsPreviewOpen(false);
+          return true;
+        }
+        router.back();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [isPreviewOpen])
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -41,7 +110,7 @@ export default function ReportDetailScreen() {
         setHistory(historyData);
       })
       .catch(() => {
-        // Leave state as-is; UI below shows an empty/loading fallback.
+        // Fallback handled by UI
       })
       .finally(() => setIsLoading(false));
   }, [id]);
@@ -52,7 +121,9 @@ export default function ReportDetailScreen() {
     setLocationName(report.barangay_name ?? 'Loading location…');
     reverseGeocode(report.latitude, report.longitude).then((name) => {
       if (isMounted) {
-        setLocationName(name !== 'Unknown area' ? name : (report.barangay_name ?? 'Unknown location'));
+        setLocationName(
+          name !== 'Unknown area' ? name : report.barangay_name ?? 'Unknown location'
+        );
       }
     });
     return () => {
@@ -60,149 +131,394 @@ export default function ReportDetailScreen() {
     };
   }, [report]);
 
-  const currentStepIndex = report ? TIMELINE_STEPS.indexOf(report.status) : -1;
+  const currentStepIndex = report
+    ? TIMELINE_STEPS.findIndex((s) => s.key === report.status)
+    : -1;
+
+  const photoUri = report?.report_image
+    ? report.report_image.startsWith('http')
+      ? report.report_image
+      : `${APP_CONFIG.API_BASE_URL}/${report.report_image}`
+    : null;
+
+  const referenceNo = report
+    ? `FR-${new Date(report.created_at).getFullYear()}-${String(report.report_id).padStart(4, '0')}`
+    : '';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SecondaryHeader title="Report Details" />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
-
-      {isLoading || !report ? (
-        <View style={styles.loadingState}>
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>
-            {isLoading ? 'Loading report…' : 'Report not found.'}
-          </Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
-          {report.report_image ? (
-            <Image
-              source={{ uri: `${APP_CONFIG.API_BASE_URL}/${report.report_image}` }}
-              style={[styles.photo, { borderRadius: radius.lg }]}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[styles.photoPlaceholder, { backgroundColor: colors.surfaceElevated, borderRadius: radius.lg }]} />
-          )}
-
-          <View style={styles.topRow}>
-            <StatusBadge status={report.status} />
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs }}>
-              Ref. #FR-{new Date(report.created_at).getFullYear()}-{String(report.report_id).padStart(4, '0')}
+        {isLoading || !report ? (
+          <View style={styles.centerState}>
+            <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>
+              {isLoading ? 'Loading report details…' : 'Report not found.'}
             </Text>
           </View>
-
-          <View style={[styles.infoRow, { marginTop: spacing.md }]}>
-            <MapPin size={16} color={colors.textMuted} />
-            <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, marginLeft: 6, fontWeight: '600' }}>
-              {locationName}
-            </Text>
-          </View>
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 2, marginLeft: 22 }}>
-            {report.latitude.toFixed(5)}°N, {report.longitude.toFixed(5)}°E
-          </Text>
-
-          <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, marginTop: spacing.lg, lineHeight: 20 }}>
-            {report.description}
-          </Text>
-
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.size.md, marginTop: spacing.xl }]}>
-            Status Timeline
-          </Text>
-
-          <View
-            style={[
-              styles.timelineCard,
-              { backgroundColor: colors.surfaceElevated, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.sm },
-              shadow.card,
-            ]}
+        ) : (
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
+            showsVerticalScrollIndicator={false}
           >
-            {report.status === 'invalid' ? (
-              <View style={{ alignItems: 'center', padding: spacing.lg }}>
-                <XCircle size={48} color={colors.textMuted} style={{ marginBottom: spacing.md }} />
-                <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700', marginBottom: spacing.xs, textAlign: 'center' }}>
-                  Report Marked as Invalid
-                </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, textAlign: 'center', lineHeight: 20 }}>
-                  This report has been reviewed and marked as invalid by the BFP. It may be a duplicate, a false alarm, or missing crucial information.
+            {/* ── 1. Photo Card (Top of Report) ── */}
+            {photoUri ? (
+              <Pressable
+                onPress={() => setIsPreviewOpen(true)}
+                style={({ pressed }) => [
+                  styles.photoCard,
+                  {
+                    backgroundColor: colors.surfaceElevated,
+                    borderColor: colors.border,
+                    borderRadius: radius.xl,
+                    transform: [{ scale: pressed ? 0.99 : 1 }],
+                  },
+                  shadow.card,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Tap to preview photo"
+              >
+                <Image source={{ uri: photoUri }} style={styles.photoImg} resizeMode="cover" />
+                <View style={styles.photoZoomBadge}>
+                  <ZoomIn size={13} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text style={styles.photoZoomText}>Tap to view</Text>
+                </View>
+              </Pressable>
+            ) : null}
+
+            {/* ── 2. Report Overview Card ── */}
+            <View
+              style={[
+                styles.overviewCard,
+                {
+                  backgroundColor: colors.surfaceElevated,
+                  borderColor: colors.border,
+                  borderRadius: radius.lg,
+                  padding: spacing.lg,
+                  marginTop: photoUri ? spacing.md : 0,
+                },
+                shadow.card,
+              ]}
+            >
+              {/* Header: StatusBadge + Reference No */}
+              <View style={styles.topMetaRow}>
+                <StatusBadge status={report.status} />
+                <View
+                  style={[
+                    styles.refPill,
+                    {
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.refText, { color: colors.textSecondary }]}>
+                    #{referenceNo}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Location */}
+              <View style={[styles.infoRow, { marginTop: spacing.md }]}>
+                <View style={[styles.iconCircle, { backgroundColor: `${colors.brandOrange}15` }]}>
+                  <MapPin size={16} color={colors.brandOrange} />
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={[styles.locationTitle, { color: colors.textPrimary }]}>
+                    {locationName}
+                  </Text>
+                  <Text style={[styles.coordText, { color: colors.textMuted }]}>
+                    {report.latitude.toFixed(5)}°N, {report.longitude.toFixed(5)}°E
+                  </Text>
+                </View>
+              </View>
+
+              {/* Timestamp */}
+              <View style={[styles.infoRow, { marginTop: spacing.sm }]}>
+                <View style={[styles.iconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
+                  <Calendar size={15} color={colors.textMuted} />
+                </View>
+                <Text style={[styles.dateText, { color: colors.textSecondary, marginLeft: 10 }]}>
+                  Reported on {formatFullDate(report.created_at)} · {formatTime(report.created_at)}
                 </Text>
               </View>
-            ) : (
-              TIMELINE_STEPS.map((step, index) => {
-              const isComplete = report.status === 'invalid' ? false : index <= currentStepIndex;
-              const isActive = index === currentStepIndex;
-              const entry = history.find((h) => h.status === step);
-              const isLast = index === TIMELINE_STEPS.length - 1;
-              const config = getStepConfig(step, colors);
-              const { Icon } = config;
 
-              return (
-                <View key={step} style={styles.timelineRow}>
-                  <View style={styles.timelineIndicator}>
+              {/* Description */}
+              {!!report.description?.trim() && (
+                <View
+                  style={[
+                    styles.descBox,
+                    {
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC',
+                      borderColor: colors.border,
+                      borderRadius: radius.md,
+                      padding: spacing.md,
+                      marginTop: spacing.md,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.descLabel, { color: colors.textMuted }]}>
+                    REPORTER NOTE
+                  </Text>
+                  <Text style={[styles.descBody, { color: colors.textPrimary }]}>
+                    {report.description.trim()}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* ── 3. Status Timeline ── */}
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              Status Timeline
+            </Text>
+
+            <View
+              style={[
+                styles.timelineCard,
+                {
+                  backgroundColor: colors.surfaceElevated,
+                  borderColor: colors.border,
+                  borderRadius: radius.lg,
+                  padding: spacing.lg,
+                },
+                shadow.card,
+              ]}
+            >
+              {report.status === 'invalid' ? (
+                <View style={styles.invalidBox}>
+                  <View style={[styles.invalidIconCircle, { backgroundColor: '#FEE2E2' }]}>
+                    <XCircle size={32} color="#DC2626" />
+                  </View>
+                  <Text style={[styles.invalidTitle, { color: colors.textPrimary }]}>
+                    Report Marked as Invalid
+                  </Text>
+                  <Text style={[styles.invalidDesc, { color: colors.textSecondary }]}>
+                    This report has been reviewed and marked as invalid by the BFP. It may be a duplicate, false alarm, or missing critical information.
+                  </Text>
+                  {history.find((h) => h.status === 'invalid')?.notes && (
                     <View
                       style={[
-                        styles.timelineDot,
+                        styles.historyNoteBox,
                         {
-                          backgroundColor: isComplete ? `${config.color}15` : colors.background,
-                          borderColor: isComplete ? config.color : colors.border,
-                          borderWidth: isActive ? 2 : 1,
-                          width: isActive ? 32 : 28,
-                          height: isActive ? 32 : 28,
-                          borderRadius: isActive ? 16 : 14,
+                          backgroundColor: isDark ? 'rgba(220,38,38,0.1)' : '#FEF2F2',
+                          borderColor: '#FCA5A5',
                         },
                       ]}
                     >
-                      <Icon 
-                        size={isActive ? 16 : 14} 
-                        color={isComplete ? config.color : colors.textMuted} 
-                      />
+                      <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '600' }}>
+                        BFP Remarks:
+                      </Text>
+                      <Text style={{ color: colors.textPrimary, fontSize: 13, marginTop: 2 }}>
+                        {history.find((h) => h.status === 'invalid')?.notes}
+                      </Text>
                     </View>
-                    {!isLast ? (
-                      <View 
-                        style={[
-                          styles.timelineLine, 
-                          { 
-                            backgroundColor: isComplete && index < currentStepIndex ? config.color : colors.border,
-                            opacity: isComplete && index < currentStepIndex ? 1 : 0.5
-                          }
-                        ]} 
-                      />
-                    ) : null}
-                  </View>
-                  <View style={{ flex: 1, paddingBottom: isLast ? 0 : spacing.xl, justifyContent: 'center' }}>
-                    <Text
-                      style={{
-                        color: isActive ? colors.textPrimary : isComplete ? colors.textSecondary : colors.textMuted,
-                        fontSize: isActive ? typography.size.md : typography.size.sm,
-                        fontWeight: isActive ? '800' : isComplete ? '600' : '500',
-                      }}
-                    >
-                      {config.label}
-                    </Text>
-                    {entry ? (
-                      <View style={{ marginTop: 4 }}>
-                        {entry.notes && (
-                           <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, lineHeight: 20, marginBottom: 4 }}>
-                             {entry.notes}
-                           </Text>
-                        )}
-                        <Text style={{ color: colors.textMuted, fontSize: typography.size.xs }}>
-                          {formatFullDate(entry.created_at)} · {formatTime(entry.created_at)}
-                        </Text>
-                      </View>
-                    ) : (
-                      isActive && (
-                        <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
-                          Currently in this status.
-                        </Text>
-                      )
-                    )}
-                  </View>
+                  )}
                 </View>
-              );
-            }))}
-          </View>
+              ) : (
+                TIMELINE_STEPS.map((step, index) => {
+                  const isComplete = index < currentStepIndex;
+                  const isActive = index === currentStepIndex;
+                  const isFuture = index > currentStepIndex;
+                  const isLast = index === TIMELINE_STEPS.length - 1;
+                  const StepIcon = step.Icon;
+                  const entry = history.find((h) => h.status === step.key);
+
+                  return (
+                    <View key={step.key} style={styles.timelineRow}>
+                      {/* Left: Indicator & Connector Line */}
+                      <View style={styles.indicatorCol}>
+                        <View
+                          style={[
+                            styles.dotWrapper,
+                            isActive
+                              ? [
+                                  styles.activeDot,
+                                  {
+                                    borderColor: step.color,
+                                    backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+                                    shadowColor: step.color,
+                                  },
+                                ]
+                              : isComplete
+                              ? [styles.completeDot, { backgroundColor: step.color }]
+                              : [
+                                  styles.futureDot,
+                                  {
+                                    borderColor: isDark ? '#334155' : '#CBD5E1',
+                                    backgroundColor: isDark ? '#0F172A' : '#F8FAFC',
+                                  },
+                                ],
+                          ]}
+                        >
+                          {isActive ? (
+                            <StepIcon size={22} color={step.color} strokeWidth={2.5} />
+                          ) : isComplete ? (
+                            <Check size={18} color="#FFFFFF" strokeWidth={3} />
+                          ) : (
+                            <StepIcon size={15} color="#94A3B8" strokeWidth={2} />
+                          )}
+                        </View>
+
+                        {!isLast && (
+                          <View
+                            style={[
+                              styles.connectorLine,
+                              {
+                                backgroundColor: isComplete
+                                  ? step.color
+                                  : isDark
+                                  ? '#334155'
+                                  : '#CBD5E1',
+                              },
+                            ]}
+                          />
+                        )}
+                      </View>
+
+                      {/* Right: Step Content */}
+                      <View
+                        style={[
+                          styles.stepContentCol,
+                          { paddingBottom: isLast ? 0 : spacing.lg },
+                        ]}
+                      >
+                        {isActive ? (
+                          /* ── EMPHASIZED CURRENT STATUS (Big & Open, No Rectangle) ── */
+                          <View style={styles.activeContentCol}>
+                            <View style={styles.activeHeaderRow}>
+                              <Text style={[styles.activeStepTitle, { color: colors.textPrimary }]}>
+                                {step.label}
+                              </Text>
+
+                              <View
+                                style={[
+                                  styles.activeBadge,
+                                  {
+                                    backgroundColor: `${step.color}18`,
+                                    borderColor: `${step.color}40`,
+                                  },
+                                ]}
+                              >
+                                <View
+                                  style={[styles.pulsingDot, { backgroundColor: step.color }]}
+                                />
+                                <Text style={[styles.activeBadgeText, { color: step.color }]}>
+                                  Current Status
+                                </Text>
+                              </View>
+                            </View>
+
+                            <Text
+                              style={[styles.activeStepDesc, { color: colors.textSecondary }]}
+                            >
+                              {entry?.notes?.trim()
+                                ? entry.notes.trim()
+                                : step.defaultDescription}
+                            </Text>
+
+                            {entry ? (
+                              <Text style={[styles.activeTimestamp, { color: colors.textMuted }]}>
+                                Updated {formatFullDate(entry.created_at)} at{' '}
+                                {formatTime(entry.created_at)}
+                              </Text>
+                            ) : (
+                              <Text style={[styles.activeTimestamp, { color: step.color }]}>
+                                Current stage in progress…
+                              </Text>
+                            )}
+                          </View>
+                        ) : isComplete ? (
+                          /* ── COMPLETED STEP (Clean with full height) ── */
+                          <View style={styles.compactContentBox}>
+                            <View style={styles.compactHeaderRow}>
+                              <Text
+                                style={[styles.compactStepTitle, { color: colors.textPrimary }]}
+                              >
+                                {step.label}
+                              </Text>
+                              {entry && (
+                                <Text
+                                  style={[styles.compactTimestamp, { color: colors.textMuted }]}
+                                >
+                                  {formatTime(entry.created_at)}
+                                </Text>
+                              )}
+                            </View>
+
+                            <Text
+                              style={[styles.compactStepDesc, { color: colors.textSecondary }]}
+                            >
+                              {entry?.notes?.trim()
+                                ? entry.notes.trim()
+                                : step.defaultDescription}
+                            </Text>
+                          </View>
+                        ) : (
+                          /* ── SUBDUED FUTURE STEP ── */
+                          <View style={styles.futureContentBox}>
+                            <Text style={[styles.futureStepTitle, { color: colors.textMuted }]}>
+                              {step.label}
+                            </Text>
+                            <Text style={[styles.futureStepDesc, { color: colors.textMuted }]}>
+                              {step.defaultDescription}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
           </ScrollView>
+        )}
+
+        {/* ── Fullscreen Lightbox Modal ── */}
+        {photoUri && (
+          <Modal
+            visible={isPreviewOpen}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setIsPreviewOpen(false)}
+            statusBarTranslucent={true}
+          >
+            <View style={styles.modalBackdrop}>
+              <SafeAreaView style={styles.modalSafeArea}>
+                <View style={styles.modalHeader}>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <Text style={styles.modalTitle} numberOfLines={1}>
+                      {locationName}
+                    </Text>
+                    <Text style={styles.modalSub}>#{referenceNo}</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setIsPreviewOpen(false)}
+                    style={({ pressed }) => [
+                      styles.modalCloseBtn,
+                      {
+                        backgroundColor: pressed ? colors.brandOrange : 'rgba(255,255,255,0.2)',
+                        transform: [{ scale: pressed ? 0.92 : 1 }],
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close photo viewer"
+                  >
+                    <X size={20} color="#FFFFFF" strokeWidth={2.5} />
+                  </Pressable>
+                </View>
+
+                <Pressable
+                  style={styles.modalImgContainer}
+                  onPress={() => setIsPreviewOpen(false)}
+                >
+                  <Image
+                    source={{ uri: photoUri }}
+                    style={styles.modalFullImg}
+                    resizeMode="contain"
+                  />
+                </Pressable>
+              </SafeAreaView>
+            </View>
+          </Modal>
         )}
       </SafeAreaView>
     </View>
@@ -210,17 +526,299 @@ export default function ReportDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth },
-  headerTitle: { fontWeight: '700' },
-  loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  photo: { width: '100%', height: 200 },
-  photoPlaceholder: { width: '100%', height: 200 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  infoRow: { flexDirection: 'row', alignItems: 'center' },
-  sectionTitle: { fontWeight: '700' },
-  timelineCard: {},
-  timelineRow: { flexDirection: 'row' },
-  timelineIndicator: { alignItems: 'center', marginRight: 12 },
-  timelineDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  timelineLine: { width: 2, flex: 1, marginTop: 4 },
+  centerState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  scrollContent: {},
+  photoCard: {
+    width: '100%',
+    height: 210,
+    borderWidth: 1,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  photoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  photoZoomBadge: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  photoZoomText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  overviewCard: {
+    borderWidth: 1,
+  },
+  topMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  refPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  refText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  coordText: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  dateText: {
+    fontSize: 13,
+  },
+  descBox: {
+    borderWidth: 1,
+  },
+  descLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  descBody: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    marginTop: 24,
+    marginBottom: 12,
+    paddingHorizontal: 2,
+  },
+  timelineCard: {
+    borderWidth: 1,
+  },
+  invalidBox: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  invalidIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  invalidTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  invalidDesc: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: 8,
+  },
+  historyNoteBox: {
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    width: '100%',
+  },
+  timelineRow: {
+    flexDirection: 'row',
+  },
+  indicatorCol: {
+    alignItems: 'center',
+    width: 44,
+    marginRight: 14,
+  },
+  dotWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeDot: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2.5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  completeDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginTop: 3,
+  },
+  futureDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginTop: 3,
+  },
+  connectorLine: {
+    width: 2.5,
+    flex: 1,
+    marginVertical: 4,
+  },
+  stepContentCol: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+  /* Emphasized Active Status (Open, No Rectangle) */
+  activeContentCol: {
+    paddingTop: 2,
+    paddingBottom: 2,
+  },
+  activeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  activeStepTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 5,
+  },
+  pulsingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  activeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  activeStepDesc: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  activeTimestamp: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  /* Completed Step */
+  compactContentBox: {
+    paddingTop: 4,
+    paddingBottom: 2,
+  },
+  compactHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
+  },
+  compactStepTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  compactTimestamp: {
+    fontSize: 12,
+  },
+  compactStepDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  /* Subdued Future Step */
+  futureContentBox: {
+    paddingTop: 4,
+    paddingBottom: 2,
+  },
+  futureStepTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  futureStepDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.94)',
+  },
+  modalSafeArea: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalSub: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalImgContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modalFullImg: {
+    width: '100%',
+    height: '100%',
+  },
 });

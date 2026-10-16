@@ -39,7 +39,19 @@ export default function PreviewScreen() {
       <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
         {/* Top bar */}
         <View style={styles.topBar}>
-          <Pressable onPress={handleRetake} style={styles.retakeButton}>
+          <Pressable
+            onPress={handleRetake}
+            style={({ pressed }) => [
+              styles.retakeButton,
+              {
+                backgroundColor: pressed ? colors.brandOrange : 'rgba(0,0,0,0.5)',
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              },
+            ]}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Retake photo"
+          >
             <RefreshCcw size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
             <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: typography.size.sm }}>
               Retake

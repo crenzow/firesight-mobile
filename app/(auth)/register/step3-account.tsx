@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, Mail } from 'lucide-react-native';
+import { ChevronLeft, Mail } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useRegistration } from '../../../context/RegistrationContext';
 import { useAuth } from '../../../context/AuthContext';
@@ -102,7 +102,7 @@ export default function RegisterStep3() {
       
       <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, paddingBottom: spacing.xl }}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={{ marginBottom: spacing.lg }}>
-          <ArrowLeft size={22} color={colors.textInverse} />
+          <ChevronLeft size={24} color={colors.textInverse} strokeWidth={2.5} />
         </Pressable>
 
         <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xl }]}>

@@ -3,10 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
 const LEGEND_ITEMS = [
-  { label: 'Critical', key: 'critical' as const },
-  { label: 'High', key: 'high' as const },
-  { label: 'Medium', key: 'moderate' as const },
-  { label: 'Low', key: 'low' as const },
+  { label: 'High', key: 'High' as const, colorKey: 'riskHigh' as const },
+  { label: 'Moderate', key: 'Moderate' as const, colorKey: 'riskModerate' as const },
+  { label: 'Mild', key: 'Mild' as const, colorKey: 'riskMild' as const },
 ];
 
 export const RiskLegend: React.FC = () => {
@@ -25,7 +24,7 @@ export const RiskLegend: React.FC = () => {
       </Text>
       {LEGEND_ITEMS.map((item) => (
         <View key={item.key} style={styles.row}>
-          <View style={[styles.dot, { backgroundColor: colors[`risk${capitalize(item.key)}` as 'riskHigh'] }]} />
+          <View style={[styles.dot, { backgroundColor: colors[item.colorKey] }]} />
           <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginLeft: 6 }}>
             {item.label}
           </Text>
@@ -34,12 +33,6 @@ export const RiskLegend: React.FC = () => {
     </View>
   );
 };
-
-function capitalize(value: string): string {
-  if (value === 'moderate') return 'Moderate';
-  if (value === 'critical') return 'Critical';
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
 
 const styles = StyleSheet.create({
   container: {

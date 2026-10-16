@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, usePathname } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,33 +12,54 @@ import { ProfileMenuRow } from '../../../components/profile/ProfileMenuRow';
 import { Button } from '../../../components/ui/Button';
 import { getInitials, formatFullName } from '../../../utils/formatters';
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
+import { getProfileImageUri } from '../../../utils/avatar';
+import { profileService } from '../../../services/api/profileService';
+import { PhotoOptionsModal, PhotoPreviewModal } from '../../../components/profile/PhotoPickerModal';
 
 export default function BFPProfileScreen() {
   const { colors, spacing, typography } = useTheme();
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logout, refreshUser, updateUser } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [localImage, setLocalImage] = useState<string | null>(null);
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [showPhotoPreview, setShowPhotoPreview] = useState(false);
+  const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const pathname = usePathname();
 
   React.useEffect(() => {
     refreshUser();
   }, [refreshUser]);
 
-  const pickProfileImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please allow access to your photo library to change your profile picture.');
-      return;
+  const handleImageSelected = (uri: string) => {
+    setPendingPhotoUri(uri);
+    setShowPhotoPreview(true);
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!pendingPhotoUri) return;
+    setIsUploadingPhoto(true);
+    try {
+      const updated = await profileService.uploadPhoto(pendingPhotoUri);
+      await updateUser(updated);
+      setLocalImage(pendingPhotoUri);
+      setShowPhotoPreview(false);
+      setPendingPhotoUri(null);
+    } catch {
+      Alert.alert('Upload Failed', 'Unable to upload profile photo. Please try again.');
+    } finally {
+      setIsUploadingPhoto(false);
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets?.[0]) {
-      setLocalImage(result.assets[0].uri);
+  };
+
+  const handleRemovePhoto = async () => {
+    try {
+      const updated = await profileService.deletePhoto();
+      await updateUser(updated);
+      setLocalImage(null);
+    } catch {
+      Alert.alert('Error', 'Unable to remove profile photo. Please try again.');
     }
   };
 
@@ -56,7 +77,7 @@ export default function BFPProfileScreen() {
   if (!user) return null;
 
   const initials = getInitials(user.first_name, user.last_name);
-  const profileImageUri = localImage ?? user.profile_image ?? null;
+  const profileImageUri = getProfileImageUri(localImage ?? user.profile_image);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -83,9 +104,13 @@ export default function BFPProfileScreen() {
 
             {/* Avatar + name */}
             <View style={styles.heroTop}>
-              <Pressable onPress={pickProfileImage} style={styles.avatarWrap}>
+              <Pressable onPress={() => setShowPhotoOptions(true)} disabled={isUploadingPhoto} style={styles.avatarWrap}>
                 <View style={styles.avatarClip}>
-                  {profileImageUri ? (
+                  {isUploadingPhoto ? (
+                    <View style={[styles.avatarInner, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    </View>
+                  ) : profileImageUri ? (
                     <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
                   ) : (
                     <View style={styles.avatarInner}>
@@ -171,6 +196,29 @@ export default function BFPProfileScreen() {
         onConfirm={confirmSignOut}
         onCancel={() => setShowLogoutModal(false)}
         icon={<LogOut size={28} color="#FFFFFF" strokeWidth={2.5} />}
+      />
+
+      {/* Photo Picker Options Modal (Take Photo / Gallery / Remove) */}
+      <PhotoOptionsModal
+        visible={showPhotoOptions}
+        onClose={() => setShowPhotoOptions(false)}
+        onImageSelected={handleImageSelected}
+        onRemovePhoto={handleRemovePhoto}
+        hasExistingPhoto={Boolean(profileImageUri)}
+      />
+
+      {/* Photo Preview & Confirmation Modal */}
+      <PhotoPreviewModal
+        visible={showPhotoPreview}
+        imageUri={pendingPhotoUri}
+        onClose={() => {
+          if (!isUploadingPhoto) {
+            setShowPhotoPreview(false);
+            setPendingPhotoUri(null);
+          }
+        }}
+        onConfirm={handleConfirmUpload}
+        isLoading={isUploadingPhoto}
       />
     </View>
   );

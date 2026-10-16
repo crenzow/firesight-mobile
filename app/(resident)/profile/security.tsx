@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Lock, Shield, FileText } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
@@ -12,11 +12,31 @@ export default function SecurityScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { colors, spacing, typography } = useTheme();
 
+  const handleBack = useCallback(() => {
+    if (from) {
+      router.replace(from as any);
+    } else {
+      router.back();
+    }
+  }, [from]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [handleBack])
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SecondaryHeader 
         title="Privacy & Security" 
-        onBack={() => from ? router.replace(from as any) : router.back()} 
+        onBack={handleBack} 
       />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }}>

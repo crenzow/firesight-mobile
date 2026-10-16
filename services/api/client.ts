@@ -33,6 +33,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const headers: Record<string, string> = {};
   if (!isFormData) headers['Content-Type'] = 'application/json';
   headers['Accept'] = 'application/json';
+  headers['Connection'] = 'close'; // Prevents RN from reusing stale keep-alive connections
 
   if (auth) {
     const token = await secureStorage.getToken();

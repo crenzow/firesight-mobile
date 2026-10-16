@@ -4,7 +4,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { ReportStatus } from '../../services/api/models';
 
 const STATUS_LABEL: Record<ReportStatus, string> = {
-  pending: 'Under Review',
+  pending: 'Pending',
   accepted: 'Accepted',
   dispatched: 'Dispatched',
   resolved: 'Resolved',

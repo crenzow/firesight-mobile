@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { router, useSegments } from 'expo-router';
-import { Bell, ArrowLeft } from 'lucide-react-native';
+import { Bell, ChevronLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -56,8 +56,22 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
     <SafeAreaView edges={['top']}>
       <View style={[styles.row, { height: 54, paddingHorizontal: spacing.lg }]}>
         {showBack ? (
-          <Pressable onPress={() => onBack ? onBack() : router.back()} hitSlop={10} style={styles.backButton}>
-            <ArrowLeft size={22} color={textColor} />
+          <Pressable
+            onPress={() => onBack ? onBack() : router.back()}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.backButton,
+              {
+                backgroundColor: bellBg,
+                borderColor: borderColor,
+                opacity: pressed ? 0.75 : 1,
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <ChevronLeft size={20} color={textColor} strokeWidth={2.5} />
           </Pressable>
         ) : null}
 
@@ -136,7 +150,15 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
 const styles = StyleSheet.create({
   container: { borderBottomWidth: StyleSheet.hairlineWidth },
   row: { flexDirection: 'row', alignItems: 'center' },
-  backButton: { marginRight: 8 },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
   bellButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',

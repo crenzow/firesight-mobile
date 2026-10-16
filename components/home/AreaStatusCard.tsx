@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Flame } from 'lucide-react-native';
+import { Flame, MapPin } from 'lucide-react-native';
 import { RiskLevel } from '../../services/api/models';
 import { APP_CONFIG } from '../../constants/config';
 
@@ -9,24 +9,38 @@ interface AreaStatusCardProps {
   barangayName: string;
   riskLevel: RiskLevel;
   incidentsThisMonth: number;
-  advisoryText?: string;
+  municipality?: string;
+  province?: string;
+  isExternal?: boolean;
+  registeredLocation?: string;
+  scopeLabel?: string;
 }
 
-const RISK_CONFIG: Record<RiskLevel, { label: string; color: string; sublabel: string }> = {
-  low:      { label: 'Normal',    color: '#2FA65A', sublabel: 'No active fire advisories' },
-  moderate: { label: 'Elevated',  color: '#EAB308', sublabel: 'Elevated risk — stay alert' },
-  high:     { label: 'High Risk', color: '#F97316', sublabel: 'Active advisory in effect' },
-  critical: { label: 'Critical',  color: '#EF4444', sublabel: 'Immediate danger — evacuate if advised' },
+const RISK_CONFIG: Record<RiskLevel, { label: string; color: string }> = {
+  mild:     { label: 'Mild Risk',     color: '#EAB308' },
+  moderate: { label: 'Moderate Risk', color: '#F4622B' },
+  high:     { label: 'High Risk',     color: '#EF4444' },
 };
+
+function normalizeRiskLevel(level?: string): RiskLevel {
+  if (level === 'high' || level === 'critical') return 'high';
+  if (level === 'moderate') return 'moderate';
+  return 'mild';
+}
 
 export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
   barangayName,
   riskLevel,
   incidentsThisMonth,
-  advisoryText,
+  municipality,
+  province,
+  isExternal = false,
+  registeredLocation,
+  scopeLabel,
 }) => {
-  const risk = RISK_CONFIG[riskLevel];
-  const locality = `${APP_CONFIG.DEFAULT_MUNICIPALITY}, ${APP_CONFIG.DEFAULT_PROVINCE}`;
+  const risk = RISK_CONFIG[normalizeRiskLevel(riskLevel)];
+  const locality = `${municipality ?? APP_CONFIG.DEFAULT_MUNICIPALITY}, ${province ?? APP_CONFIG.DEFAULT_PROVINCE}`;
+  const eyebrowText = scopeLabel ?? (isExternal ? 'PILOT COVERAGE · MUNICIPAL AVERAGE' : 'AREA STATUS');
 
   return (
     <View style={styles.shadow}>
@@ -38,14 +52,20 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
           style={StyleSheet.absoluteFillObject}
         />
 
-        {/* Section label */}
-        <Text style={styles.eyebrow}>AREA STATUS</Text>
+        {/* Section label & pilot indicator */}
+        <View style={styles.eyebrowRow}>
+          <Text style={styles.eyebrow}>{eyebrowText}</Text>
+          {isExternal && (
+            <View style={styles.pilotPill}>
+              <Text style={styles.pilotPillText}>BFP LIAN PILOT</Text>
+            </View>
+          )}
+        </View>
 
         {/* Body row: risk status left, location right */}
         <View style={styles.bodyRow}>
           <View style={styles.riskBlock}>
             <Text style={[styles.riskLabel, { color: risk.color }]}>{risk.label}</Text>
-            <Text style={styles.sublabel}>{advisoryText ?? risk.sublabel}</Text>
           </View>
 
           <View style={styles.locationBlock}>
@@ -62,9 +82,21 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
           <Flame size={13} color="rgba(255,255,255,0.4)" />
           <Text style={styles.incidentText}>
             <Text style={styles.incidentCount}>{incidentsThisMonth}</Text>
-            {' '}fire incident{incidentsThisMonth !== 1 ? 's' : ''} recorded this month
+            {isExternal
+              ? ` fire incident${incidentsThisMonth !== 1 ? 's' : ''} recorded across Lian this month`
+              : ` fire incident${incidentsThisMonth !== 1 ? 's' : ''} recorded in your barangay this month`}
           </Text>
         </View>
+
+        {/* Non-Lian registered resident indicator */}
+        {isExternal && registeredLocation && (
+          <View style={styles.registeredHomeRow}>
+            <MapPin size={11} color="rgba(255,255,255,0.5)" />
+            <Text style={styles.registeredHomeText} numberOfLines={1}>
+              Registered Home: <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{registeredLocation}</Text>
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -92,19 +124,38 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   eyebrow: {
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1.4,
     color: 'rgba(255,255,255,0.38)',
-    marginBottom: 12,
+  },
+  pilotPill: {
+    backgroundColor: 'rgba(244, 98, 43, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(244, 98, 43, 0.45)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  pilotPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#F4622B',
+    letterSpacing: 0.6,
   },
 
   bodyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
+    alignItems: 'center',
+    marginBottom: 16,
   },
 
   /* Left: risk status */
@@ -113,24 +164,16 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   riskLabel: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
     letterSpacing: -0.4,
-    lineHeight: 30,
-  },
-  sublabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
-    marginTop: 4,
-    lineHeight: 17,
+    lineHeight: 28,
   },
 
   /* Right: location */
   locationBlock: {
     alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    paddingTop: 3,           // nudge to align with risk label cap-height
+    justifyContent: 'center',
   },
   barangayName: {
     fontSize: 14,
@@ -158,6 +201,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   incidentText: {
+    flex: 1,
     fontSize: 12,
     color: 'rgba(255,255,255,0.4)',
     fontWeight: '500',
@@ -166,5 +210,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 13,
+  },
+
+  registeredHomeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  registeredHomeText: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.55)',
+    fontWeight: '500',
   },
 });

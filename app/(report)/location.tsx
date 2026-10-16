@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, Check, AlertTriangle, LocateFixed, Layers, Globe } from 'lucide-react-native';
+import { ChevronLeft, Check, AlertTriangle, LocateFixed, Layers, Globe } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
 import { Button } from '../../components/ui/Button';
@@ -106,9 +106,21 @@ export default function LocationScreen() {
       <SafeAreaView style={styles.backOverlay} edges={['top']}>
         <Pressable
           onPress={() => router.back()}
-          style={[styles.floatButton, shadow.card, { backgroundColor: colors.surface }]}
+          style={({ pressed }) => [
+            styles.floatButton,
+            shadow.card,
+            {
+              backgroundColor: pressed ? colors.brandOrange : colors.surface,
+              transform: [{ scale: pressed ? 0.90 : 1 }],
+            },
+          ]}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
-          <ArrowLeft size={20} color={colors.textPrimary} />
+          {({ pressed }) => (
+            <ChevronLeft size={22} color={pressed ? '#FFFFFF' : colors.textPrimary} strokeWidth={2.5} />
+          )}
         </Pressable>
       </SafeAreaView>
 
@@ -123,16 +135,31 @@ export default function LocationScreen() {
                 {i > 0 && <View style={[styles.mapTypeDivider, { backgroundColor: colors.border }]} />}
                 <Pressable
                   onPress={() => setMapType(item.key)}
-                  style={[styles.mapTypeBtn, isActive && { backgroundColor: `${colors.brandOrange}12` }]}
+                  style={({ pressed }) => [
+                    styles.mapTypeBtn,
+                    (isActive || pressed) && { backgroundColor: pressed ? colors.brandOrange : `${colors.brandOrange}12` },
+                    { transform: [{ scale: pressed ? 0.94 : 1 }] },
+                  ]}
+                  accessibilityRole="button"
                 >
-                  <item.Icon
-                    size={16}
-                    color={isActive ? colors.brandOrange : colors.textMuted}
-                    strokeWidth={isActive ? 2.3 : 1.8}
-                  />
-                  <Text style={[styles.mapTypeLabel, { color: isActive ? colors.brandOrange : colors.textMuted }, isActive && styles.mapTypeLabelActive]}>
-                    {item.label}
-                  </Text>
+                  {({ pressed }) => (
+                    <>
+                      <item.Icon
+                        size={16}
+                        color={pressed ? '#FFFFFF' : isActive ? colors.brandOrange : colors.textMuted}
+                        strokeWidth={isActive || pressed ? 2.3 : 1.8}
+                      />
+                      <Text
+                        style={[
+                          styles.mapTypeLabel,
+                          { color: pressed ? '#FFFFFF' : isActive ? colors.brandOrange : colors.textMuted },
+                          isActive && styles.mapTypeLabelActive,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </>
+                  )}
                 </Pressable>
               </React.Fragment>
             );
@@ -142,11 +169,25 @@ export default function LocationScreen() {
         {/* Locate Me Button */}
         <Pressable
           onPress={handleLocateMe}
-          style={[styles.floatButton, shadow.card, { backgroundColor: colors.surface, marginTop: 10 }]}
+          style={({ pressed }) => [
+            styles.floatButton,
+            shadow.card,
+            {
+              backgroundColor: pressed ? colors.brandOrange : colors.surface,
+              marginTop: 10,
+              transform: [{ scale: pressed ? 0.90 : 1 }],
+            },
+          ]}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Locate my position"
         >
-          {isLocating
-            ? <ActivityIndicator size="small" color={colors.brandOrange} />
-            : <LocateFixed size={20} color={colors.brandOrange} />
+          {({ pressed }) =>
+            isLocating ? (
+              <ActivityIndicator size="small" color={pressed ? '#FFFFFF' : colors.brandOrange} />
+            ) : (
+              <LocateFixed size={20} color={pressed ? '#FFFFFF' : colors.brandOrange} />
+            )
           }
         </Pressable>
       </SafeAreaView>

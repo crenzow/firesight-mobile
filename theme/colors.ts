@@ -31,10 +31,11 @@ export interface ColorTokens {
   danger: string;
   info: string;
 
-  // Risk levels (map)
-  riskLow: string;
+  // Risk levels (map) — only mild (yellow), moderate (orange), and high (red)
+  riskMild: string;
   riskModerate: string;
   riskHigh: string;
+  riskLow: string;
   riskCritical: string;
 
   // Misc
@@ -52,10 +53,11 @@ const shared = {
   warning: '#E8A33D',
   danger: '#E14245',
   info: '#3B82C4',
-  riskLow: '#2FA65A',
-  riskModerate: '#EAB308',
-  riskHigh: '#F97316',
-  riskCritical: '#EF4444',
+  riskMild: '#EAB308',       // Yellow
+  riskModerate: '#F4622B',   // Orange
+  riskHigh: '#EF4444',       // Red
+  riskLow: '#EAB308',        // Yellow alias
+  riskCritical: '#EF4444',   // Red alias
 };
 
 export const lightColors: ColorTokens = {

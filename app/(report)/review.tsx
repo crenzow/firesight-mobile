@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, Pressable, ScrollView, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useNavigation } from 'expo-router';
-import { ArrowLeft, MapPin, AlertTriangle, RefreshCw, Maximize2, X } from 'lucide-react-native';
+import { ChevronLeft, MapPin, AlertTriangle, RefreshCw, Maximize2, X } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
 import { Button } from '../../components/ui/Button';
@@ -65,8 +65,14 @@ export default function ReviewScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.90 : 1 }] }]}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2.5} />
         </Pressable>
         <View>
           <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: 20, fontWeight: '800' }]}>
@@ -74,7 +80,12 @@ export default function ReviewScreen() {
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, textAlign: 'center' }}>Confirm details before submitting</Text>
         </View>
-        <Pressable onPress={handleCancelReport} hitSlop={8}>
+        <Pressable
+          onPress={handleCancelReport}
+          hitSlop={8}
+          style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
+          accessibilityRole="button"
+        >
           <Text style={{ color: colors.danger, fontWeight: '600', fontSize: typography.size.sm }}>Cancel</Text>
         </Pressable>
       </View>
@@ -82,18 +93,41 @@ export default function ReviewScreen() {
       <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
         {draft.photoUri ? (
           <View>
-            <Pressable onPress={() => setFullscreen(true)}>
+            <Pressable
+              onPress={() => setFullscreen(true)}
+              style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.985 : 1 }] }]}
+            >
               <Image source={{ uri: draft.photoUri }} style={[styles.photo, { borderRadius: radius.lg }]} resizeMode="cover" />
             </Pressable>
             <Pressable
               onPress={() => setFullscreen(true)}
-              style={[styles.expandChip, { backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: radius.full }]}
+              style={({ pressed }) => [
+                styles.expandChip,
+                {
+                  backgroundColor: pressed ? colors.brandOrange : 'rgba(0,0,0,0.55)',
+                  borderRadius: radius.full,
+                  transform: [{ scale: pressed ? 0.90 : 1 }],
+                },
+              ]}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="View full size photo"
             >
               <Maximize2 size={12} color="#FFFFFF" />
             </Pressable>
             <Pressable
               onPress={handleRetake}
-              style={[styles.retakeChip, { backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: radius.full }]}
+              style={({ pressed }) => [
+                styles.retakeChip,
+                {
+                  backgroundColor: pressed ? colors.brandOrange : 'rgba(0,0,0,0.55)',
+                  borderRadius: radius.full,
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
+                },
+              ]}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Retake photo"
             >
               <RefreshCw size={12} color="#FFFFFF" />
               <Text style={styles.retakeText}>Retake</Text>

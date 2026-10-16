@@ -5,10 +5,12 @@ import { BarangayRiskFeature, IncidentMarker, RiskLevel } from '../../services/a
 
 import LianGeoJson from '../../boundaries/barangay_boundaries_lian.json';
 
-const RISK_HEX: Record<RiskLevel, string> = {
-  low: '#2FA65A',
-  moderate: '#EAB308',
-  high: '#F97316',
+const RISK_HEX: Record<RiskLevel, string> & Record<string, string> = {
+  mild: '#EAB308',      // Yellow
+  moderate: '#F4622B',  // Orange
+  high: '#EF4444',      // Red
+  // Backward compatibility fallbacks
+  low: '#EAB308',
   critical: '#EF4444',
 };
 
@@ -117,7 +119,7 @@ function buildMapHtml({
         lat: b.centroid_lat,
         lng: b.centroid_lng,
         risk: b.risk_level,
-        color: RISK_HEX[b.risk_level],
+        color: RISK_HEX[b.risk_level] || '#EAB308',
         geojson: geojsonFeature || null,
       };
     })

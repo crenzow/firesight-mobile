@@ -6,7 +6,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { BFPIncident } from '../../services/api/bfpModels';
 import { IncidentStatusBadge } from './IncidentStatusBadge';
 import { SeverityBadge } from './SeverityBadge';
-import { formatRelativeDate } from '../../utils/formatters';
+import { formatRelativeDate, formatTime } from '../../utils/formatters';
 import { APP_CONFIG } from '../../constants/config';
 import { InteractiveCard } from './InteractiveCard';
 
@@ -83,7 +83,7 @@ export const IncidentListItem: React.FC<{ incident: BFPIncident; from?: 'dashboa
         <View style={[styles.locationRow, { marginTop: 6 }]}>
           <Clock size={12} color={colors.textMuted} />
           <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginLeft: 4, fontWeight: '500' }}>
-            {formatRelativeDate(incident.created_at)} · {incident.reporter_name ?? 'Unknown reporter'}
+            {formatRelativeDate(incident.created_at)} · {formatTime(incident.created_at)} · {incident.reporter_name ?? 'Unknown reporter'}
           </Text>
         </View>
       </View>

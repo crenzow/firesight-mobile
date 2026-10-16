@@ -7,6 +7,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -39,7 +40,16 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   fullWidth = true,
 }) => {
-  const { colors, radius, spacing, typography } = useTheme();
+  const { colors, radius, spacing, typography, isDark } = useTheme();
+
+  const handlePress = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {
+      // Safe fallback
+    }
+    onPress();
+  };
 
   const getBackgroundColor = (pressed: boolean) => {
     if (disabled) return colors.disabled;
@@ -47,32 +57,38 @@ export const Button: React.FC<ButtonProps> = ({
       case 'primary':
         return pressed ? colors.brandOrangeDeep : colors.brandOrange;
       case 'secondary':
-        return pressed ? colors.brandNavyDeep : colors.brandNavy;
+        return pressed ? colors.brandOrange : colors.brandNavy;
       case 'danger':
         return pressed ? '#B93336' : colors.danger;
       case 'outline':
+        return pressed ? colors.brandOrange : 'transparent';
       case 'ghost':
-        return pressed ? colors.surfaceElevated : 'transparent';
+        return pressed ? (isDark ? '#221915' : '#FFF7F2') : 'transparent';
       default:
         return colors.brandOrange;
     }
   };
 
-  const getTextColor = () => {
+  const getTextColor = (pressed: boolean) => {
     if (disabled) return colors.textMuted;
-    if (variant === 'outline') return colors.brandOrange;
-    if (variant === 'ghost') return colors.textPrimary;
+    if (variant === 'outline') return pressed ? '#FFFFFF' : colors.brandOrange;
+    if (variant === 'ghost') return pressed ? colors.brandOrange : colors.textPrimary;
     return colors.textInverse;
   };
 
-  const getBorder = () => {
-    if (variant === 'outline') return { borderWidth: 1.5, borderColor: colors.brandOrange };
+  const getBorder = (pressed: boolean) => {
+    if (variant === 'outline') {
+      return {
+        borderWidth: 1.5,
+        borderColor: colors.brandOrange,
+      };
+    }
     return {};
   };
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled || loading}
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading }}
@@ -83,26 +99,29 @@ export const Button: React.FC<ButtonProps> = ({
           paddingVertical: spacing.md + 2,
           borderRadius: radius.md,
           width: fullWidth ? '100%' : undefined,
-          ...getBorder(),
+          transform: [{ scale: pressed && !disabled && !loading ? 0.975 : 1 }],
+          ...getBorder(pressed),
         },
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={getTextColor()} />
-      ) : (
-        <View style={styles.content}>
-          {icon && iconPosition === 'left' ? <View style={{ marginRight: spacing.sm }}>{icon}</View> : null}
-          <Text
-            style={[
-              styles.label,
-              { color: getTextColor(), fontSize: typography.size.md, fontWeight: typography.weight.semibold },
-            ]}
-          >
-            {label}
-          </Text>
-          {icon && iconPosition === 'right' ? <View style={{ marginLeft: spacing.sm }}>{icon}</View> : null}
-        </View>
+      {({ pressed }) => (
+        loading ? (
+          <ActivityIndicator color={getTextColor(pressed)} />
+        ) : (
+          <View style={styles.content}>
+            {icon && iconPosition === 'left' ? <View style={{ marginRight: spacing.sm }}>{icon}</View> : null}
+            <Text
+              style={[
+                styles.label,
+                { color: getTextColor(pressed), fontSize: typography.size.md, fontWeight: typography.weight.semibold },
+              ]}
+            >
+              {label}
+            </Text>
+            {icon && iconPosition === 'right' ? <View style={{ marginLeft: spacing.sm }}>{icon}</View> : null}
+          </View>
+        )
       )}
     </Pressable>
   );

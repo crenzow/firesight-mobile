@@ -120,6 +120,7 @@ export default function IncidentsListScreen() {
             <ClipboardList size={32} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, marginTop: spacing.sm }}>
               No incidents match this filter.
+              
             </Text>
           </View>
         }

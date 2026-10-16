@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Check, RotateCcw, Filter, ShieldAlert } from 'lucide-react-native';
+import { X, Check, RotateCcw, Filter } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { RiskLevel } from '../../services/api/models';
 
@@ -31,10 +31,9 @@ export const MapFilterModal: React.FC<MapFilterModalProps> = ({
 
   const riskOptions: { key: 'all' | RiskLevel; label: string; color?: string }[] = [
     { key: 'all', label: 'All Risk Levels' },
-    { key: 'critical', label: 'Critical Risk', color: '#EF4444' },
-    { key: 'high', label: 'High Risk', color: '#F97316' },
-    { key: 'moderate', label: 'Moderate Risk', color: '#EAB308' },
-    { key: 'low', label: 'Low Risk', color: '#2FA65A' },
+    { key: 'high', label: 'High Risk', color: colors.riskHigh },
+    { key: 'moderate', label: 'Moderate Risk', color: colors.riskModerate },
+    { key: 'mild', label: 'Mild Risk', color: colors.riskMild },
   ];
 
   const hasActiveFilters = selectedRisk !== 'all';
@@ -63,7 +62,6 @@ export const MapFilterModal: React.FC<MapFilterModalProps> = ({
               {/* Risk Level Filter Section */}
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <ShieldAlert size={16} color={colors.brandOrange} />
                   <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
                     Select Risk Level
                   </Text>

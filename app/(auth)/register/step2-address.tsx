@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useRegistration } from '../../../context/RegistrationContext';
 import { Input } from '../../../components/ui/Input';
@@ -34,7 +34,7 @@ export default function RegisterStep2() {
       
       <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, paddingBottom: spacing.xl }}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={{ marginBottom: spacing.lg }}>
-          <ArrowLeft size={22} color={colors.textInverse} />
+          <ChevronLeft size={24} color={colors.textInverse} strokeWidth={2.5} />
         </Pressable>
 
         <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xl }]}>
@@ -84,7 +84,7 @@ export default function RegisterStep2() {
           value={form.barangayId}
           options={LIAN_BARANGAYS}
           onSelect={(id) => {
-            updateForm({ barangayId: id });
+            updateForm({ barangayId: typeof id === 'number' ? id : Number(id) });
             if (errors.barangayId) setErrors((prev) => ({ ...prev, barangayId: '' }));
           }}
           placeholder="Select your barangay"

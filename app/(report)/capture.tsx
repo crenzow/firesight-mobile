@@ -84,7 +84,19 @@ export default function CaptureScreen() {
 
       <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
         <View style={[styles.topBar, { paddingHorizontal: spacing.lg }]}>
-          <Pressable onPress={() => router.back()} style={styles.iconButton} hitSlop={8}>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [
+              styles.iconButton,
+              {
+                backgroundColor: pressed ? colors.brandOrange : 'rgba(0,0,0,0.45)',
+                transform: [{ scale: pressed ? 0.90 : 1 }],
+              },
+            ]}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Close camera"
+          >
             <X size={22} color="#FFFFFF" />
           </Pressable>
 
@@ -92,7 +104,19 @@ export default function CaptureScreen() {
             <Text style={styles.reportModeText}>REPORT MODE</Text>
           </View>
 
-          <Pressable onPress={() => setFlash((f) => (f === 'off' ? 'on' : 'off'))} style={styles.iconButton} hitSlop={8}>
+          <Pressable
+            onPress={() => setFlash((f) => (f === 'off' ? 'on' : 'off'))}
+            style={({ pressed }) => [
+              styles.iconButton,
+              {
+                backgroundColor: pressed ? colors.brandOrange : 'rgba(0,0,0,0.45)',
+                transform: [{ scale: pressed ? 0.90 : 1 }],
+              },
+            ]}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle flash"
+          >
             {flash === 'off' ? <ZapOff size={20} color="#FFFFFF" /> : <Zap size={20} color="#FFC24B" />}
           </Pressable>
         </View>
@@ -125,7 +149,15 @@ export default function CaptureScreen() {
           <Pressable
             onPress={handleCapture}
             disabled={isCapturing || isLocating || !location}
-            style={[styles.shutterOuter, (isCapturing || isLocating || !location) && { opacity: 0.6 }]}
+            style={({ pressed }) => [
+              styles.shutterOuter,
+              (isCapturing || isLocating || !location) && { opacity: 0.6 },
+              {
+                transform: [{ scale: pressed && !isCapturing && !isLocating && !!location ? 0.92 : 1 }],
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Capture photo"
           >
             <View style={[styles.shutterInner, { backgroundColor: (isLocating || !location) ? colors.textMuted : colors.brandOrange }]}>
               {isCapturing ? <ActivityIndicator color="#FFFFFF" /> : null}

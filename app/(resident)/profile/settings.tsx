@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Switch } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Smartphone, Sun, Moon, MoonStar } from 'lucide-react-native';
 import { useTheme, ThemePreference } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
@@ -22,11 +22,31 @@ export default function SettingsScreen() {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [alertSounds, setAlertSounds] = useState(true);
 
+  const handleBack = useCallback(() => {
+    if (from) {
+      router.replace(from as any);
+    } else {
+      router.back();
+    }
+  }, [from]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [handleBack])
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SecondaryHeader 
         title="Settings" 
-        onBack={() => from ? router.replace(from as any) : router.back()} 
+        onBack={handleBack} 
       />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView contentContainerStyle={{ padding: spacing.lg }}>

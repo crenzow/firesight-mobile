@@ -1,18 +1,17 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { ClipboardList, ArrowLeft } from 'lucide-react-native';
+import { ClipboardList } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
-import { AppHeader } from '../../../components/navigation/AppHeader';
+import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { reportService } from '../../../services/api/reportService';
 import { CommunityReport } from '../../../services/api/models';
 import { ReportListItem } from '../../../components/home/ReportListItem';
-import { ShinyCard } from '../../../components/ui/ShinyCard';
 
 export default function MyReportsScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
-  const { colors, spacing, typography, radius, shadow } = useTheme();
+  const { colors, spacing, typography, radius } = useTheme();
 
   const [reports, setReports] = useState<CommunityReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,10 +27,26 @@ export default function MyReportsScreen() {
     }
   }, []);
 
+  const handleBack = useCallback(() => {
+    if (from) {
+      router.replace(from as any);
+    } else {
+      router.back();
+    }
+  }, [from]);
+
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [load, handleBack])
   );
 
   const handleRefresh = () => {
@@ -41,42 +56,35 @@ export default function MyReportsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader variant="dark" />
-      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+      {/* Custom secondary header matching Announcements & Emergency Contacts */}
+      <SecondaryHeader title="My Reports" onBack={handleBack} />
 
-        {/* Page header */}
-        <View style={[styles.pageHeader, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center' }]}>
-          <Pressable 
-            onPress={() => {
-              if (from) {
-                router.replace(from as any);
-              } else {
-                router.back();
-              }
-            }} 
-            hitSlop={8} 
-            style={{ marginRight: spacing.md }}
-          >
-            <ArrowLeft size={22} color={colors.textPrimary} />
-          </Pressable>
-          <View>
-            <Text style={{ color: colors.textPrimary, fontSize: typography.size.xl, fontWeight: '800' }}>
-              My Reports
-            </Text>
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, marginTop: 2 }}>
-              All incidents you've submitted
-            </Text>
-          </View>
-        </View>
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
 
         {isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.brandOrange} />
           </View>
+        ) : reports.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyBox}>
+              <View style={[styles.emptyIcon, { backgroundColor: `${colors.brandOrange}15`, borderRadius: radius.full }]}>
+                <ClipboardList size={32} color={colors.brandOrange} />
+              </View>
+              <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700', marginTop: spacing.md }}>
+                No Reports Yet
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
+                Reports you submit through the app will appear here for tracking.
+              </Text>
+            </View>
+          </View>
         ) : (
-          <FlatList
-            data={reports}
-            keyExtractor={(item) => String(item.report_id)}
+          <ScrollView
+            contentContainerStyle={{
+              paddingTop: spacing.xs,
+              paddingBottom: spacing.xxxl,
+            }}
             refreshControl={
               <RefreshControl
                 refreshing={isRefreshing}
@@ -84,31 +92,35 @@ export default function MyReportsScreen() {
                 tintColor={colors.brandOrange}
               />
             }
-            contentContainerStyle={
-              reports.length === 0
-                ? styles.emptyContainer
-                : { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingBottom: spacing.xxxl }
-            }
-            ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-            renderItem={({ item }) => (
-              <ShinyCard padding={spacing.sm}>
-                <ReportListItem report={item} />
-              </ShinyCard>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyBox}>
-                <View style={[styles.emptyIcon, { backgroundColor: `${colors.brandOrange}15`, borderRadius: radius.full }]}>
-                  <ClipboardList size={32} color={colors.brandOrange} />
+          >
+            {/* Seamless Feed blending into background */}
+            <View
+              style={[
+                styles.edgeToEdgeContainer,
+                {
+                  borderTopColor: colors.border,
+                  borderBottomColor: colors.border,
+                },
+              ]}
+            >
+              {reports.map((report, index) => (
+                <View key={report.report_id}>
+                  {index > 0 && (
+                    <View
+                      style={[
+                        styles.divider,
+                        {
+                          backgroundColor: colors.border,
+                          marginLeft: spacing.lg + 48 + spacing.md,
+                        },
+                      ]}
+                    />
+                  )}
+                  <ReportListItem report={report} paddingHorizontal={spacing.lg} />
                 </View>
-                <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700', marginTop: spacing.md }}>
-                  No Reports Yet
-                </Text>
-                <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
-                  Reports you submit through the app will appear here for tracking.
-                </Text>
-              </View>
-            }
-          />
+              ))}
+            </View>
+          </ScrollView>
         )}
       </SafeAreaView>
     </View>
@@ -116,9 +128,35 @@ export default function MyReportsScreen() {
 }
 
 const styles = StyleSheet.create({
-  pageHeader: {},
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyBox: { alignItems: 'center' },
-  emptyIcon: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
+  subheader: {
+    fontWeight: '500',
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyBox: {
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  edgeToEdgeContainer: {
+    width: '100%',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+  },
 });

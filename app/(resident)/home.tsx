@@ -2,24 +2,20 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { router, usePathname, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronRight, Lightbulb } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { AppHeader } from '../../components/navigation/AppHeader';
 import { AreaStatusCard } from '../../components/home/AreaStatusCard';
 import { QuickActionsRow } from '../../components/home/QuickActionsRow';
-import { AdvisoryBanner } from '../../components/home/AdvisoryBanner';
-import { DailyTipCard } from '../../components/home/DailyTipCard';
 import { ReportListItem } from '../../components/home/ReportListItem';
-import { ShinyCard } from '../../components/ui/ShinyCard';
 import { reportService } from '../../services/api/reportService';
 import { announcementService } from '../../services/api';
 import { AreaStatus, CommunityReport, Announcement } from '../../services/api/models';
-import { formatRelativeDate } from '../../utils/formatters';
 
 export default function HomeScreen() {
-  const { colors, spacing, typography, radius, shadow } = useTheme();
+  const { colors, spacing, typography, radius } = useTheme();
   const { user } = useAuth();
   const { refresh: refreshNotifications } = useNotifications();
   const pathname = usePathname();
@@ -71,7 +67,7 @@ export default function HomeScreen() {
           contentContainerStyle={{
             paddingHorizontal: spacing.lg,
             paddingTop: spacing.md,
-            paddingBottom: spacing.xxxl,
+            paddingBottom: 110,
           }}
           refreshControl={
             <RefreshControl
@@ -85,9 +81,19 @@ export default function HomeScreen() {
           <View>
             <AreaStatusCard
               barangayName={areaStatus?.barangay_name ?? user?.address?.barangay_name ?? 'Your Barangay'}
-              riskLevel={areaStatus?.risk_level ?? 'low'}
+              riskLevel={areaStatus?.risk_level ?? 'mild'}
               incidentsThisMonth={areaStatus?.incidents_this_month ?? 0}
-              advisoryText={areaStatus?.advisory_active ? 'Dry season fire advisory in effect' : undefined}
+              municipality={areaStatus?.municipality ?? user?.address?.municipality}
+              province={areaStatus?.province ?? user?.address?.province}
+              isExternal={areaStatus?.is_external ?? (user?.address?.municipality ? user.address.municipality.toLowerCase() !== 'lian' : false)}
+              registeredLocation={
+                areaStatus?.registered_municipality
+                  ? `${areaStatus.registered_municipality}${areaStatus.registered_province ? `, ${areaStatus.registered_province}` : ''}`
+                  : user?.address?.municipality
+                  ? `${user.address.municipality}${user.address.province ? `, ${user.address.province}` : ''}`
+                  : undefined
+              }
+              scopeLabel={areaStatus?.scope_label}
             />
           </View>
 
@@ -98,22 +104,46 @@ export default function HomeScreen() {
 
           {/* Recent Reports */}
           <View style={{ marginTop: spacing.xl }}>
-            <View style={[styles.sectionHeader, { marginBottom: spacing.sm }]}>
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.size.md }]}>
-                My Recent Reports
+            <View style={[styles.sectionHeader, { marginBottom: 8, paddingHorizontal: 4 }]}>
+              <Text style={[styles.sectionHeaderTitle, { color: colors.textMuted }]}>
+                MY RECENT REPORTS
               </Text>
               <Pressable
                 onPress={() => router.push({ pathname: '/(resident)/reports', params: { from: pathname } } as any)}
-                style={({ pressed }) => [styles.seeAllRow, { opacity: pressed ? 0.6 : 1 }]}
+                style={({ pressed }) => [
+                  styles.seeAllRow,
+                  {
+                    backgroundColor: pressed ? colors.brandOrange : 'transparent',
+                    paddingHorizontal: pressed ? 8 : 4,
+                    paddingVertical: 2,
+                    borderRadius: 12,
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                  },
+                ]}
+                hitSlop={8}
+                accessibilityRole="button"
               >
-                <Text style={{ color: colors.brandOrange, fontSize: typography.size.sm, fontWeight: '600' }}>
-                  See all
-                </Text>
-                <ChevronRight size={14} color={colors.brandOrange} />
+                {({ pressed }) => (
+                  <>
+                    <Text style={{ color: pressed ? '#FFFFFF' : colors.brandOrange, fontSize: 13, fontWeight: '700' }}>
+                      See all
+                    </Text>
+                    <ChevronRight size={13} color={pressed ? '#FFFFFF' : colors.brandOrange} strokeWidth={2.5} />
+                  </>
+                )}
               </Pressable>
             </View>
 
-            <ShinyCard style={styles.reportsCard} padding={0}>
+            {/* Contained Inset Card matching Announcements */}
+            <View
+              style={[
+                styles.reportsCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
               {isLoading ? (
                 <View style={styles.stateBox}>
                   <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>Loading…</Text>
@@ -121,33 +151,28 @@ export default function HomeScreen() {
               ) : recentReports.length === 0 ? (
                 <View style={styles.stateBox}>
                   <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, textAlign: 'center', lineHeight: 20 }}>
-                    No reports yet. Tap the action button to submit an incident.
+                    No reports yet. Tap the report button below to submit an incident.
                   </Text>
                 </View>
               ) : (
                 recentReports.map((report, index) => (
-                  <View
-                    key={report.report_id}
-                    style={[
-                      { paddingHorizontal: spacing.md },
-                      index < recentReports.length - 1
-                        ? { borderBottomWidth: 1, borderBottomColor: colors.border }
-                        : undefined,
-                    ]}
-                  >
-                    <ReportListItem report={report} />
+                  <View key={report.report_id}>
+                    {index > 0 && (
+                      <View
+                        style={[
+                          styles.divider,
+                          {
+                            backgroundColor: colors.border,
+                            marginLeft: 14 + 48 + 12,
+                          },
+                        ]}
+                      />
+                    )}
+                    <ReportListItem report={report} paddingHorizontal={14} />
                   </View>
                 ))
               )}
-            </ShinyCard>
-          </View>
-
-          {/* Safety Tip */}
-          <View style={{ marginTop: spacing.xl }}>
-            <DailyTipCard
-              title="Never leave cooking unattended"
-              tip="Unattended kitchen equipment is the leading cause of residential fires in Lian."
-            />
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -161,10 +186,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  sectionTitle: { fontWeight: '700' },
+  sectionHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+  },
   seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  reportsCard: { overflow: 'hidden' },
-  stateBox: { padding: 20, alignItems: 'center' },
-  tipCard: {},
-  tipHeader: { flexDirection: 'row', alignItems: 'center' },
+  reportsCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+  },
+  stateBox: { padding: 22, alignItems: 'center' },
 });

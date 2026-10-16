@@ -23,36 +23,73 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
   hideChevron,
   gradient,
 }) => {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, typography, isDark } = useTheme();
 
   return (
-    <Pressable onPress={onPress} style={[styles.row, { paddingVertical: spacing.md }]}>
-      <View style={[styles.iconWrap, { backgroundColor: destructive ? `${colors.danger}14` : (gradient ? 'transparent' : colors.surfaceElevated) }]}>
-        {gradient && !destructive ? (
-          <LinearGradient
-            colors={gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-        ) : null}
-        {icon}
-      </View>
-      <View style={{ flex: 1, marginLeft: spacing.sm }}>
-        <Text
-          style={{
-            color: destructive ? colors.danger : colors.textPrimary,
-            fontSize: typography.size.sm,
-            fontWeight: '600',
-          }}
-        >
-          {label}
-        </Text>
-        {subtitle ? (
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 1 }}>{subtitle}</Text>
-        ) : null}
-      </View>
-      {hideChevron ? null : <ChevronRight size={18} color={colors.textMuted} />}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        {
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.sm,
+          marginHorizontal: -spacing.sm,
+          borderRadius: 12,
+          backgroundColor: pressed
+            ? (isDark ? '#221915' : '#FFF7F2')
+            : 'transparent',
+          borderColor: pressed ? colors.brandOrange : 'transparent',
+          borderWidth: 1.5,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
+        },
+      ]}
+    >
+      {({ pressed }) => (
+        <>
+          <View
+            style={[
+              styles.iconWrap,
+              {
+                backgroundColor: pressed
+                  ? colors.brandOrange
+                  : destructive
+                  ? `${colors.danger}14`
+                  : (gradient ? 'transparent' : colors.surfaceElevated),
+              },
+            ]}
+          >
+            {gradient && !destructive && !pressed ? (
+              <LinearGradient
+                colors={gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+            ) : null}
+            {icon}
+          </View>
+          <View style={{ flex: 1, marginLeft: spacing.sm }}>
+            <Text
+              style={{
+                color: destructive ? colors.danger : colors.textPrimary,
+                fontSize: typography.size.sm,
+                fontWeight: '600',
+              }}
+            >
+              {label}
+            </Text>
+            {subtitle ? (
+              <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 1 }}>{subtitle}</Text>
+            ) : null}
+          </View>
+          {hideChevron ? null : (
+            <ChevronRight
+              size={18}
+              color={pressed ? colors.brandOrange : colors.textMuted}
+            />
+          )}
+        </>
+      )}
     </Pressable>
   );
 };

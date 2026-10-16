@@ -35,14 +35,36 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ variant = 'dark' }) => {
         <Pressable
           onPress={() => router.push({ pathname: '/(resident)/notifications', params: { from: pathname } } as any)}
           hitSlop={10}
-          style={[styles.bellButton, { backgroundColor: bellBg }]}
+          style={({ pressed }) => [
+            styles.bellButton,
+            {
+              backgroundColor: pressed ? colors.brandOrange : bellBg,
+              borderColor: pressed ? colors.brandOrange : 'transparent',
+              borderWidth: 1,
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
         >
-          <Bell size={20} color={textColor} />
-          {unreadCount > 0 ? (
-            <View style={[styles.badge, { backgroundColor: colors.brandOrange, borderColor: backgroundColor }]}>
-              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-            </View>
-          ) : null}
+          {({ pressed }) => (
+            <>
+              <Bell size={20} color={pressed ? '#FFFFFF' : textColor} />
+              {unreadCount > 0 ? (
+                <View
+                  style={[
+                    styles.badge,
+                    {
+                      backgroundColor: pressed ? '#0F1C3F' : colors.brandOrange,
+                      borderColor: pressed ? '#0F1C3F' : backgroundColor,
+                    },
+                  ]}
+                >
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              ) : null}
+            </>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>

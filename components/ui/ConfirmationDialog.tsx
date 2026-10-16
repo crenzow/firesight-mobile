@@ -119,9 +119,19 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
             <Pressable
               onPress={onClose ?? onCancel}
               hitSlop={12}
-              style={[styles.closeButton, { backgroundColor: colors.surfaceElevated }]}
+              style={({ pressed }) => [
+                styles.closeButton,
+                {
+                  backgroundColor: pressed ? colors.brandOrange : colors.surfaceElevated,
+                  transform: [{ scale: pressed ? 0.90 : 1 }],
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Close dialog"
             >
-              <X size={16} color={colors.textMuted} />
+              {({ pressed }) => (
+                <X size={16} color={pressed ? '#FFFFFF' : colors.textMuted} />
+              )}
             </Pressable>
           )}
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, Mail, CheckCircle2 } from 'lucide-react-native';
+import { ChevronLeft, Mail, CheckCircle2 } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -38,7 +38,7 @@ export default function ForgotPasswordScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <Pressable onPress={() => router.back()} hitSlop={8} style={{ marginBottom: spacing.lg }}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
+          <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2.5} />
         </Pressable>
 
         {isSent ? (

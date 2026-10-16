@@ -1,12 +1,13 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Home, Map as MapIcon, BookOpen, User, Flame } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
-const ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = {
+const ICONS: Record<string, React.ComponentType<{ size: number; color: string; strokeWidth?: number }>> = {
   home: Home,
   map: MapIcon,
   'learn/index': BookOpen,
@@ -20,77 +21,256 @@ const LABELS: Record<string, string> = {
   'profile/index': 'Profile',
 };
 
-// The ONLY route names that should ever appear as tabs. Every other screen
-// registered under (resident)/_layout.tsx (reports/[id], profile/edit,
-// profile/settings, notifications, announcements, emergency-contacts,
-// learn/[id]) is reachable via router.push() but must never render here —
-// `options={{ href: null }}` only hides them from Expo Router's *default*
-// tab bar, not from a custom one like this, so we filter explicitly instead.
+// The ONLY route names that should ever appear as tabs.
 const VISIBLE_TAB_ORDER = ['home', 'map', 'learn/index', 'profile/index'] as const;
 
-/**
- * Custom tab bar matching the Figma reference: four real tab destinations
- * (Home, Map, Learn, Profile) plus a centered, elevated orange Report FAB
- * that isn't a tab route at all — tapping it pushes into the standalone
- * (report) capture -> review -> success stack.
- */
+interface TabItemProps {
+  route: { key: string; name: string };
+  isFocused: boolean;
+  onPress: () => void;
+  brandOrange: string;
+  tabInactive: string;
+}
+
+const TabItem: React.FC<TabItemProps> = ({ route, isFocused, onPress, brandOrange, tabInactive }) => {
+  const Icon = ICONS[route.name] ?? Home;
+  const label = LABELS[route.name] ?? route.name;
+  const color = isFocused ? brandOrange : tabInactive;
+
+  // Android Native-Driver spring pop on selection
+  const iconScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isFocused) {
+      iconScale.setValue(0.84);
+      Animated.spring(iconScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 32,
+        bounciness: 8,
+      }).start();
+    }
+  }, [isFocused]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tabItem,
+        {
+          opacity: pressed ? 0.9 : 1,
+          transform: [{ scale: pressed ? 0.94 : 1 }],
+        },
+      ]}
+      accessibilityRole="button"
+    >
+      {({ pressed }) => {
+        const itemColor = isFocused || pressed ? brandOrange : tabInactive;
+        return (
+          <>
+            {/* Top Active Highlight Pill sitting directly flush on top border line */}
+            {(isFocused || pressed) && (
+              <View
+                style={[
+                  styles.activeIndicator,
+                  { backgroundColor: brandOrange, opacity: isFocused ? 1 : 0.6 },
+                ]}
+              />
+            )}
+
+            <Animated.View style={{ transform: [{ scale: iconScale }] }}>
+              <Icon
+                size={22}
+                color={itemColor}
+                strokeWidth={isFocused || pressed ? 2.5 : 1.8}
+              />
+            </Animated.View>
+
+            <Text
+              style={[
+                styles.tabLabel,
+                {
+                  color: itemColor,
+                  fontWeight: isFocused || pressed ? '700' : '500',
+                },
+              ]}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.2}
+            >
+              {label}
+            </Text>
+          </>
+        );
+      }}
+    </Pressable>
+  );
+};
+
 export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  // Only keep the 4 routes we actually want as tabs, in a fixed order —
-  // regardless of how many other screens are registered in this navigator.
   const visibleRoutes = VISIBLE_TAB_ORDER.map((name) => state.routes.find((r) => r.name === name)).filter(
     (r): r is (typeof state.routes)[number] => !!r
   );
   const leftRoutes = visibleRoutes.slice(0, 2);
   const rightRoutes = visibleRoutes.slice(2);
 
-  const renderTab = (route: (typeof visibleRoutes)[number]) => {
-    const routeIndex = state.routes.findIndex((r) => r.key === route.key);
-    const isFocused = state.index === routeIndex;
-    const Icon = ICONS[route.name] ?? Home;
-    const label = LABELS[route.name] ?? route.name;
-    const color = isFocused ? colors.brandOrange : colors.tabInactive;
+  // Android Native-Driver spring scale for tactile FAB press
+  const fabScale = useRef(new Animated.Value(1)).current;
 
-    const onPress = () => {
-      const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-      if (!isFocused && !event.defaultPrevented) {
-        navigation.navigate(route.name);
-      }
-    };
+  const handlePressIn = () => {
+    Animated.spring(fabScale, {
+      toValue: 0.9,
+      useNativeDriver: true,
+      speed: 45,
+      bounciness: 4,
+    }).start();
+  };
 
-    return (
-      <Pressable key={route.key} onPress={onPress} style={styles.tabItem} accessibilityRole="button">
-        <Icon size={22} color={color} />
-        <Text style={[styles.tabLabel, { color }]}>{label}</Text>
-      </Pressable>
-    );
+  const handlePressOut = () => {
+    Animated.spring(fabScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 9,
+    }).start();
+  };
+
+  const handleReportPress = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {
+      // Safe fallback
+    }
+    router.push('/(report)/capture');
   };
 
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom || 9 },
+        {
+          backgroundColor: colors.surface,
+          paddingBottom: insets.bottom || 9,
+        },
       ]}
     >
-      <View style={styles.row}>
-        {leftRoutes.map((route) => renderTab(route))}
+      {/* Top hairline borders that stop cleanly before the center FAB cutout */}
+      <View
+        style={[
+          styles.borderSegmentLeft,
+          { backgroundColor: colors.border },
+        ]}
+        pointerEvents="none"
+      />
+      <View
+        style={[
+          styles.borderSegmentRight,
+          { backgroundColor: colors.border },
+        ]}
+        pointerEvents="none"
+      />
 
+      <View style={styles.row}>
+        {leftRoutes.map((route) => {
+          const routeIndex = state.routes.findIndex((r) => r.key === route.key);
+          const isFocused = state.index === routeIndex;
+          const onPress = () => {
+            try {
+              Haptics.selectionAsync();
+            } catch {
+              // Safe fallback
+            }
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          return (
+            <TabItem
+              key={route.key}
+              route={route}
+              isFocused={isFocused}
+              onPress={onPress}
+              brandOrange={colors.brandOrange}
+              tabInactive={colors.tabInactive}
+            />
+          );
+        })}
+
+        {/* Center Report Floating Action Button */}
         <View style={styles.fabSlot}>
           <Pressable
-            onPress={() => router.push('/(report)/capture')}
-            style={[styles.fab, { backgroundColor: colors.brandOrange }]}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            onPress={handleReportPress}
+            style={styles.fabPressable}
             accessibilityRole="button"
             accessibilityLabel="Report a fire"
           >
-            <Flame size={24} color="#FFFFFF" />
+            {({ pressed }) => (
+              <>
+                <Animated.View
+                  style={[
+                    styles.fab,
+                    {
+                      backgroundColor: pressed ? colors.brandOrangeDeep : colors.brandOrange,
+                      borderColor: colors.surface,
+                      transform: [{ scale: fabScale }],
+                    },
+                  ]}
+                >
+                  <Flame size={27} color="#FFFFFF" strokeWidth={2.4} />
+                </Animated.View>
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    {
+                      color: pressed ? colors.brandOrange : colors.tabInactive,
+                      fontWeight: pressed ? '700' : '500',
+                      marginTop: 3,
+                      textAlign: 'center',
+                      width: '100%',
+                    },
+                  ]}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.2}
+                >
+                  Report
+                </Text>
+              </>
+            )}
           </Pressable>
-          <Text style={[styles.tabLabel, { color: colors.tabInactive, marginTop: 2 }]}>Report</Text>
         </View>
 
-        {rightRoutes.map((route) => renderTab(route))}
+        {rightRoutes.map((route) => {
+          const routeIndex = state.routes.findIndex((r) => r.key === route.key);
+          const isFocused = state.index === routeIndex;
+          const onPress = () => {
+            try {
+              Haptics.selectionAsync();
+            } catch {
+              // Safe fallback
+            }
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          return (
+            <TabItem
+              key={route.key}
+              route={route}
+              isFocused={isFocused}
+              onPress={onPress}
+              brandOrange={colors.brandOrange}
+              tabInactive={colors.tabInactive}
+            />
+          );
+        })}
       </View>
     </View>
   );
@@ -98,43 +278,82 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation })
 
 const styles = StyleSheet.create({
   container: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 9,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  borderSegmentLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: '50%',
+    marginRight: 42,
+    height: StyleSheet.hairlineWidth,
+    zIndex: 1,
+  },
+  borderSegmentRight: {
+    position: 'absolute',
+    top: 0,
+    left: '50%',
+    right: 0,
+    marginLeft: 42,
+    height: StyleSheet.hairlineWidth,
+    zIndex: 1,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 54,
     justifyContent: 'space-around',
   },
   tabItem: {
     flex: 1,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    paddingTop: 8,
+    paddingBottom: 2,
+    gap: 3,
+    position: 'relative',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    top: 0,
+    alignSelf: 'center',
+    width: 44,
+    height: 3,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    zIndex: 10,
   },
   tabLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    letterSpacing: -0.1,
+    textAlign: 'center',
   },
   fabSlot: {
-    width: 64,
+    width: 74,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 50,
+  },
+  fabPressable: {
+    width: 74,
     alignItems: 'center',
     justifyContent: 'center',
   },
   fab: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -28,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    // Soft simple glow effect
-    shadowColor: '#F4622B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    marginTop: -34,
+    borderWidth: 5,
+    zIndex: 50,
   },
 });

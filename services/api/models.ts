@@ -33,7 +33,7 @@ export interface BFPIncidentMarker extends IncidentMarker {
 }
 
 export type ReportStatus = 'pending' | 'accepted' | 'dispatched' | 'resolved' | 'invalid';
-export type RiskLevel = 'low' | 'moderate' | 'high' | 'critical';
+export type RiskLevel = 'mild' | 'moderate' | 'high';
 
 export interface CommunityReport {
   report_id: number;
@@ -69,8 +69,15 @@ export interface CreateReportPayload {
 }
 
 export interface AreaStatus {
-  barangay_id: number;
+  barangay_id: number | null;
   barangay_name: string;
+  municipality?: string;
+  province?: string;
+  registered_municipality?: string | null;
+  registered_province?: string | null;
+  is_external?: boolean;
+  scope_label?: string;
+  pilot_station?: string;
   risk_level: RiskLevel;
   incidents_this_month: number;
   advisory_active: boolean;

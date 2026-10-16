@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Modal, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Plus, Camera, X } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';

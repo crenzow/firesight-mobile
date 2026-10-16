@@ -14,6 +14,8 @@ import { ApiError } from '../../../services/api/client';
 import { getInitials, formatFullName } from '../../../utils/formatters';
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
 import { ShinyCard } from '../../../components/ui/ShinyCard';
+import { getProfileImageUri } from '../../../utils/avatar';
+import { PhotoOptionsModal } from '../../../components/profile/PhotoPickerModal';
 
 export default function BFPEditProfileScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -24,31 +26,18 @@ export default function BFPEditProfileScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [localImage, setLocalImage] = useState<string | null>(null);
+  const [removePhotoSelected, setRemovePhotoSelected] = useState(false);
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const profileImageUri = localImage ?? user?.profile_image ?? null;
+  const profileImageUri = removePhotoSelected
+    ? null
+    : getProfileImageUri(localImage ?? user?.profile_image);
   const initials = getInitials(user?.first_name ?? '', user?.last_name ?? '');
-
-  const pickProfileImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please allow access to your photo library to change your profile picture.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets?.[0]) {
-      setLocalImage(result.assets[0].uri);
-    }
-  };
 
   const handleSavePress = () => {
     setError(null);
@@ -74,6 +63,8 @@ export default function BFPEditProfileScreen() {
       const updatedUser = await profileService.update({
         contact_number: contactNumber.trim(),
         ...(password.trim() ? { password: password.trim() } : {}),
+        photoUri: localImage ?? undefined,
+        remove_photo: removePhotoSelected,
       });
       await updateUser(updatedUser);
       setShowSuccessModal(true);
@@ -104,16 +95,18 @@ export default function BFPEditProfileScreen() {
 
           {/* Profile Photo */}
           <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-            <Pressable onPress={pickProfileImage} style={styles.photoWrap}>
-              {profileImageUri ? (
-                <Image source={{ uri: profileImageUri }} style={styles.photoImage} />
-              ) : (
-                <View style={[styles.photoFallback, { backgroundColor: colors.brandOrange }]}>
-                  <Text style={styles.photoInitials}>{initials}</Text>
-                </View>
-              )}
-              <View style={styles.photoCameraBadge}>
-                <Camera size={14} color="#FFFFFF" />
+            <Pressable onPress={() => setShowPhotoOptions(true)} style={styles.photoWrap}>
+              <View style={styles.photoClip}>
+                {profileImageUri ? (
+                  <Image source={{ uri: profileImageUri }} style={styles.photoImage} />
+                ) : (
+                  <View style={[styles.photoFallback, { backgroundColor: colors.brandOrange }]}>
+                    <Text style={styles.photoInitials}>{initials}</Text>
+                  </View>
+                )}
+              </View>
+              <View style={[styles.photoCameraBadge, { borderColor: colors.background }]}>
+                <Camera size={15} color="#FFFFFF" />
               </View>
             </Pressable>
             <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: spacing.sm }}>
@@ -210,6 +203,21 @@ export default function BFPEditProfileScreen() {
         showCancel={false}
         onConfirm={handleSuccessClose}
       />
+
+      {/* Photo Options Modal */}
+      <PhotoOptionsModal
+        visible={showPhotoOptions}
+        onClose={() => setShowPhotoOptions(false)}
+        onImageSelected={(uri) => {
+          setLocalImage(uri);
+          setRemovePhotoSelected(false);
+        }}
+        onRemovePhoto={() => {
+          setLocalImage(null);
+          setRemovePhotoSelected(true);
+        }}
+        hasExistingPhoto={Boolean(profileImageUri)}
+      />
     </View>
   );
 }
@@ -218,9 +226,14 @@ const styles = StyleSheet.create({
   photoWrap: {
     width: 100,
     height: 100,
+    position: 'relative',
+  },
+  photoClip: {
+    width: 100,
+    height: 100,
     borderRadius: 28,
     overflow: 'hidden',
-    position: 'relative',
+    backgroundColor: '#E2E8F0',
   },
   photoImage: {
     width: '100%',
@@ -239,15 +252,19 @@ const styles = StyleSheet.create({
   },
   photoCameraBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    bottom: -3,
+    right: -3,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#6D5BD0',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderWidth: 2.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });
