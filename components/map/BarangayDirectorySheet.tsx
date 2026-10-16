@@ -7,7 +7,8 @@ import {
   Pressable,
   TextInput,
   FlatList,
-  useWindowDimensions,
+  Dimensions,
+  Platform,
   Keyboard,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -49,20 +50,52 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
   selectedBarangayName,
 }) => {
   const { colors, isDark } = useTheme();
-  const { height: windowHeight } = useWindowDimensions();
+  const screenHeight = Dimensions.get('screen').height;
   const [searchQuery, setSearchQuery] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Sheet geometry:
-  // Full sheet height is 88% of screen height.
-  // translateY = 0 -> Full open (88% visible)
-  // translateY = SNAP_HALF -> Half open (~56% visible)
-  // translateY = sheetHeight -> Closed (0% visible)
-  const sheetHeight = Math.round(windowHeight * 0.88);
+  // Top snap position is 10% from screen top (safely below status bar and floating header).
+  // translateY = snapFull (0) -> Full open (top of sheet anchored at topSnap)
+  // translateY = snapHalf     -> Half open (top of sheet anchored at topSnap + snapHalf)
+  // translateY = sheetHeight  -> Closed (off bottom of screen)
+  const topSnap = Math.round(screenHeight * 0.10);
+  const sheetHeight = screenHeight - topSnap;
   const snapFull = 0;
-  const snapHalf = Math.round(windowHeight * 0.32);
+  const snapHalf = Math.round(screenHeight * 0.35);
 
   const translateY = useSharedValue(sheetHeight);
   const dragStartY = useSharedValue(snapHalf);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        if (translateY.value > snapFull + 10) {
+          translateY.value = withSpring(snapFull, SPRING_CONFIG);
+        }
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [snapFull, translateY]);
+
+  const dismissKeyboard = useCallback(() => {
+    try {
+      Keyboard.dismiss();
+    } catch {
+      // safe fallback
+    }
+  }, []);
 
   const triggerSnapHaptic = useCallback(() => {
     Haptics.selectionAsync().catch(() => {});
@@ -96,6 +129,7 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
     () =>
       Gesture.Pan()
         .onBegin(() => {
+          runOnJS(dismissKeyboard)();
           dragStartY.value = translateY.value;
         })
         .onUpdate((event) => {
@@ -140,7 +174,7 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
           translateY.value = withSpring(targetSnap, SPRING_CONFIG);
           runOnJS(triggerSnapHaptic)();
         }),
-    [dragStartY, handleDismiss, sheetHeight, snapFull, snapHalf, translateY, triggerSnapHaptic]
+    [dismissKeyboard, dragStartY, handleDismiss, sheetHeight, snapFull, snapHalf, translateY, triggerSnapHaptic]
   );
 
   const toggleSnapPoint = () => {
@@ -177,17 +211,6 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
     );
   }, [barangays, searchQuery]);
 
-  const riskCounts = useMemo(() => {
-    let high = 0;
-    let moderate = 0;
-    let mild = 0;
-    barangays.forEach((b) => {
-      if (b.risk_level === 'high') high++;
-      else if (b.risk_level === 'moderate') moderate++;
-      else mild++;
-    });
-    return { high, moderate, mild, total: barangays.length };
-  }, [barangays]);
 
   const userBarangayRiskColor =
     userBarangayFeature?.risk_level === 'high'
@@ -201,6 +224,7 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
       visible={visible}
       animationType="none"
       transparent
+      statusBarTranslucent
       onRequestClose={animateClose}
     >
       <GestureHandlerRootView style={styles.root}>
@@ -215,7 +239,7 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
             style={[
               styles.sheetContainer,
               {
-                height: sheetHeight,
+                top: topSnap,
                 backgroundColor: isDark ? '#141A2E' : '#FFFFFF',
                 borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
               },
@@ -237,14 +261,9 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
 
                 {/* Header Row */}
                 <View style={styles.headerRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-                      Lian Barangays
-                    </Text>
-                    <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                      {riskCounts.total} Areas · {riskCounts.high} High · {riskCounts.moderate} Moderate · {riskCounts.mild} Mild
-                    </Text>
-                  </View>
+                  <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+                    Lian Barangays
+                  </Text>
 
                   <Pressable
                     onPress={animateClose}
@@ -292,9 +311,13 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
             <FlatList
               data={filteredBarangays}
               keyExtractor={(item) => String(item.barangay_id)}
-              contentContainerStyle={{ paddingBottom: 42 }}
+              style={{ flex: 1 }}
+              contentContainerStyle={{
+                paddingBottom: Platform.OS === 'ios' && keyboardHeight > 0 ? keyboardHeight + 24 : 42,
+              }}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               ListHeaderComponent={
                 !searchQuery.trim() ? (
                   <View style={styles.pinnedSection}>
@@ -435,13 +458,17 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: 'flex-end',
+    position: 'relative',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sheetContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderTopWidth: 1,
@@ -471,11 +498,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     letterSpacing: 0.2,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
   },
   closeCircle: {
     width: 32,
