@@ -50,6 +50,7 @@ import { StatusStepper } from '../../../components/bfp/StatusStepper';
 import { EvidenceGallery } from '../../../components/bfp/EvidenceGallery';
 import { IncidentLocationMap, MapType, GPSUpdate } from '../../../components/bfp/IncidentLocationMap';
 import { incidentService } from '../../../services/api/incidentService';
+import { reverseGeocode } from '../../../utils/geocoding';
 import { BFPIncident, BFPIncidentStatusHistoryEntry, IncidentType } from '../../../services/api/bfpModels';
 import { BFPIncidentStatus } from '../../../components/bfp/IncidentStatusBadge';
 import { formatFullDate, formatTime } from '../../../utils/formatters';
@@ -368,12 +369,10 @@ export default function IncidentDetailScreen() {
   useEffect(() => {
     let isMounted = true;
     if (incident?.latitude && incident?.longitude) {
-      import('../../../utils/geocoding').then(({ reverseGeocode }) => {
-        reverseGeocode(incident.latitude, incident.longitude).then((name) => {
-          if (isMounted) {
-            setLocationName(name !== 'Unknown area' ? name : (incident.barangay_name ?? 'Unknown location'));
-          }
-        });
+      reverseGeocode(incident.latitude, incident.longitude).then((name) => {
+        if (isMounted) {
+          setLocationName(name !== 'Unknown area' ? name : (incident.barangay_name ?? 'Unknown location'));
+        }
       });
     } else if (incident) {
       setLocationName(incident.barangay_name ?? 'Unknown location');

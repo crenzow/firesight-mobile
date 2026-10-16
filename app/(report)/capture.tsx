@@ -80,7 +80,13 @@ export default function CaptureScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" flash={flash} />
+      <CameraView
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+        facing="back"
+        flash={flash}
+        enableTorch={flash === 'on'}
+      />
 
       <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
         <View style={[styles.topBar, { paddingHorizontal: spacing.lg }]}>
@@ -109,13 +115,15 @@ export default function CaptureScreen() {
             style={({ pressed }) => [
               styles.iconButton,
               {
-                backgroundColor: pressed ? colors.brandOrange : 'rgba(0,0,0,0.45)',
+                backgroundColor: flash === 'on' ? 'rgba(255, 194, 75, 0.28)' : (pressed ? colors.brandOrange : 'rgba(0,0,0,0.45)'),
+                borderColor: flash === 'on' ? '#FFC24B' : 'transparent',
+                borderWidth: flash === 'on' ? 1.5 : 0,
                 transform: [{ scale: pressed ? 0.90 : 1 }],
               },
             ]}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Toggle flash"
+            accessibilityLabel={flash === 'on' ? 'Turn flashlight off' : 'Turn flashlight on'}
           >
             {flash === 'off' ? <ZapOff size={20} color="#FFFFFF" /> : <Zap size={20} color="#FFC24B" />}
           </Pressable>

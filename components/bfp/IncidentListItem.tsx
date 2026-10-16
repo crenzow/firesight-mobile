@@ -9,24 +9,27 @@ import { SeverityBadge } from './SeverityBadge';
 import { formatRelativeDate, formatTime } from '../../utils/formatters';
 import { APP_CONFIG } from '../../constants/config';
 import { InteractiveCard } from './InteractiveCard';
+import { reverseGeocode, getCachedGeocode } from '../../utils/geocoding';
 
 export const IncidentListItem: React.FC<{ incident: BFPIncident; from?: 'dashboard' | 'incidents' }> = ({ incident, from = 'incidents' }) => {
   const { colors, spacing, radius, typography, isDark } = useTheme();
-  const [locationName, setLocationName] = React.useState<string>(incident.barangay_name ?? 'Loading location…');
+  const [locationName, setLocationName] = React.useState<string>(
+    () => getCachedGeocode(incident.latitude, incident.longitude) || incident.barangay_name || 'Loading location…'
+  );
 
   React.useEffect(() => {
     let isMounted = true;
-    import('../../utils/geocoding').then(({ reverseGeocode }) => {
+    if (incident.latitude && incident.longitude) {
       reverseGeocode(incident.latitude, incident.longitude).then((name) => {
-        if (isMounted) {
-          setLocationName(name !== 'Unknown area' ? name : (incident.barangay_name ?? 'Unknown location'));
+        if (isMounted && name !== 'Unknown area') {
+          setLocationName(name);
         }
       });
-    });
+    }
     return () => {
       isMounted = false;
     };
-  }, [incident.latitude, incident.longitude, incident.barangay_name]);
+  }, [incident.latitude, incident.longitude]);
 
   return (
     <InteractiveCard

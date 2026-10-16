@@ -28,6 +28,7 @@ import { getInitials, formatFullName } from '../../../utils/formatters';
 import { getProfileImageUri } from '../../../utils/avatar';
 import { profileService } from '../../../services/api/profileService';
 import { PhotoOptionsModal, PhotoPreviewModal } from '../../../components/profile/PhotoPickerModal';
+import { PhotoCropModal } from '../../../components/profile/PhotoCropModal';
 
 export default function ProfileScreen() {
   const { colors, spacing, typography } = useTheme();
@@ -36,6 +37,8 @@ export default function ProfileScreen() {
   const [localImage, setLocalImage] = useState<string | null>(null);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const [showPhotoPreview, setShowPhotoPreview] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropTargetUri, setCropTargetUri] = useState<string | null>(null);
   const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const pathname = usePathname();
@@ -45,7 +48,12 @@ export default function ProfileScreen() {
   }, [refreshUser]);
 
   const handleImageSelected = (uri: string) => {
-    setPendingPhotoUri(uri);
+    setCropTargetUri(uri);
+    setShowCropModal(true);
+  };
+
+  const handleCropComplete = (croppedUri: string) => {
+    setPendingPhotoUri(croppedUri);
     setShowPhotoPreview(true);
   };
 
@@ -302,6 +310,17 @@ export default function ProfileScreen() {
         onImageSelected={handleImageSelected}
         onRemovePhoto={handleRemovePhoto}
         hasExistingPhoto={Boolean(profileImageUri)}
+      />
+
+      {/* Social-Media Style Interactive Crop & Adjust Modal */}
+      <PhotoCropModal
+        visible={showCropModal}
+        imageUri={cropTargetUri}
+        onClose={() => {
+          setShowCropModal(false);
+          setCropTargetUri(null);
+        }}
+        onCropComplete={handleCropComplete}
       />
 
       {/* Photo Preview & Confirmation Modal */}

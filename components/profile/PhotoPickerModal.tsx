@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Image as ImageIcon, Trash2, X } from 'lucide-react-native';
+import { Camera, Image as ImageIcon, Trash2, X, RotateCcw } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { Button } from '../ui/Button';
 

@@ -19,6 +19,7 @@ import { getProfileImageUri } from '../../../utils/avatar';
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
 import { Save } from 'lucide-react-native';
 import { PhotoOptionsModal } from '../../../components/profile/PhotoPickerModal';
+import { PhotoCropModal } from '../../../components/profile/PhotoCropModal';
 
 export default function EditProfileScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -35,6 +36,8 @@ export default function EditProfileScreen() {
   const [localImage, setLocalImage] = useState<string | null>(null);
   const [removePhotoSelected, setRemovePhotoSelected] = useState(false);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropTargetUri, setCropTargetUri] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -157,14 +160,30 @@ export default function EditProfileScreen() {
         visible={showPhotoOptions}
         onClose={() => setShowPhotoOptions(false)}
         onImageSelected={(uri) => {
-          setLocalImage(uri);
-          setRemovePhotoSelected(false);
+          setCropTargetUri(uri);
+          setShowCropModal(true);
         }}
         onRemovePhoto={() => {
           setLocalImage(null);
           setRemovePhotoSelected(true);
         }}
         hasExistingPhoto={Boolean(profileImageUri)}
+      />
+
+      {/* Social-Media Style Interactive Crop & Adjust Modal */}
+      <PhotoCropModal
+        visible={showCropModal}
+        imageUri={cropTargetUri}
+        onClose={() => {
+          setShowCropModal(false);
+          setCropTargetUri(null);
+        }}
+        onCropComplete={(croppedUri) => {
+          setLocalImage(croppedUri);
+          setRemovePhotoSelected(false);
+          setShowCropModal(false);
+          setCropTargetUri(null);
+        }}
       />
     </View>
   );

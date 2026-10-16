@@ -7,6 +7,7 @@ import { CommunityReport } from '../../services/api/models';
 import { StatusBadge } from './StatusBadge';
 import { formatRelativeDate, formatTime } from '../../utils/formatters';
 import { APP_CONFIG } from '../../constants/config';
+import { reverseGeocode, getCachedGeocode } from '../../utils/geocoding';
 
 interface ReportListItemProps {
   report: CommunityReport;
@@ -15,24 +16,26 @@ interface ReportListItemProps {
 
 export const ReportListItem: React.FC<ReportListItemProps> = ({ report, paddingHorizontal }) => {
   const { colors, spacing, typography, radius, isDark } = useTheme();
-  const [locationName, setLocationName] = useState<string>(report.barangay_name ?? 'Loading location…');
   const [imageError, setImageError] = useState(false);
+  const [locationName, setLocationName] = useState<string>(
+    () => getCachedGeocode(report.latitude, report.longitude) || report.barangay_name || 'Loading location…'
+  );
 
   const horizontalPadding = paddingHorizontal ?? spacing.md;
 
   useEffect(() => {
     let isMounted = true;
-    import('../../utils/geocoding').then(({ reverseGeocode }) => {
+    if (report.latitude && report.longitude) {
       reverseGeocode(report.latitude, report.longitude).then((name) => {
-        if (isMounted) {
-          setLocationName(name !== 'Unknown area' ? name : (report.barangay_name ?? 'Unknown location'));
+        if (isMounted && name !== 'Unknown area') {
+          setLocationName(name);
         }
       });
-    });
+    }
     return () => {
       isMounted = false;
     };
-  }, [report.latitude, report.longitude, report.barangay_name]);
+  }, [report.latitude, report.longitude]);
 
   const hasPhoto = !!report.report_image && !imageError;
   const photoUri = report.report_image?.startsWith('http')
