@@ -103,9 +103,15 @@ export const LeafletPickerMap: React.FC<LeafletPickerMapProps> = ({
         onMessage={handleMessage}
         onLoad={handleLoad}
       />
-      {/* Pin dot overlay */}
+      {/* Precision Crosshair Target Overlay */}
       <View style={styles.crosshairContainer} pointerEvents="none">
-        <View style={styles.centerDot} />
+        <View style={styles.targetRing}>
+          <View style={[styles.reticleLine, styles.reticleTop]} />
+          <View style={[styles.reticleLine, styles.reticleBottom]} />
+          <View style={[styles.reticleLine, styles.reticleLeft]} />
+          <View style={[styles.reticleLine, styles.reticleRight]} />
+          <View style={styles.targetCenterPoint} />
+        </View>
       </View>
     </View>
   );
@@ -193,8 +199,6 @@ function buildMapHtml(lat: number, lng: number, zoom: number, initialMapType: Pi
 
 // ---------------------------------------------------------------------------
 
-const DOT = 18;
-
 const styles = StyleSheet.create({
   container: { flex: 1, position: 'relative' },
   webview: { flex: 1, backgroundColor: 'transparent' },
@@ -206,18 +210,53 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
 
-  /* Blue pin dot */
-  centerDot: {
-    width: DOT,
-    height: DOT,
-    borderRadius: DOT / 2,
-    backgroundColor: '#3B82F6',
-    borderWidth: 3,
+  /* Precision Brand Reticle — Clean & Transparent */
+  targetRing: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#F4622B',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  targetCenterPoint: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#F4622B',
+    borderWidth: 2,
     borderColor: '#FFFFFF',
     shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 3,
+    shadowOpacity: 0.35,
+    shadowRadius: 2,
     shadowOffset: { width: 0, height: 1 },
-    elevation: 6,
+    elevation: 3,
+  },
+  reticleLine: {
+    position: 'absolute',
+    backgroundColor: '#F4622B',
+  },
+  reticleTop: {
+    top: -5,
+    width: 1.5,
+    height: 4,
+  },
+  reticleBottom: {
+    bottom: -5,
+    width: 1.5,
+    height: 4,
+  },
+  reticleLeft: {
+    left: -5,
+    width: 4,
+    height: 1.5,
+  },
+  reticleRight: {
+    right: -5,
+    width: 4,
+    height: 1.5,
   },
 });

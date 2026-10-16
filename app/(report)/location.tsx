@@ -2,16 +2,18 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ChevronLeft, Check, AlertTriangle, LocateFixed, Layers, Globe } from 'lucide-react-native';
+import { ChevronLeft, Check, AlertTriangle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
 import { Button } from '../../components/ui/Button';
 import { LeafletPickerMap, PickerMapType } from '../../components/map/LeafletPickerMap';
+import { MapFloatingControls } from '../../components/map/MapFloatingControls';
+import { MapTypeModal } from '../../components/map/MapTypeModal';
 import { reverseGeocode } from '../../utils/geocoding';
 
 export default function LocationScreen() {
-  const { colors, spacing, typography, shadow } = useTheme();
+  const { colors, spacing, typography, shadow, isDark } = useTheme();
   const { draft, updateDraft } = useReportDraft();
 
   const [currentLat, setCurrentLat] = useState<number | null>(null);
@@ -20,6 +22,7 @@ export default function LocationScreen() {
   const [isGeocodingLoading, setIsGeocodingLoading] = useState(false);
   const [mapType, setMapType] = useState<PickerMapType>('satellite');
   const [isLocating, setIsLocating] = useState(false);
+  const [isMapTypeModalOpen, setIsMapTypeModalOpen] = useState(false);
 
   // Ref to the pan function exposed by LeafletPickerMap
   const panToRef = useRef<((lat: number, lng: number) => void) | null>(null);
@@ -57,11 +60,6 @@ export default function LocationScreen() {
     panToRef.current = pan;
   }, []);
 
-  const handleChangeMapType = useCallback((nextType: PickerMapType) => {
-    Haptics.selectionAsync().catch(() => {});
-    setMapType(nextType);
-  }, []);
-
   const handleLocateMe = useCallback(() => {
     if (!draft.deviceLocation) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -97,11 +95,6 @@ export default function LocationScreen() {
     );
   }
 
-  const MAP_TYPES: { key: PickerMapType; label: string; Icon: typeof Layers }[] = [
-    { key: 'standard', label: 'Default', Icon: Layers },
-    { key: 'satellite', label: 'Satellite', Icon: Globe },
-  ];
-
   return (
     <View style={styles.container}>
       {/* Map */}
@@ -119,93 +112,62 @@ export default function LocationScreen() {
           onPress={() => router.back()}
           style={({ pressed }) => [
             styles.floatButton,
+            {
+              backgroundColor: isDark ? 'rgba(21, 26, 48, 0.92)' : 'rgba(255, 255, 255, 0.94)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+              borderWidth: 1,
+            },
             shadow.card,
             {
-              backgroundColor: pressed ? colors.brandOrange : colors.surface,
-              transform: [{ scale: pressed ? 0.90 : 1 }],
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+              opacity: pressed ? 0.8 : 1,
             },
           ]}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          {({ pressed }) => (
-            <ChevronLeft size={22} color={pressed ? '#FFFFFF' : colors.textPrimary} strokeWidth={2.5} />
-          )}
+          <ChevronLeft size={22} color={colors.textPrimary} strokeWidth={2.5} />
         </Pressable>
       </SafeAreaView>
 
-      {/* Map type toggle + locate-me — stacked on right side */}
+      {/* Floating map controls (Layer switch + Locate me) */}
       <SafeAreaView style={styles.rightOverlay} edges={['top']}>
-        {/* Map Type Toggle */}
-        <View style={[styles.mapTypeContainer, shadow.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {MAP_TYPES.map((item, i) => {
-            const isActive = mapType === item.key;
-            return (
-              <React.Fragment key={item.key}>
-                {i > 0 && <View style={[styles.mapTypeDivider, { backgroundColor: colors.border }]} />}
-                <Pressable
-                  onPress={() => handleChangeMapType(item.key)}
-                  style={({ pressed }) => [
-                    styles.mapTypeBtn,
-                    (isActive || pressed) && { backgroundColor: pressed ? colors.brandOrange : `${colors.brandOrange}12` },
-                    { transform: [{ scale: pressed ? 0.94 : 1 }] },
-                  ]}
-                  accessibilityRole="button"
-                >
-                  {({ pressed }) => (
-                    <>
-                      <item.Icon
-                        size={16}
-                        color={pressed ? '#FFFFFF' : isActive ? colors.brandOrange : colors.textMuted}
-                        strokeWidth={isActive || pressed ? 2.3 : 1.8}
-                      />
-                      <Text
-                        style={[
-                          styles.mapTypeLabel,
-                          { color: pressed ? '#FFFFFF' : isActive ? colors.brandOrange : colors.textMuted },
-                          isActive && styles.mapTypeLabelActive,
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                    </>
-                  )}
-                </Pressable>
-              </React.Fragment>
-            );
-          })}
-        </View>
-
-        {/* Locate Me Button */}
-        <Pressable
-          onPress={handleLocateMe}
-          style={({ pressed }) => [
-            styles.floatButton,
-            shadow.card,
-            {
-              backgroundColor: pressed ? colors.brandOrange : colors.surface,
-              marginTop: 10,
-              transform: [{ scale: pressed ? 0.90 : 1 }],
-            },
-          ]}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Locate my position"
-        >
-          {({ pressed }) =>
-            isLocating ? (
-              <ActivityIndicator size="small" color={pressed ? '#FFFFFF' : colors.textPrimary} />
-            ) : (
-              <LocateFixed size={20} color={pressed ? '#FFFFFF' : colors.textPrimary} strokeWidth={2} />
-            )
-          }
-        </Pressable>
+        <MapFloatingControls
+          onOpenMapType={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setIsMapTypeModalOpen(true);
+          }}
+          onLocateUser={handleLocateMe}
+          isLocating={isLocating}
+        />
       </SafeAreaView>
+
+      {/* Map Type Sheet */}
+      <MapTypeModal
+        visible={isMapTypeModalOpen}
+        onClose={() => setIsMapTypeModalOpen(false)}
+        mapType={mapType}
+        onChange={(type) => {
+          if (type === 'standard' || type === 'satellite') {
+            setMapType(type);
+          }
+        }}
+      />
 
       {/* Floating Bottom Card */}
       <SafeAreaView style={styles.bottomOverlay} edges={['bottom']}>
-        <View style={[styles.bottomCard, shadow.large, { backgroundColor: colors.surface }]}>
+        <View
+          style={[
+            styles.bottomCard,
+            shadow.large,
+            {
+              backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.96)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+              borderWidth: 1,
+            },
+          ]}
+        >
           <Text style={{ color: colors.textPrimary, fontWeight: '800', fontSize: typography.size.md, marginBottom: 2 }}>
             Pin Incident Location
           </Text>
@@ -215,10 +177,9 @@ export default function LocationScreen() {
 
           {/* Place name chip */}
           <View style={[styles.placeChip, { backgroundColor: `${colors.brandOrange}14`, borderColor: `${colors.brandOrange}30` }]}>
-            {isGeocodingLoading
-              ? <ActivityIndicator size="small" color={colors.brandOrange} style={{ marginRight: 8 }} />
-              : null
-            }
+            {isGeocodingLoading ? (
+              <ActivityIndicator size="small" color={colors.brandOrange} style={{ marginRight: 8 }} />
+            ) : null}
             <Text style={{ color: colors.brandOrange, fontWeight: '700', fontSize: 13, flexShrink: 1 }} numberOfLines={2}>
               📍 {placeName}
             </Text>
@@ -242,7 +203,6 @@ export default function LocationScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  // Back button anchored to the top-left
   backOverlay: {
     position: 'absolute',
     top: 0,
@@ -251,7 +211,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingLeft: 16,
   },
-  // Map type toggle + locate-me stacked on the top-right
   rightOverlay: {
     position: 'absolute',
     top: 0,
@@ -268,35 +227,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mapTypeContainer: {
-    flexDirection: 'column',
-    overflow: 'hidden',
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingVertical: 4,
-  },
-  mapTypeDivider: { height: 1, marginHorizontal: 6 },
-  mapTypeBtn: {
-    width: 58,
-    paddingVertical: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-  },
-  mapTypeLabel: { fontSize: 9, fontWeight: '600', letterSpacing: 0.2 },
-  mapTypeLabelActive: { fontWeight: '700' },
   bottomOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20 },
   bottomCard: {
     margin: 16,
     padding: 20,
-    borderRadius: 20,
+    borderRadius: 24,
   },
   placeChip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
   },
 });

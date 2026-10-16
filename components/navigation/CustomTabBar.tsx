@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
 import { router } from 'expo-router';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Home, Map as MapIcon, BookOpen, User, Flame } from 'lucide-react-native';
@@ -119,6 +119,61 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation })
   // Android Native-Driver spring scale for tactile FAB press
   const fabScale = useRef(new Animated.Value(1)).current;
 
+  // Slow, light outward-only radiating sonar waves (structured, light color, zero eye strain)
+  const wave1 = useRef(new Animated.Value(0)).current;
+  const wave2 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const createLoop = (val: Animated.Value) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(val, {
+            toValue: 1,
+            duration: 4400,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(val, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+    const anim1 = createLoop(wave1);
+    const anim2 = createLoop(wave2);
+
+    anim1.start();
+    const timer = setTimeout(() => {
+      anim2.start();
+    }, 2200);
+
+    return () => {
+      anim1.stop();
+      anim2.stop();
+      clearTimeout(timer);
+    };
+  }, [wave1, wave2]);
+
+  const wave1Scale = wave1.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.0, 1.34],
+  });
+  const wave1Opacity = wave1.interpolate({
+    inputRange: [0, 0.25, 0.70, 1],
+    outputRange: [0.55, 0.42, 0.16, 0.0],
+  });
+
+  const wave2Scale = wave2.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.0, 1.34],
+  });
+  const wave2Opacity = wave2.interpolate({
+    inputRange: [0, 0.25, 0.70, 1],
+    outputRange: [0.55, 0.42, 0.16, 0.0],
+  });
+
   const handlePressIn = () => {
     Animated.spring(fabScale, {
       toValue: 0.9,
@@ -207,6 +262,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation })
             onPressOut={handlePressOut}
             onPress={handleReportPress}
             style={styles.fabPressable}
+            hitSlop={{ top: 24, bottom: 6, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Report a fire"
           >
@@ -214,22 +270,56 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation })
               <>
                 <Animated.View
                   style={[
-                    styles.fab,
+                    styles.fabAnchor,
                     {
-                      backgroundColor: pressed ? colors.brandOrangeDeep : colors.brandOrange,
-                      borderColor: colors.surface,
                       transform: [{ scale: fabScale }],
                     },
                   ]}
                 >
-                  <Flame size={27} color="#FFFFFF" strokeWidth={2.4} />
+                  {/* Slow, Light Outward Sonar Wave 1 */}
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.fabHalo,
+                      {
+                        transform: [{ scale: wave1Scale }],
+                        opacity: wave1Opacity,
+                      },
+                    ]}
+                  />
+
+                  {/* Slow, Light Outward Sonar Wave 2 */}
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.fabHalo,
+                      {
+                        transform: [{ scale: wave2Scale }],
+                        opacity: wave2Opacity,
+                      },
+                    ]}
+                  />
+
+                  {/* 64px Core Floating Action Button */}
+                  <View
+                    style={[
+                      styles.fab,
+                      {
+                        backgroundColor: pressed ? colors.brandOrangeDeep : colors.brandOrange,
+                        borderColor: '#FFFFFF',
+                      },
+                    ]}
+                  >
+                    <Flame size={27} color="#FFFFFF" strokeWidth={2.4} />
+                  </View>
                 </Animated.View>
+
                 <Text
                   style={[
                     styles.tabLabel,
                     {
                       color: pressed ? colors.brandOrange : colors.tabInactive,
-                      fontWeight: pressed ? '700' : '500',
+                      fontWeight: pressed ? '700' : '600',
                       marginTop: 3,
                       textAlign: 'center',
                       width: '100%',
@@ -284,6 +374,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 8,
+    overflow: 'visible',
   },
   borderSegmentLeft: {
     position: 'absolute',
@@ -308,6 +399,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 54,
     justifyContent: 'space-around',
+    overflow: 'visible',
   },
   tabItem: {
     flex: 1,
@@ -340,11 +432,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 50,
+    overflow: 'visible',
   },
   fabPressable: {
     width: 74,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    overflow: 'visible',
+  },
+  fabAnchor: {
+    width: 64,
+    height: 64,
+    marginTop: -34,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+    zIndex: 50,
+  },
+  fabHalo: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(244, 98, 43, 0.10)',
+    borderColor: 'rgba(244, 98, 43, 0.55)',
+    borderWidth: 1.6,
+    zIndex: 1,
   },
   fab: {
     width: 64,
@@ -352,8 +466,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -34,
-    borderWidth: 5,
-    zIndex: 50,
+    borderWidth: 3.5,
+    zIndex: 2,
   },
 });
