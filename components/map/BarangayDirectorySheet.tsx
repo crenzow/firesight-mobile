@@ -296,11 +296,13 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               ListHeaderComponent={
-                !searchQuery.trim() && userBarangayFeature ? (
+                !searchQuery.trim() ? (
                   <View style={styles.pinnedSection}>
-                    <Text style={[styles.sectionHeaderTitle, { color: colors.textMuted }]}>
-                      YOUR BARANGAY
-                    </Text>
+                    {userBarangayFeature ? (
+                      <>
+                        <Text style={[styles.sectionHeaderTitle, { color: colors.textMuted }]}>
+                          YOUR BARANGAY
+                        </Text>
                     <Pressable
                       onPress={() => {
                         onSelectBarangay(userBarangayFeature);
@@ -339,7 +341,9 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
                       <ChevronRight size={16} color={colors.textMuted} style={{ marginLeft: 8 }} />
                     </Pressable>
                     <View style={[styles.sectionDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9' }]} />
-                    <Text style={[styles.sectionHeaderTitle, { color: colors.textMuted, marginTop: 10 }]}>
+                      </>
+                    ) : null}
+                    <Text style={[styles.sectionHeaderTitle, { color: colors.textMuted, marginTop: userBarangayFeature ? 10 : 2 }]}>
                       ALL LIAN BARANGAYS ({filteredBarangays.length})
                     </Text>
                   </View>

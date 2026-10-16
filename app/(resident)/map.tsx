@@ -86,16 +86,38 @@ export default function MapScreen() {
     return { high, moderate, mild, total: barangays.length };
   }, [barangays]);
 
-  // User's home barangay feature (if registered)
-  const userBarangayName = user?.address?.barangay_name;
+  // User's home barangay feature (only if resident has a registered address in Lian, Batangas)
+  const isUserFromLian = useMemo(() => {
+    if (!user?.address) return false;
+    const municipality = (user.address.municipality || '').trim().toLowerCase();
+    const province = (user.address.province || '').trim().toLowerCase();
+
+    // Must be explicitly located in Lian, Batangas
+    const isLian = municipality === 'lian';
+    const isBatangas = !province || province === 'batangas';
+    return isLian && isBatangas;
+  }, [user?.address]);
+
   const userBarangayFeature = useMemo(() => {
-    if (!userBarangayName || !barangays.length) return null;
+    if (!isUserFromLian || !barangays.length) return null;
+
+    // Check by exact barangay_id first if present
+    if (user?.address?.barangay_id) {
+      const byId = barangays.find((b) => b.barangay_id === user.address?.barangay_id);
+      if (byId) return byId;
+    }
+
+    const userBarangayName = user?.address?.barangay_name?.trim();
+    if (!userBarangayName) return null;
+
     return (
-      barangays.find((b) =>
-        b.barangay_name.toLowerCase().includes(userBarangayName.toLowerCase())
+      barangays.find(
+        (b) =>
+          b.barangay_name.toLowerCase().includes(userBarangayName.toLowerCase()) ||
+          userBarangayName.toLowerCase().includes(b.barangay_name.toLowerCase())
       ) || null
     );
-  }, [barangays, userBarangayName]);
+  }, [isUserFromLian, barangays, user?.address?.barangay_id, user?.address?.barangay_name]);
 
   const handleLocateMe = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
