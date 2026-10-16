@@ -29,6 +29,7 @@ interface BarangayDirectorySheetProps {
   visible: boolean;
   onClose: () => void;
   barangays: BarangayRiskFeature[];
+  userBarangayFeature?: BarangayRiskFeature | null;
   onSelectBarangay: (barangay: BarangayRiskFeature) => void;
   selectedBarangayName?: string | null;
 }
@@ -43,6 +44,7 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
   visible,
   onClose,
   barangays,
+  userBarangayFeature,
   onSelectBarangay,
   selectedBarangayName,
 }) => {
@@ -187,6 +189,13 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
     return { high, moderate, mild, total: barangays.length };
   }, [barangays]);
 
+  const userBarangayRiskColor =
+    userBarangayFeature?.risk_level === 'high'
+      ? colors.riskHigh
+      : userBarangayFeature?.risk_level === 'moderate'
+      ? colors.riskModerate
+      : colors.riskMild;
+
   return (
     <Modal
       visible={visible}
@@ -286,6 +295,56 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
               contentContainerStyle={{ paddingBottom: 42 }}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              ListHeaderComponent={
+                !searchQuery.trim() && userBarangayFeature ? (
+                  <View style={styles.pinnedSection}>
+                    <Text style={[styles.sectionHeaderTitle, { color: colors.textMuted }]}>
+                      YOUR BARANGAY
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        onSelectBarangay(userBarangayFeature);
+                        animateClose();
+                      }}
+                      style={({ pressed }) => [
+                        styles.pinnedCard,
+                        {
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F8FAFC',
+                          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                          transform: [{ scale: pressed ? 0.985 : 1 }],
+                        },
+                      ]}
+                    >
+                      <View style={[styles.itemIcon, { backgroundColor: `${userBarangayRiskColor}16` }]}>
+                        <MapPin size={16} color={userBarangayRiskColor} />
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={[styles.itemTitle, { color: colors.textPrimary, fontWeight: '700' }]}>
+                          {userBarangayFeature.barangay_name}
+                        </Text>
+                        <Text style={[styles.itemSubtitle, { color: colors.textSecondary }]}>
+                          Registered Resident Area
+                        </Text>
+                      </View>
+                      <View style={[styles.pillBadge, { backgroundColor: `${userBarangayRiskColor}18` }]}>
+                        <View style={[styles.badgeDot, { backgroundColor: userBarangayRiskColor }]} />
+                        <Text style={[styles.pillBadgeText, { color: userBarangayRiskColor }]}>
+                          {userBarangayFeature.risk_level === 'high'
+                            ? 'High'
+                            : userBarangayFeature.risk_level === 'moderate'
+                            ? 'Moderate'
+                            : 'Mild'}
+                        </Text>
+                      </View>
+                      <ChevronRight size={16} color={colors.textMuted} style={{ marginLeft: 8 }} />
+                    </Pressable>
+                    <View style={[styles.sectionDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9' }]} />
+                    <Text style={[styles.sectionHeaderTitle, { color: colors.textMuted, marginTop: 10 }]}>
+                      ALL LIAN BARANGAYS ({filteredBarangays.length})
+                    </Text>
+                  </View>
+                ) : null
+              }
               renderItem={({ item }) => {
                 const isSelected = item.barangay_name === selectedBarangayName;
                 const riskColor =
@@ -481,5 +540,28 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
+  },
+  pinnedSection: {
+    paddingBottom: 6,
+  },
+  sectionHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  pinnedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  sectionDivider: {
+    height: 1,
+    marginVertical: 10,
   },
 });

@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, usePathname } from 'expo-router';
 import {
   Bell,
+  Search,
   ChevronRight,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -189,42 +190,69 @@ export default function MapScreen() {
               </Text>
             </View>
 
-            {/* Notifications Bell */}
-            <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: '/(resident)/notifications',
-                  params: { from: pathname },
-                } as any)
-              }
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.bellButton,
-                {
-                  backgroundColor: pressed
-                    ? colors.brandOrange
-                    : isDark
-                    ? 'rgba(255,255,255,0.08)'
-                    : '#F1F5F9',
-                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Notifications"
-            >
-              {({ pressed }) => (
-                <>
-                  <Bell size={18} color={pressed ? '#FFFFFF' : colors.textPrimary} />
-                  {unreadCount > 0 ? (
-                    <View style={[styles.bellBadge, { backgroundColor: colors.brandOrange }]}>
-                      <Text style={styles.bellBadgeText}>
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </Text>
-                    </View>
-                  ) : null}
-                </>
-              )}
-            </Pressable>
+            {/* Header Actions: Search & Notifications */}
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setIsDirectoryOpen(true);
+                }}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.headerIconButton,
+                  {
+                    backgroundColor: pressed
+                      ? colors.brandOrange
+                      : isDark
+                      ? 'rgba(255,255,255,0.08)'
+                      : '#F1F5F9',
+                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Search barangays"
+              >
+                {({ pressed }) => (
+                  <Search size={17} color={pressed ? '#FFFFFF' : colors.textPrimary} />
+                )}
+              </Pressable>
+
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/(resident)/notifications',
+                    params: { from: pathname },
+                  } as any)
+                }
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.headerIconButton,
+                  {
+                    backgroundColor: pressed
+                      ? colors.brandOrange
+                      : isDark
+                      ? 'rgba(255,255,255,0.08)'
+                      : '#F1F5F9',
+                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
+              >
+                {({ pressed }) => (
+                  <>
+                    <Bell size={17} color={pressed ? '#FFFFFF' : colors.textPrimary} />
+                    {unreadCount > 0 ? (
+                      <View style={[styles.bellBadge, { backgroundColor: colors.brandOrange }]}>
+                        <Text style={styles.bellBadgeText}>
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </>
+                )}
+              </Pressable>
+            </View>
           </View>
 
           {/* Quick-Filter Metric Pills (Apple Weather-Style) */}
@@ -357,8 +385,8 @@ export default function MapScreen() {
         />
       )}
 
-      {/* 5. Apple Maps-Style Bottom Peek Drawer or Detail Card */}
-      {selectedBarangay ? (
+      {/* 5. Apple Maps-Style Detail Card (Only visible when a barangay is tapped/selected) */}
+      {selectedBarangay && (
         <BarangayDetailCard
           barangay={selectedBarangay}
           onClose={() => {
@@ -366,101 +394,6 @@ export default function MapScreen() {
             setSelectedBarangay(null);
           }}
         />
-      ) : (
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            setIsDirectoryOpen(true);
-          }}
-          style={({ pressed }) => [
-            styles.bottomPeekCard,
-            {
-              backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.96)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-              transform: [{ scale: pressed ? 0.985 : 1 }],
-            },
-            shadow.card,
-          ]}
-        >
-          {/* Apple-style Grab Handle */}
-          <View style={styles.peekHandle}>
-            <View
-              style={[
-                styles.peekBar,
-                { backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)' },
-              ]}
-            />
-          </View>
-
-          <View style={styles.peekContent}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.peekCategory, { color: colors.textMuted }]}>
-                {userBarangayFeature ? 'YOUR BARANGAY' : 'MUNICIPALITY'}
-              </Text>
-              <Text style={[styles.peekTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                {userBarangayFeature?.barangay_name || 'Lian, Batangas'}
-              </Text>
-            </View>
-
-            {userBarangayFeature ? (
-              <View
-                style={[
-                  styles.peekRiskBadge,
-                  {
-                    backgroundColor:
-                      userBarangayFeature.risk_level === 'high'
-                        ? `${colors.riskHigh}18`
-                        : userBarangayFeature.risk_level === 'moderate'
-                        ? `${colors.riskModerate}18`
-                        : `${colors.riskMild}18`,
-                    borderColor:
-                      userBarangayFeature.risk_level === 'high'
-                        ? colors.riskHigh
-                        : userBarangayFeature.risk_level === 'moderate'
-                        ? colors.riskModerate
-                        : colors.riskMild,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.peekRiskDot,
-                    {
-                      backgroundColor:
-                        userBarangayFeature.risk_level === 'high'
-                          ? colors.riskHigh
-                          : userBarangayFeature.risk_level === 'moderate'
-                          ? colors.riskModerate
-                          : colors.riskMild,
-                    },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.peekRiskText,
-                    {
-                      color:
-                        userBarangayFeature.risk_level === 'high'
-                          ? colors.riskHigh
-                          : userBarangayFeature.risk_level === 'moderate'
-                          ? colors.riskModerate
-                          : colors.riskMild,
-                    },
-                  ]}
-                >
-                  {userBarangayFeature.risk_level.toUpperCase()} RISK
-                </Text>
-              </View>
-            ) : null}
-
-            <View style={styles.peekBrowseAction}>
-              <Text style={[styles.browseText, { color: colors.brandOrange }]}>
-                All 19
-              </Text>
-              <ChevronRight size={16} color={colors.brandOrange} />
-            </View>
-          </View>
-        </Pressable>
       )}
 
       {/* 6. Apple-Style Barangay Directory Sheet */}
@@ -468,6 +401,7 @@ export default function MapScreen() {
         visible={isDirectoryOpen}
         onClose={() => setIsDirectoryOpen(false)}
         barangays={barangays}
+        userBarangayFeature={userBarangayFeature}
         onSelectBarangay={handleSelectFromDirectory}
         selectedBarangayName={selectedBarangay?.barangay_name}
       />
@@ -530,7 +464,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 2,
   },
-  bellButton: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -585,71 +524,5 @@ const styles = StyleSheet.create({
     top: 154,
     left: 16,
     zIndex: 10,
-  },
-  bottomPeekCard: {
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
-    right: 16,
-    borderRadius: 22,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 12,
-    zIndex: 10,
-  },
-  peekHandle: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  peekBar: {
-    width: 32,
-    height: 4,
-    borderRadius: 2,
-  },
-  peekContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 2,
-  },
-  peekCategory: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  peekTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginTop: 1,
-  },
-  peekRiskBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginRight: 10,
-    gap: 4,
-  },
-  peekRiskDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  peekRiskText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  peekBrowseAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  browseText: {
-    fontSize: 12.5,
-    fontWeight: '700',
   },
 });

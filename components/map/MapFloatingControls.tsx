@@ -65,9 +65,9 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
             accessibilityLabel="Locate my position"
           >
             {isLocating ? (
-              <ActivityIndicator size="small" color={colors.brandOrange} />
+              <ActivityIndicator size="small" color={colors.textPrimary} />
             ) : (
-              <LocateFixed size={19} color={colors.brandOrange} strokeWidth={2} />
+              <LocateFixed size={19} color={colors.textPrimary} strokeWidth={2} />
             )}
           </Pressable>
         </>

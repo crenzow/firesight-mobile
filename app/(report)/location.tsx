@@ -195,9 +195,9 @@ export default function LocationScreen() {
         >
           {({ pressed }) =>
             isLocating ? (
-              <ActivityIndicator size="small" color={pressed ? '#FFFFFF' : colors.brandOrange} />
+              <ActivityIndicator size="small" color={pressed ? '#FFFFFF' : colors.textPrimary} />
             ) : (
-              <LocateFixed size={20} color={pressed ? '#FFFFFF' : colors.brandOrange} />
+              <LocateFixed size={20} color={pressed ? '#FFFFFF' : colors.textPrimary} strokeWidth={2} />
             )
           }
         </Pressable>
