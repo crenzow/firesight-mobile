@@ -6,6 +6,7 @@ import { ChevronLeft, MapPin, AlertTriangle, RefreshCw, Maximize2, X } from 'luc
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
 import { Button } from '../../components/ui/Button';
+import { PhotoLightboxModal } from '../../components/ui/PhotoLightboxModal';
 import { reportService } from '../../services/api/reportService';
 import { ApiError } from '../../services/api/client';
 
@@ -215,20 +216,15 @@ export default function ReviewScreen() {
       </Modal>
 
       {/* Fullscreen photo viewer modal */}
-      <Modal visible={fullscreen} transparent animationType="fade" onRequestClose={() => setFullscreen(false)}>
-        <View style={styles.modalBg}>
-          <Image
-            source={{ uri: draft.photoUri || '' }}
-            style={styles.modalImage}
-            resizeMode="contain"
-          />
-          <SafeAreaView style={styles.modalClose} edges={['top']}>
-            <Pressable onPress={() => setFullscreen(false)} style={styles.closeButton}>
-              <X size={22} color="#FFFFFF" />
-            </Pressable>
-          </SafeAreaView>
-        </View>
-      </Modal>
+      {draft.photoUri ? (
+        <PhotoLightboxModal
+          visible={fullscreen}
+          imageSource={{ uri: draft.photoUri }}
+          title="Attached Incident Photo"
+          subtitle="Report Evidence"
+          onClose={() => setFullscreen(false)}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

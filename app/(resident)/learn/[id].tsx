@@ -69,6 +69,27 @@ function formatArticleDate(dateString?: string): string {
   }
 }
 
+function getArticleImageCredit(article: FireEducationArticle | null): string {
+  if (!article) return '';
+
+  const path = (article.image_path ?? '').toLowerCase();
+  const title = (article.title ?? '').toLowerCase();
+
+  // 1. Explicit or keyword-detected BFP Lian official infographics / advisories
+  if (
+    [6, 11, 14, 15].includes(article.content_id) ||
+    path.includes('lian') ||
+    path.includes('babala') ||
+    path.includes('bfp') ||
+    title.includes('lian fire station')
+  ) {
+    return 'Source: BFP Lian Fire Station';
+  }
+
+  // 2. Default for other safety educational photos
+  return 'Photo: Public Safety Reference';
+}
+
 export default function LearnArticleScreen() {
   const { colors, spacing, typography, radius, isDark } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -332,16 +353,23 @@ export default function LearnArticleScreen() {
                   />
                 </View>
               )}
+              {imageSource ? (
+                <View style={styles.photoCreditRow}>
+                  <Text style={[styles.photoCreditText, { color: colors.textMuted }]}>
+                    {getArticleImageCredit(article)}
+                  </Text>
+                </View>
+              ) : null}
             </View>
 
             {/* 6. Editorial Body Content */}
             <EditorialContent content={article.body} fontSizeStep={fontSizeStep} />
 
-            {/* 7. "UP NEXT" Contextual Recommendation Card */}
+            {/* 7. "READ NEXT" Contextual Recommendation Card */}
             {nextArticle && (
               <View style={styles.upNextSection}>
                 <Text style={[styles.upNextEyebrow, { color: colors.textMuted }]}>
-                  UP NEXT IN SAFETY
+                  READ NEXT
                 </Text>
                 <Pressable
                   onPress={() => router.push(`/(resident)/learn/${nextArticle.content_id}`)}
@@ -389,13 +417,13 @@ export default function LearnArticleScreen() {
               </View>
             )}
 
-            {/* 8. Apple Health "Medical ID" Style Emergency SOS Card */}
+            {/* 8. BFP Lian Fire Station Emergency Card */}
             <View
               style={[
                 styles.sosCard,
                 {
-                  backgroundColor: isDark ? 'rgba(15, 23, 42, 0.8)' : '#F8FAFC',
-                  borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+                  backgroundColor: colors.surfaceElevated,
+                  borderColor: colors.border,
                 },
               ]}
             >
@@ -451,6 +479,7 @@ export default function LearnArticleScreen() {
         visible={lightboxVisible}
         imageSource={imageSource}
         title={article?.title}
+        caption={getArticleImageCredit(article)}
         onClose={() => setLightboxVisible(false)}
       />
 
@@ -598,6 +627,16 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  photoCreditRow: {
+    marginTop: 6,
+    paddingHorizontal: 4,
+    alignItems: 'flex-start',
+  },
+  photoCreditText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    letterSpacing: 0.1,
   },
 
   /* Up Next Section */

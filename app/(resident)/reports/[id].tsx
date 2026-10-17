@@ -27,6 +27,7 @@ import {
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { StatusBadge } from '../../../components/home/StatusBadge';
+import { PhotoLightboxModal } from '../../../components/ui/PhotoLightboxModal';
 import { reportService } from '../../../services/api/reportService';
 import {
   CommunityReport,
@@ -474,51 +475,13 @@ export default function ReportDetailScreen() {
 
         {/* ── Fullscreen Lightbox Modal ── */}
         {photoUri && (
-          <Modal
+          <PhotoLightboxModal
             visible={isPreviewOpen}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => setIsPreviewOpen(false)}
-            statusBarTranslucent={true}
-          >
-            <View style={styles.modalBackdrop}>
-              <SafeAreaView style={styles.modalSafeArea}>
-                <View style={styles.modalHeader}>
-                  <View style={{ flex: 1, marginRight: 12 }}>
-                    <Text style={styles.modalTitle} numberOfLines={1}>
-                      {locationName}
-                    </Text>
-                    <Text style={styles.modalSub}>#{referenceNo}</Text>
-                  </View>
-                  <Pressable
-                    onPress={() => setIsPreviewOpen(false)}
-                    style={({ pressed }) => [
-                      styles.modalCloseBtn,
-                      {
-                        backgroundColor: pressed ? colors.brandOrange : 'rgba(255,255,255,0.2)',
-                        transform: [{ scale: pressed ? 0.92 : 1 }],
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Close photo viewer"
-                  >
-                    <X size={20} color="#FFFFFF" strokeWidth={2.5} />
-                  </Pressable>
-                </View>
-
-                <Pressable
-                  style={styles.modalImgContainer}
-                  onPress={() => setIsPreviewOpen(false)}
-                >
-                  <Image
-                    source={{ uri: photoUri }}
-                    style={styles.modalFullImg}
-                    resizeMode="contain"
-                  />
-                </Pressable>
-              </SafeAreaView>
-            </View>
-          </Modal>
+            imageSource={{ uri: photoUri }}
+            title={locationName}
+            subtitle={`#${referenceNo}`}
+            onClose={() => setIsPreviewOpen(false)}
+          />
         )}
       </SafeAreaView>
     </View>

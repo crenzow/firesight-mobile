@@ -205,7 +205,7 @@ export default function MapScreen() {
           <View style={styles.headerTopRow}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-                Fire Hazard Map
+                Fire Risk Map
               </Text>
               <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
                 Lian, Batangas · 19 Barangays
