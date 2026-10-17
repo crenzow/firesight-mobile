@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Image } from 'react-native';
 import { router } from 'expo-router';
-import { Clock, ChevronRight, Flame, ShieldAlert, BookOpen, Sparkles, ArrowRight } from 'lucide-react-native';
+import { Clock, ChevronRight, Flame, ShieldAlert, BookOpen, Sparkles, ArrowRight, Bookmark } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/ThemeContext';
 import { FireEducationArticle } from '../../services/api/models';
 import { getArticleImageSource } from '../../constants/educationImages';
+import { useBookmarks } from '../../hooks/useBookmarks';
 
 const CATEGORY_ICON = {
   prevention: Flame,
@@ -27,6 +28,8 @@ const CATEGORY_GRADIENT = {
 
 export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = ({ article }) => {
   const { colors, spacing, radius, typography } = useTheme();
+  const { isBookmarked } = useBookmarks();
+  const isSaved = isBookmarked(article.content_id);
   const imageSource = getArticleImageSource(article.image_path);
 
   return (
@@ -75,6 +78,9 @@ export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = 
             </View>
 
             <View style={styles.readTimeRow}>
+              {isSaved && (
+                <Bookmark size={12} color={colors.brandOrange} fill={colors.brandOrange} />
+              )}
               <Clock size={12} color="#94A3B8" />
               <Text style={styles.readTimeText}>{article.read_minutes} min read</Text>
             </View>
@@ -114,6 +120,8 @@ export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = 
 
 export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ article }) => {
   const { colors, spacing, radius, typography, isDark } = useTheme();
+  const { isBookmarked } = useBookmarks();
+  const isSaved = isBookmarked(article.content_id);
   const Icon = CATEGORY_ICON[article.category] ?? BookOpen;
   const gradient = CATEGORY_GRADIENT[article.category as keyof typeof CATEGORY_GRADIENT] ?? ['#F97316', '#EA580C'];
   const imageSource = getArticleImageSource(article.image_path);
@@ -167,6 +175,12 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
               {article.title}
             </Text>
             <View style={styles.metaRow}>
+              {isSaved && (
+                <>
+                  <Bookmark size={11} color={colors.brandOrange} fill={colors.brandOrange} />
+                  <View style={[styles.metaDot, { backgroundColor: colors.textMuted }]} />
+                </>
+              )}
               <Clock size={11} color={colors.textMuted} />
               <Text style={[styles.metaText, { color: colors.textMuted }]}>
                 {article.read_minutes} min read

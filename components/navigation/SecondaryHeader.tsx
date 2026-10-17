@@ -7,11 +7,18 @@ import { useTheme } from '../../theme/ThemeContext';
 
 interface SecondaryHeaderProps {
   title: string;
+  subtitle?: string;
   onBack?: () => void;
+  rightElement?: React.ReactNode;
 }
 
-export const SecondaryHeader: React.FC<SecondaryHeaderProps> = ({ title, onBack }) => {
-  const { colors, spacing, typography } = useTheme();
+export const SecondaryHeader: React.FC<SecondaryHeaderProps> = ({
+  title,
+  subtitle,
+  onBack,
+  rightElement,
+}) => {
+  const { colors, spacing } = useTheme();
 
   const handleBack = () => {
     if (onBack) {
@@ -22,35 +29,56 @@ export const SecondaryHeader: React.FC<SecondaryHeaderProps> = ({ title, onBack 
   };
 
   return (
-    <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']}>
-      <View style={[styles.row, { height: 60, paddingHorizontal: spacing.lg }]}>
-        <Pressable
-          onPress={handleBack}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.backButton,
-            {
-              backgroundColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.12)',
-              borderColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.2)',
-              transform: [{ scale: pressed ? 0.94 : 1 }],
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <ChevronLeft size={20} color={colors.textInverse} strokeWidth={2.5} />
-        </Pressable>
+    <SafeAreaView
+      style={{
+        backgroundColor: colors.brandNavy,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+      }}
+      edges={['top']}
+    >
+      <View style={[styles.row, { height: 62, paddingHorizontal: spacing.lg }]}>
+        <View style={styles.leftContainer}>
+          <Pressable
+            onPress={handleBack}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.backButton,
+              {
+                backgroundColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.12)',
+                borderColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.2)',
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <ChevronLeft size={20} color={colors.textInverse} strokeWidth={2.5} />
+          </Pressable>
+        </View>
 
-        <Text
-          style={[styles.title, { color: colors.textInverse, fontSize: 18, flex: 1, textAlign: 'center', marginHorizontal: 8 }]}
-          numberOfLines={1}
-          maxFontSizeMultiplier={1.3}
-        >
-          {title}
-        </Text>
+        <View style={styles.titleWrap}>
+          <Text
+            style={[styles.title, { color: colors.textInverse }]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.3}
+          >
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text
+              style={styles.subtitle}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.2}
+            >
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
 
-        {/* Balancer to keep title centered */}
-        <View style={{ width: 38 }} />
+        <View style={styles.rightContainer}>
+          {rightElement ? rightElement : <View style={{ width: 38 }} />}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -62,6 +90,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  leftContainer: {
+    minWidth: 38,
+    alignItems: 'flex-start',
+  },
+  rightContainer: {
+    minWidth: 38,
+    alignItems: 'flex-end',
+  },
   backButton: {
     width: 38,
     height: 38,
@@ -70,8 +106,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  titleWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 8,
+  },
   title: {
+    fontSize: 17,
     fontWeight: '700',
     letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#94A3B8',
+    letterSpacing: 0.2,
+    marginTop: 1,
+    textAlign: 'center',
   },
 });
