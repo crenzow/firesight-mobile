@@ -52,7 +52,7 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
                 {title}
               </Text>
             ) : null}
-            <Text style={styles.hintText}>Pinch or double-tap to inspect</Text>
+            <Text style={styles.hintText}>Pinch or tap to zoom</Text>
           </View>
 
           <Pressable

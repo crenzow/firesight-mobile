@@ -8,6 +8,7 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Search, X, BookOpen, Bookmark } from "lucide-react-native";
@@ -257,11 +258,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
     marginBottom: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   searchInput: {
     flex: 1,

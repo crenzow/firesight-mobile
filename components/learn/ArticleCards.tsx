@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Image } from 'react-native';
 import { router } from 'expo-router';
-import { Clock, ChevronRight, Flame, ShieldAlert, BookOpen, Sparkles, ArrowRight, Bookmark } from 'lucide-react-native';
+import { ChevronRight, Flame, ShieldAlert, BookOpen, Sparkles, ArrowRight, Bookmark } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/ThemeContext';
 import { FireEducationArticle } from '../../services/api/models';
@@ -16,7 +16,7 @@ const CATEGORY_ICON = {
 
 const CATEGORY_LABEL = {
   prevention: 'PREVENTION',
-  emergency_response: 'EMERGENCY RESPONSE',
+  emergency_response: 'EMERGENCY',
   awareness: 'AWARENESS',
 } as const;
 
@@ -51,14 +51,14 @@ export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = 
             <>
               <Image
                 source={imageSource}
-                style={StyleSheet.absoluteFillObject}
+                style={[StyleSheet.absoluteFillObject, { borderRadius: 22 }]}
                 resizeMode="cover"
               />
               <LinearGradient
                 colors={['rgba(10, 19, 48, 0.45)', 'rgba(10, 19, 48, 0.78)', 'rgba(10, 19, 48, 0.96)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
+                style={[StyleSheet.absoluteFillObject, { borderRadius: 22 }]}
               />
             </>
           ) : (
@@ -66,7 +66,7 @@ export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = 
               colors={['#0A1330', '#132147', '#25254A', '#452622']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
+              style={[StyleSheet.absoluteFillObject, { borderRadius: 22 }]}
             />
           )}
 
@@ -77,13 +77,12 @@ export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = 
               <Text style={styles.featuredBadgeText}>FEATURED GUIDE</Text>
             </View>
 
-            <View style={styles.readTimeRow}>
-              {isSaved && (
+            {isSaved && (
+              <View style={styles.readTimeRow}>
                 <Bookmark size={12} color={colors.brandOrange} fill={colors.brandOrange} />
-              )}
-              <Clock size={12} color="#94A3B8" />
-              <Text style={styles.readTimeText}>{article.read_minutes} min read</Text>
-            </View>
+                <Text style={styles.readTimeText}>Saved</Text>
+              </View>
+            )}
           </View>
 
           {/* Title & Summary */}
@@ -157,7 +156,7 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
                 colors={gradient as [string, string]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
+                style={[StyleSheet.absoluteFillObject, { borderRadius: 15 }]}
               />
               <Icon size={20} color="#FFFFFF" />
             </View>
@@ -174,22 +173,12 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
             >
               {article.title}
             </Text>
-            <View style={styles.metaRow}>
-              {isSaved && (
-                <>
-                  <Bookmark size={11} color={colors.brandOrange} fill={colors.brandOrange} />
-                  <View style={[styles.metaDot, { backgroundColor: colors.textMuted }]} />
-                </>
-              )}
-              <Clock size={11} color={colors.textMuted} />
-              <Text style={[styles.metaText, { color: colors.textMuted }]}>
-                {article.read_minutes} min read
-              </Text>
-              <View style={[styles.metaDot, { backgroundColor: colors.textMuted }]} />
-              <Text style={[styles.metaText, { color: colors.textMuted }]}>
-                Guide
-              </Text>
-            </View>
+            {isSaved && (
+              <View style={styles.metaRow}>
+                <Bookmark size={11} color={colors.brandOrange} fill={colors.brandOrange} />
+                <Text style={[styles.metaText, { color: colors.brandOrange, marginLeft: 4 }]}>Saved</Text>
+              </View>
+            )}
           </View>
 
           {/* Chevron Circle */}
@@ -215,16 +204,24 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1.5,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
+    backgroundColor: '#0A1330',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   featuredCard: {
     padding: 20,
-    borderRadius: 24,
+    borderRadius: 22,
     overflow: 'hidden',
+    backgroundColor: '#0A1330',
   },
   featuredTopRow: {
     flexDirection: 'row',
@@ -302,17 +299,22 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  /* List Item */
   rowCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   squircleWrap: {
     width: 46,

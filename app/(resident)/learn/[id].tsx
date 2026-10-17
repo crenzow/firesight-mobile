@@ -7,7 +7,6 @@ import {
   Pressable,
   BackHandler,
   Image,
-  Share,
   Linking,
   Platform,
   ActivityIndicator,
@@ -18,28 +17,27 @@ import {
   ChevronLeft,
   ChevronRight,
   Bookmark,
-  Share2,
   PhoneCall,
   ZoomIn,
   ShieldAlert,
   Flame,
   BookOpen,
-  Clock,
   Sparkles,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../theme/ThemeContext';
-import { educationService } from '../../../services/api';
-import { FireEducationArticle } from '../../../services/api/models';
+import { educationService, contactService } from '../../../services/api';
+import { FireEducationArticle, EmergencyContact } from '../../../services/api/models';
 import { getArticleImageSource } from '../../../constants/educationImages';
 import { EditorialContent } from '../../../components/learn/EditorialContent';
 import { PhotoLightboxModal } from '../../../components/learn/PhotoLightboxModal';
+import { TextSizeModal, TextSizeStep } from '../../../components/learn/TextSizeModal';
 import { useBookmarks } from '../../../hooks/useBookmarks';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 
 const CATEGORY_LABEL = {
   prevention: 'FIRE PREVENTION',
-  emergency_response: 'EMERGENCY PROTOCOL',
+  emergency_response: 'EMERGENCY',
   awareness: 'COMMUNITY AWARENESS',
 } as const;
 
@@ -51,23 +49,60 @@ const CATEGORY_ICON = {
 
 const HEADER_TITLE: Record<string, string> = {
   prevention: 'Prevention Guide',
-  emergency_response: 'Emergency Protocol',
+  emergency_response: 'Emergency',
   awareness: 'Community Advisory',
 };
+
+function formatArticleDate(dateString?: string): string {
+  if (!dateString) return '2026';
+  try {
+    const cleaned = dateString.replace(' ', 'T');
+    const date = new Date(cleaned);
+    if (isNaN(date.getTime())) return '2026';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return '2026';
+  }
+}
 
 export default function LearnArticleScreen() {
   const { colors, spacing, typography, radius, isDark } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [article, setArticle] = useState<FireEducationArticle | null>(null);
   const [allArticles, setAllArticles] = useState<FireEducationArticle[]>([]);
+  const [hotlineContacts, setHotlineContacts] = useState<EmergencyContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [fontSizeScale, setFontSizeScale] = useState<'standard' | 'large'>('standard');
+  const [fontSizeStep, setFontSizeStep] = useState<TextSizeStep>(1);
+  const [textSizeModalVisible, setTextSizeModalVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
 
   const { isBookmarked, toggleBookmark } = useBookmarks();
   const bookmarked = article ? isBookmarked(article.content_id) : false;
 
   const imageSource = getArticleImageSource(article?.image_path);
+
+  useEffect(() => {
+    if (imageSource && typeof imageSource === 'object' && 'uri' in imageSource && imageSource.uri) {
+      Image.getSize(
+        imageSource.uri,
+        (w, h) => {
+          if (w > 0 && h > 0) {
+            setImageAspectRatio(w / h);
+          }
+        },
+        () => {
+          setImageAspectRatio(16 / 9);
+        }
+      );
+    } else {
+      setImageAspectRatio(null);
+    }
+  }, [imageSource]);
 
   useFocusEffect(
     useCallback(() => {
@@ -103,6 +138,24 @@ export default function LearnArticleScreen() {
         }
       })
       .catch(() => {});
+
+    // Fetch official BFP hotlines from emergency contacts database
+    contactService
+      .list()
+      .then((data) => {
+        if (data && data.length > 0) {
+          const lianFire = data.filter(
+            (c) => c.category === 'fire' && c.name.toLowerCase().includes('lian')
+          );
+          if (lianFire.length > 0) {
+            setHotlineContacts(lianFire);
+          } else {
+            const anyFire = data.filter((c) => c.category === 'fire' || c.is_primary);
+            setHotlineContacts(anyFire.slice(0, 2));
+          }
+        }
+      })
+      .catch(() => {});
   }, [id]);
 
   // Compute next recommended article
@@ -115,51 +168,37 @@ export default function LearnArticleScreen() {
     return allArticles[0]?.content_id !== article.content_id ? allArticles[0] : null;
   }, [article, allArticles]);
 
-  const handleShare = async () => {
-    if (!article) return;
-    try {
-      await Share.share({
-        title: article.title,
-        message: `${article.title}\n\n${article.summary}\n\nEmergency Assistance: BFP Lian Station (0961 832 9494)\nShared via FireSight`,
-      });
-    } catch (err) {
-      console.warn('Share error', err);
-    }
-  };
-
-  const toggleFontSize = () => {
-    setFontSizeScale((prev) => (prev === 'standard' ? 'large' : 'standard'));
-  };
-
   const headerTitle = article ? (HEADER_TITLE[article.category] ?? 'Safety Advisory') : 'Safety Advisory';
-  const headerSubtitle = 'BFP Lian · FireSight';
+
+  // Proportional font sizing based on selected slider step
+  const headlineFontSize = [22, 24, 26.5, 29][fontSizeStep];
+  const headlineLineHeight = [28, 30, 33, 36][fontSizeStep];
+  const summaryFontSize = [14.5, 16, 18, 20][fontSizeStep];
+  const summaryLineHeight = [22, 24, 26, 28][fontSizeStep];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SecondaryHeader
         title={headerTitle}
-        subtitle={headerSubtitle}
         onBack={() => router.navigate('/(resident)/learn')}
         rightElement={
           <View style={styles.headerRightCluster}>
-            {/* Font Size Toggle Button */}
+            {/* Font Size Settings Button */}
             <Pressable
-              onPress={toggleFontSize}
+              onPress={() => setTextSizeModalVisible(true)}
               hitSlop={8}
               style={({ pressed }) => [
                 styles.headerActionBtn,
-                fontSizeScale === 'large' && {
+                fontSizeStep !== 1 && {
                   backgroundColor: colors.brandOrange,
                   borderColor: colors.brandOrange,
                 },
                 { transform: [{ scale: pressed ? 0.92 : 1 }] },
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Toggle Text Size"
+              accessibilityLabel="Adjust Text Size"
             >
-              <Text style={styles.fontSizeIndicator}>
-                {fontSizeScale === 'large' ? 'A+' : 'Aa'}
-              </Text>
+              <Text style={styles.fontSizeIndicator}>Aa</Text>
             </Pressable>
 
             {/* Bookmark Button */}
@@ -185,20 +224,6 @@ export default function LearnArticleScreen() {
                 />
               </Pressable>
             )}
-
-            {/* Native Share Button */}
-            <Pressable
-              onPress={handleShare}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.headerActionBtn,
-                { transform: [{ scale: pressed ? 0.92 : 1 }] },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Share guide"
-            >
-              <Share2 size={16} color="#FFFFFF" />
-            </Pressable>
           </View>
         }
       />
@@ -222,29 +247,40 @@ export default function LearnArticleScreen() {
             contentContainerStyle={styles.scrollContainer}
             showsVerticalScrollIndicator={false}
           >
-            {/* 1. Category Eyebrow & Meta */}
+            {/* 1. Category Eyebrow */}
             <View style={styles.eyebrowRow}>
               <View style={[styles.categoryBadge, { backgroundColor: isDark ? 'rgba(249, 115, 22, 0.15)' : '#FFF0E5' }]}>
                 <Text style={[styles.categoryBadgeText, { color: colors.brandOrange }]}>
                   {CATEGORY_LABEL[article.category] ?? 'SAFETY GUIDE'}
                 </Text>
               </View>
-
-              <View style={styles.readMetaRow}>
-                <Clock size={12} color={colors.textMuted} />
-                <Text style={[styles.readMetaText, { color: colors.textMuted }]}>
-                  {article.read_minutes} min read
-                </Text>
-              </View>
             </View>
 
             {/* 2. Editorial Headline */}
-            <Text style={[styles.editorialHeadline, { color: colors.textPrimary }]}>
+            <Text
+              style={[
+                styles.editorialHeadline,
+                {
+                  color: colors.textPrimary,
+                  fontSize: headlineFontSize,
+                  lineHeight: headlineLineHeight,
+                },
+              ]}
+            >
               {article.title}
             </Text>
 
             {/* 3. Lead Standfirst / Deck Summary */}
-            <Text style={[styles.standfirstText, { color: isDark ? '#94A3B8' : '#475569' }]}>
+            <Text
+              style={[
+                styles.standfirstText,
+                {
+                  color: isDark ? '#94A3B8' : '#475569',
+                  fontSize: summaryFontSize,
+                  lineHeight: summaryLineHeight,
+                },
+              ]}
+            >
               {article.summary}
             </Text>
 
@@ -252,7 +288,7 @@ export default function LearnArticleScreen() {
             <View style={styles.bylineRow}>
               <View style={[styles.bylineDot, { backgroundColor: colors.brandOrange }]} />
               <Text style={[styles.bylineText, { color: colors.textMuted }]}>
-                Bureau of Fire Protection · Lian Municipal Station · Updated 2026
+                Bureau of Fire Protection · Lian Fire Station · {formatArticleDate(article.created_at)}
               </Text>
             </View>
 
@@ -273,12 +309,17 @@ export default function LearnArticleScreen() {
                 >
                   <Image
                     source={imageSource}
-                    style={styles.heroImage}
-                    resizeMode="cover"
+                    style={[
+                      styles.heroImage,
+                      imageAspectRatio
+                        ? { aspectRatio: imageAspectRatio }
+                        : { height: 220 },
+                    ]}
+                    resizeMode="contain"
                   />
                   <View style={styles.zoomPill}>
                     <ZoomIn size={12} color="#FFFFFF" />
-                    <Text style={styles.zoomPillText}>Tap to inspect</Text>
+                    <Text style={styles.zoomPillText}>Tap to view</Text>
                   </View>
                 </Pressable>
               ) : (
@@ -291,15 +332,10 @@ export default function LearnArticleScreen() {
                   />
                 </View>
               )}
-
-              {/* Quiet Photo Caption */}
-              <Text style={[styles.captionText, { color: colors.textMuted }]}>
-                Photo: Official safety guidelines and operational protocols for Lian households.
-              </Text>
             </View>
 
             {/* 6. Editorial Body Content */}
-            <EditorialContent content={article.body} fontSizeScale={fontSizeScale} />
+            <EditorialContent content={article.body} fontSizeStep={fontSizeStep} />
 
             {/* 7. "UP NEXT" Contextual Recommendation Card */}
             {nextArticle && (
@@ -335,7 +371,7 @@ export default function LearnArticleScreen() {
                       {nextArticle.title}
                     </Text>
                     <Text style={[styles.upNextMeta, { color: colors.textMuted }]}>
-                      {nextArticle.read_minutes} min read · Recommended follow-up
+                      Recommended follow-up
                     </Text>
                   </View>
                   <View
@@ -364,34 +400,47 @@ export default function LearnArticleScreen() {
               ]}
             >
               <View style={styles.sosHeaderRow}>
-                <View style={[styles.sosIconWrap, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}>
-                  <ShieldAlert size={18} color="#EF4444" />
-                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.sosStationTitle, { color: colors.textPrimary }]}>
-                    BFP Lian Municipal Station
+                    BFP Lian Fire Station
                   </Text>
                   <Text style={[styles.sosStationSubtitle, { color: colors.textMuted }]}>
-                    24/7 Fire Suppression & Emergency Rescue Response
+                    24/7 Fire Suppression & Emergency Rescue
                   </Text>
                 </View>
               </View>
 
-              <Pressable
-                onPress={() => Linking.openURL('tel:09618329494')}
-                style={({ pressed }) => [
-                  styles.sosButton,
-                  {
-                    backgroundColor: pressed ? '#DC2626' : '#EF4444',
-                    transform: [{ scale: pressed ? 0.97 : 1 }],
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Call BFP Lian Station at 0961 832 9494"
-              >
-                <PhoneCall size={16} color="#FFFFFF" strokeWidth={2.2} />
-                <Text style={styles.sosButtonText}>Call Hotline: 0961 832 9494</Text>
-              </Pressable>
+              {hotlineContacts.length > 0 ? (
+                <View style={styles.sosButtonsWrap}>
+                  {hotlineContacts.map((contact) => {
+                    const cleanNumber = contact.phone_number.replace(/[^\d+]/g, '');
+                    const labelMatch = contact.name.match(/\(([^)]+)\)/);
+                    const typeLabel = labelMatch ? labelMatch[1] : '';
+                    const buttonText = typeLabel
+                      ? `Call ${typeLabel}: ${contact.phone_number}`
+                      : `Call: ${contact.phone_number}`;
+
+                    return (
+                      <Pressable
+                        key={contact.contact_id}
+                        onPress={() => Linking.openURL(`tel:${cleanNumber}`)}
+                        style={({ pressed }) => [
+                          styles.sosButton,
+                          {
+                            backgroundColor: pressed ? '#DC2626' : '#EF4444',
+                            transform: [{ scale: pressed ? 0.98 : 1 }],
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Call ${contact.name} at ${contact.phone_number}`}
+                      >
+                        <PhoneCall size={15} color="#FFFFFF" strokeWidth={2.2} />
+                        <Text style={styles.sosButtonText}>{buttonText}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
             </View>
           </ScrollView>
         )}
@@ -402,8 +451,15 @@ export default function LearnArticleScreen() {
         visible={lightboxVisible}
         imageSource={imageSource}
         title={article?.title}
-        caption="Official safety guidelines and operational protocols for Lian households."
         onClose={() => setLightboxVisible(false)}
+      />
+
+      {/* Interactive Text Size Stepped Slider Modal */}
+      <TextSizeModal
+        visible={textSizeModalVisible}
+        step={fontSizeStep}
+        onChange={setFontSizeStep}
+        onClose={() => setTextSizeModalVisible(false)}
       />
     </View>
   );
@@ -502,22 +558,28 @@ const styles = StyleSheet.create({
 
   /* Media Container */
   mediaContainer: {
-    marginBottom: 22,
+    marginBottom: 16,
   },
   heroImageWrap: {
-    borderRadius: 22,
+    borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
+    borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
     position: 'relative',
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
   },
   heroImage: {
     width: '100%',
-    height: 210,
   },
   zoomPill: {
     position: 'absolute',
@@ -537,13 +599,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  captionText: {
-    fontSize: 11.5,
-    lineHeight: 16,
-    fontStyle: 'italic',
-    marginTop: 8,
-    paddingHorizontal: 2,
-  },
 
   /* Up Next Section */
   upNextSection: {
@@ -562,11 +617,17 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 18,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   upNextContent: {
     flex: 1,
@@ -607,14 +668,6 @@ const styles = StyleSheet.create({
   sosHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  sosIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   sosStationTitle: {
     fontSize: 14.5,
@@ -625,6 +678,9 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     marginTop: 2,
     fontWeight: '500',
+  },
+  sosButtonsWrap: {
+    gap: 8,
   },
   sosButton: {
     flexDirection: 'row',

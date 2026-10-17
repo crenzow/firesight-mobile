@@ -119,6 +119,6 @@ export interface FireEducationArticle {
   summary: string;
   body: string;
   image_path: string | null;
-  read_minutes: number;
   is_featured: boolean;
+  created_at?: string;
 }
