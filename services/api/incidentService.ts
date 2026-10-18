@@ -61,7 +61,7 @@ export const incidentService = {
     formData.append('longitude', String(payload.longitude));
     formData.append('description', payload.description);
     formData.append('incident_type', payload.incident_type);
-    formData.append('severity_level', payload.severity_level);
+    if (payload.alarm_level) formData.append('alarm_level', payload.alarm_level);
     formData.append('data_time', payload.data_time);
     if (payload.cause_of_fire) formData.append('cause_of_fire', payload.cause_of_fire);
     if (payload.casualties != null) formData.append('casualties', String(payload.casualties));

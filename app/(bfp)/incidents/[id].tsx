@@ -38,6 +38,7 @@ import {
   PlayCircle,
   StopCircle,
   CheckCircle2,
+  Bell,
 } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { GlassHeader } from '../../../components/glass/GlassHeader';
@@ -45,7 +46,7 @@ import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { SelectField } from '../../../components/ui/SelectField';
 import { IncidentStatusBadge } from '../../../components/bfp/IncidentStatusBadge';
-import { SeverityBadge, SeverityLevel } from '../../../components/bfp/SeverityBadge';
+import { AlarmLevelBadge, AlarmLevel, ALARM_LEVEL_OPTIONS, ALARM_LEVEL_LABELS } from '../../../components/bfp/AlarmLevelBadge';
 import { StatusStepper } from '../../../components/bfp/StatusStepper';
 import { EvidenceGallery } from '../../../components/bfp/EvidenceGallery';
 import { IncidentLocationMap, MapType, GPSUpdate } from '../../../components/bfp/IncidentLocationMap';
@@ -57,7 +58,6 @@ import { formatFullDate, formatTime } from '../../../utils/formatters';
 import { FIRE_STATION } from '../../../constants/fireStation';
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
 
-const SEVERITY_OPTIONS: SeverityLevel[] = ['low', 'moderate', 'high', 'critical'];
 const INCIDENT_TYPE_OPTIONS: { id: IncidentType; name: string }[] = [
   { id: 'residential_fire', name: 'Residential Fire' },
   { id: 'commercial_fire', name: 'Commercial Fire' },
@@ -268,7 +268,7 @@ export default function IncidentDetailScreen() {
   const [causeOfFire, setCauseOfFire] = useState('');
   const [casualties, setCasualties] = useState('0');
   const [notes, setNotes] = useState('');
-  const [severity, setSeverity] = useState<SeverityLevel | null>(null);
+  const [alarmLevel, setAlarmLevel] = useState<AlarmLevel | null>(null);
   const [incidentType, setIncidentType] = useState<IncidentType | null>(null);
 
   // Route / Map state
@@ -357,7 +357,7 @@ export default function IncidentDetailScreen() {
         setCauseOfFire(detail.cause_of_fire ?? '');
         setCasualties(String(detail.casualties ?? 0));
         setNotes(detail.notes ?? '');
-        setSeverity(detail.severity_level ?? null);
+        setAlarmLevel((detail.alarm_level as AlarmLevel) ?? null);
         setIncidentType(detail.incident_type ?? null);
       })
       .catch(() => {})
@@ -454,18 +454,14 @@ export default function IncidentDetailScreen() {
   };
 
   const handleSaveDetails = async () => {
-    if (!incidentType || !severity) {
-      Alert.alert('Missing incident details', 'Please select the incident type and severity level before saving.');
-      return;
-    }
     setIsActing(true);
     try {
       const updated = await incidentService.updateDetails(reportId, {
-        incident_type: incidentType,
-        cause_of_fire: causeOfFire || undefined,
-        casualties: Number(casualties) || 0,
-        notes: notes || undefined,
-        severity_level: severity,
+        incident_type: incidentType || undefined,
+        cause_of_fire: causeOfFire ? causeOfFire.trim() : undefined,
+        casualties: casualties !== '' ? Number(casualties) || 0 : 0,
+        notes: notes ? notes.trim() : undefined,
+        alarm_level: alarmLevel,
       });
       setIncident(updated);
       setIsEditingDetails(false);
@@ -524,7 +520,7 @@ export default function IncidentDetailScreen() {
         >
           <View style={styles.heroBadgeRow}>
             <IncidentStatusBadge status={incident.status} />
-            {incident.severity_level ? <SeverityBadge severity={incident.severity_level} /> : null}
+            {incident.alarm_level ? <AlarmLevelBadge alarmLevel={incident.alarm_level} /> : null}
           </View>
 
           {incident.description ? (
@@ -553,7 +549,9 @@ export default function IncidentDetailScreen() {
             {incident.created_at ? (
               <View style={[styles.metaChip, { marginLeft: spacing.md }]}>
                 <Calendar size={12} color={colors.textMuted} />
-                <Text style={{ color: colors.textMuted, fontSize: 12, marginLeft: 4 }}>{formatFullDate(incident.created_at)}</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 12, marginLeft: 4 }}>
+                  {formatFullDate(incident.created_at)} · {formatTime(incident.created_at)}
+                </Text>
               </View>
             ) : null}
           </View>
@@ -583,6 +581,11 @@ export default function IncidentDetailScreen() {
                 icon={<Phone size={16} color={colors.brandNavy} />}
                 label="Contact Number"
                 value={incident.contact_number || 'No contact provided'}
+              />
+              <InfoRow
+                icon={<Clock size={16} color={colors.brandNavy} />}
+                label="Reported At"
+                value={incident.created_at ? `${formatFullDate(incident.created_at)} · ${formatTime(incident.created_at)}` : 'Unknown'}
                 isLast={!incident.contact_number}
               />
               {incident.contact_number ? (
@@ -841,27 +844,19 @@ export default function IncidentDetailScreen() {
               <Card padding={spacing.md}>
                 <FieldLabel text="INCIDENT TYPE" />
                 <SelectField
-                  label="Incident Type"
                   value={incidentType}
                   options={INCIDENT_TYPE_OPTIONS}
                   onSelect={(value) => setIncidentType(value as IncidentType)}
                   placeholder="Select incident type"
                 />
 
-                <FieldLabel text="SEVERITY" />
-                <View style={styles.severityOptionsRow}>
-                  {SEVERITY_OPTIONS.map((level) => (
-                    <Pressable
-                      key={level}
-                      onPress={() => setSeverity(level)}
-                      style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}
-                    >
-                      <View style={{ opacity: severity === level ? 1 : 0.35 }}>
-                        <SeverityBadge severity={level} />
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
+                <FieldLabel text="ALARM LEVEL" />
+                <SelectField
+                  value={alarmLevel}
+                  options={ALARM_LEVEL_OPTIONS}
+                  onSelect={(value) => setAlarmLevel(value as AlarmLevel)}
+                  placeholder="Select alarm level"
+                />
 
                 <FieldLabel text="CAUSE OF FIRE" />
                 <TextInput
@@ -902,6 +897,12 @@ export default function IncidentDetailScreen() {
                   label="Incident Type" 
                   value={INCIDENT_TYPE_OPTIONS.find((t) => t.id === incident.incident_type)?.name || incident.incident_type || 'Unspecified'} 
                 />
+                <InfoRow 
+                  icon={<Bell size={16} color={colors.brandNavy} />} 
+                  label="Alarm Level" 
+                  value={incident.alarm_level ? (ALARM_LEVEL_LABELS[incident.alarm_level as AlarmLevel] || incident.alarm_level) : 'Not yet assigned'} 
+                />
+
                 <InfoRow icon={<AlertTriangle size={16} color={colors.brandNavy} />} label="Cause of Fire" value={incident.cause_of_fire || 'Not yet determined'} />
                 <InfoRow icon={<HeartPulse size={16} color={colors.brandNavy} />} label="Casualties" value={String(incident.casualties ?? 0)} />
                 <InfoRow icon={<FileText size={16} color={colors.brandNavy} />} label="Notes" value={incident.notes || 'No additional notes'} isLast />
@@ -1151,7 +1152,6 @@ const styles = StyleSheet.create({
   },
 
   // Edit mode
-  severityOptionsRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
   input: { borderWidth: 1.5, padding: 10, fontSize: 14, marginBottom: 4 },
 
   // History

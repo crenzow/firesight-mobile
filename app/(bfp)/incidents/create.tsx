@@ -9,7 +9,7 @@ import { GlassHeader } from '../../../components/glass/GlassHeader';
 import { GlassCard } from '../../../components/glass/GlassCard';
 import { SelectField } from '../../../components/ui/SelectField';
 import { Button } from '../../../components/ui/Button';
-import { SeverityBadge, SeverityLevel } from '../../../components/bfp/SeverityBadge';
+import { AlarmLevel, ALARM_LEVEL_OPTIONS } from '../../../components/bfp/AlarmLevelBadge';
 import { IncidentType } from '../../../services/api/bfpModels';
 import { LIAN_BARANGAYS } from '../../../constants/barangays';
 import { useLocation } from '../../../hooks/useLocation';
@@ -24,8 +24,6 @@ const INCIDENT_TYPES: { id: IncidentType; name: string }[] = [
   { id: 'others', name: 'Others' },
 ];
 
-const SEVERITY_OPTIONS: SeverityLevel[] = ['low', 'moderate', 'high', 'critical'];
-
 export default function CreateManualIncidentScreen() {
   const { colors, spacing, typography, radius } = useTheme();
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -33,7 +31,7 @@ export default function CreateManualIncidentScreen() {
 
   const [barangayId, setBarangayId] = useState<number | null>(null);
   const [incidentType, setIncidentType] = useState<IncidentType | null>(null);
-  const [severity, setSeverity] = useState<SeverityLevel | null>(null);
+  const [alarmLevel, setAlarmLevel] = useState<AlarmLevel | null>(null);
   const [description, setDescription] = useState('');
   const [causeOfFire, setCauseOfFire] = useState('');
   const [casualties, setCasualties] = useState('0');
@@ -81,8 +79,8 @@ export default function CreateManualIncidentScreen() {
       Alert.alert('Missing description', 'Please provide a brief description of the incident.');
       return;
     }
-    if (!incidentType || !severity) {
-      Alert.alert('Missing incident details', 'Please select the incident type and severity level.');
+    if (!incidentType) {
+      Alert.alert('Missing incident details', 'Please select the incident type.');
       return;
     }
 
@@ -94,7 +92,7 @@ export default function CreateManualIncidentScreen() {
         longitude: location.longitude,
         description: description.trim(),
         incident_type: incidentType,
-        severity_level: severity,
+        alarm_level: alarmLevel,
         cause_of_fire: causeOfFire || undefined,
         casualties: Number(casualties) || 0,
         notes: notes || undefined,
@@ -158,16 +156,14 @@ export default function CreateManualIncidentScreen() {
             onSelect={(value) => setIncidentType(value as IncidentType)}
             placeholder="Select incident type"
           />
-        </View>
 
-        {/* Severity Selection */}
-        <FieldLabel text="SEVERITY" />
-        <View style={styles.chipRow}>
-          {SEVERITY_OPTIONS.map((level) => (
-            <Pressable key={level} onPress={() => setSeverity(level)} style={{ opacity: severity === level ? 1 : 0.4, marginRight: spacing.sm, marginBottom: spacing.sm }}>
-              <SeverityBadge severity={level} />
-            </Pressable>
-          ))}
+          <SelectField
+            label="Alarm Level"
+            value={alarmLevel}
+            options={ALARM_LEVEL_OPTIONS}
+            onSelect={(value) => setAlarmLevel(value as AlarmLevel)}
+            placeholder="Select alarm level"
+          />
         </View>
 
         {/* Date & Time Picker */}

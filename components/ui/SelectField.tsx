@@ -10,7 +10,7 @@ interface SelectOption {
 }
 
 interface SelectFieldProps {
-  label: string;
+  label?: string;
   required?: boolean;
   placeholder?: string;
   value: number | string | null;
@@ -40,11 +40,13 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   const borderColor = error ? colors.danger : colors.border;
 
   return (
-    <View style={{ marginBottom: spacing.lg }}>
-      <Text style={[styles.label, { color: colors.textSecondary, fontSize: typography.size.sm, marginBottom: spacing.xs }]}>
-        {label}
-        {required ? <Text style={{ color: colors.brandOrange }}> *</Text> : null}
-      </Text>
+    <View style={{ marginBottom: label ? spacing.lg : spacing.sm }}>
+      {label ? (
+        <Text style={[styles.label, { color: colors.textSecondary, fontSize: typography.size.sm, marginBottom: spacing.xs }]}>
+          {label}
+          {required ? <Text style={{ color: colors.brandOrange }}> *</Text> : null}
+        </Text>
+      ) : null}
 
       <Pressable
         onPress={() => setIsOpen(true)}

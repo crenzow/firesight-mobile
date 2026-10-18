@@ -1,5 +1,5 @@
 import { BFPIncidentStatus } from '../../components/bfp/IncidentStatusBadge';
-import { SeverityLevel } from '../../components/bfp/SeverityBadge';
+import { AlarmLevel } from '../../components/bfp/AlarmLevelBadge';
 
 export type IncidentType =
   | 'residential_fire'
@@ -11,7 +11,7 @@ export type IncidentType =
 
 /**
  * Extends the resident-facing CommunityReport shape (services/api/models.ts)
- * with the fields BFP personnel need: severity, incident type, cause,
+ * with the fields BFP personnel need: alarm level, incident type, cause,
  * casualties, and reporter contact info that the resident-facing model
  * intentionally omits.
  */
@@ -32,7 +32,7 @@ export interface BFPIncident {
   ai_fire_confidence?: number | null;
   // Present only once an incident_record exists (i.e. status is at least 'accepted')
   incident_type?: IncidentType;
-  severity_level?: SeverityLevel;
+  alarm_level?: AlarmLevel | null;
   cause_of_fire?: string | null;
   casualties?: number | null;
   notes?: string | null;
@@ -64,7 +64,7 @@ export interface CreateManualIncidentPayload {
   longitude: number;
   description: string;
   incident_type: IncidentType;
-  severity_level: SeverityLevel;
+  alarm_level?: AlarmLevel | null;
   cause_of_fire?: string;
   casualties?: number;
   notes?: string;
@@ -77,5 +77,5 @@ export interface UpdateIncidentDetailsPayload {
   cause_of_fire?: string;
   casualties?: number;
   notes?: string;
-  severity_level?: SeverityLevel;
+  alarm_level?: AlarmLevel | null;
 }

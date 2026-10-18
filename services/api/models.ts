@@ -1,3 +1,5 @@
+import { AlarmLevel } from '../../components/bfp/AlarmLevelBadge';
+
 export interface BarangayRiskFeature {
   barangay_id: number;
   barangay_name: string;
@@ -15,7 +17,7 @@ export interface IncidentMarker {
   latitude: number;
   longitude: number;
   incident_type: 'residential_fire' | 'commercial_fire' | 'vehicular_fire' | 'storage_fire' | 'rubbish_fire' | 'others' | null;
-  severity_level: 'low' | 'moderate' | 'high' | 'critical' | null;
+  alarm_level?: AlarmLevel | null;
   data_time: string;
   cause_of_fire?: string | null;
   casualties?: number | null;
@@ -99,7 +101,6 @@ export interface Announcement {
   announcement_id: number;
   title: string;
   content: string;
-  announcement_type: 'emergency' | 'general';
   created_at: string;
 }
 

@@ -22,6 +22,7 @@ export interface AppUser {
     rank: string;
     station_assigned: string;
     employee_number: string;
+    duty_group?: string | null;
   } | null;
 }
 

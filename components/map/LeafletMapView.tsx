@@ -223,7 +223,7 @@ function buildMapHtml({
       lng: i.longitude,
       barangay: i.barangay_name,
       type: i.incident_type,
-      severity: i.severity_level,
+      alarm: i.alarm_level,
       date: i.data_time,
       cause: i.cause_of_fire || null,
       casualties: i.casualties ?? null,
@@ -577,7 +577,9 @@ function buildMapHtml({
       window.highlightBarangay(currentSelectedKey);
     } else {
       incidents.forEach((i) => {
-        const color = i.severity === 'critical' || i.severity === 'high' ? '#E14245' : i.severity === 'moderate' ? '#E8A33D' : '#3B82C4';
+        const isTaskForceOrGeneral = i.alarm && (i.alarm.indexOf('task_force') !== -1 || i.alarm === 'general_alarm');
+        const isHighAlarm = i.alarm === '3rd_alarm' || i.alarm === '4th_alarm' || i.alarm === '5th_alarm';
+        const color = isTaskForceOrGeneral ? '#E14245' : isHighAlarm ? '#F4622B' : i.alarm === '2nd_alarm' ? '#E8A33D' : '#3B82C4';
         const marker = L.circleMarker([i.lat, i.lng], {
           radius: 8,
           color: '#FFFFFF',
@@ -590,14 +592,16 @@ function buildMapHtml({
         if (isBFP) {
           const fmt = function(v) { return v != null && v !== '' ? v : '-'; };
           const dateLabel = new Date(timeString.replace(' ', 'T')).toLocaleString();
-          const sc = i.severity === 'critical' ? '#E14245' : i.severity === 'high' ? '#E8A33D' : i.severity === 'moderate' ? '#E8A33D' : '#3B82C4';
-          const stc = i.status === 'resolved' ? '#2FA65A' : i.status === 'dispatched' ? '#E8A33D' : '#3B82C4';
+          const sc = isTaskForceOrGeneral ? '#E14245' : isHighAlarm ? '#F4622B' : i.alarm === '2nd_alarm' ? '#E8A33D' : '#3B82C4';
+          const alarmBadgeHtml = i.alarm
+            ? '<span style="background:' + sc + ';color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase">' + i.alarm.replace(/_/g, ' ').toUpperCase() + '</span>'
+            : '';
           popupHtml =
             '<div style="font-family:-apple-system,Roboto,sans-serif;min-width:220px;max-width:280px">' +
               '<div style="background:#0F1C3F;color:#fff;padding:8px 10px;border-radius:6px 6px 0 0;margin:-8px -10px 8px;">' +
                 '<div style="font-weight:800;font-size:13px">' + fmt(i.barangay) + '</div>' +
                 '<div style="display:flex;gap:6px;margin-top:4px;align-items:center">' +
-                  '<span style="background:' + sc + ';color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase">' + fmt(i.severity) + '</span>' +
+                  alarmBadgeHtml +
                   '<span style="background:' + stc + ';color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase">' + fmt(i.status) + '</span>' +
                   '<span style="color:rgba(255,255,255,0.7);font-size:9px;text-transform:uppercase">' + fmt(i.type) + '</span>' +
                 '</div>' +
@@ -614,7 +618,8 @@ function buildMapHtml({
             '</div>';
         } else {
           const dateLabel = new Date(timeString.replace(' ', 'T')).toLocaleDateString();
-          popupHtml = '<b>' + i.barangay + '</b><br/>' + i.type + ' &middot; ' + i.severity + '<br/>' + dateLabel;
+          const alarmLabel = i.alarm ? ' &middot; ' + i.alarm.replace(/_/g, ' ').toUpperCase() : '';
+          popupHtml = '<b>' + i.barangay + '</b><br/>' + (i.type || 'Fire') + alarmLabel + '<br/>' + dateLabel;
           if (i.cause) popupHtml += '<br/>Cause: ' + i.cause;
           if (i.casualties) popupHtml += '<br/>Casualties: ' + i.casualties;
         }

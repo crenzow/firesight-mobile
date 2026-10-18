@@ -10,21 +10,29 @@ interface BFPHeatmapViewProps {
   centerLng: number;
 }
 
-const SEVERITY_WEIGHT: Record<string, number> = { low: 0.3, moderate: 0.5, high: 0.8, critical: 1.0 };
+const ALARM_WEIGHT: Record<string, number> = {
+  '1st_alarm': 0.35,
+  '2nd_alarm': 0.45,
+  '3rd_alarm': 0.6,
+  '4th_alarm': 0.75,
+  '5th_alarm': 0.85,
+  'task_force_alpha': 0.9,
+  'task_force_bravo': 0.9,
+  'task_force_charlie': 0.95,
+  'task_force_delta': 0.95,
+  'task_force_echo': 0.95,
+  'task_force_hotel': 0.95,
+  'task_force_india': 0.95,
+  'general_alarm': 1.0,
+};
 
 /**
  * Risk Mapping module map — two modes:
  *  - 'heatmap': a density heatmap (via the leaflet.heat plugin) built from
- *    all incident coordinates, weighted by severity, showing fire-prone
+ *    all incident coordinates, weighted by alarm level intensity, showing fire-prone
  *    areas visually rather than as discrete markers.
  *  - 'incidents': the same discrete incident markers used elsewhere, for
  *    when personnel want to inspect individual records rather than density.
- *
- * A true ML-generated risk heatmap (per the thesis's risk_assessment /
- * prediction_score pipeline) would come from the backend; this incident-
- * density heatmap is a reasonable, honest stand-in using data that already
- * exists, and can be swapped for backend-supplied heat points later without
- * changing this component's shape.
  */
 export const BFPHeatmapView: React.FC<BFPHeatmapViewProps> = ({ mode, incidents, centerLat, centerLng }) => {
   const html = useMemo(() => buildHtml({ mode, incidents, centerLat, centerLng }), [mode, incidents, centerLat, centerLng]);
@@ -36,7 +44,7 @@ export const BFPHeatmapView: React.FC<BFPHeatmapViewProps> = ({ mode, incidents,
 
 function buildHtml({ mode, incidents, centerLat, centerLng }: BFPHeatmapViewProps): string {
   const heatPoints = JSON.stringify(
-    incidents.map((i) => [i.latitude, i.longitude, i.severity_level ? SEVERITY_WEIGHT[i.severity_level] ?? 0.4 : 0.4])
+    incidents.map((i) => [i.latitude, i.longitude, i.alarm_level ? ALARM_WEIGHT[i.alarm_level] ?? 0.4 : 0.4])
   );
   const markerData = JSON.stringify(
     incidents.map((i) => ({
@@ -44,7 +52,7 @@ function buildHtml({ mode, incidents, centerLat, centerLng }: BFPHeatmapViewProp
       lng: i.longitude,
       barangay: i.barangay_name,
       type: i.incident_type,
-      severity: i.severity_level,
+      alarm: i.alarm_level,
       date: i.data_time,
     }))
   );
@@ -81,10 +89,13 @@ function buildHtml({ mode, incidents, centerLat, centerLng }: BFPHeatmapViewProp
       }
     } else {
       markers.forEach((m) => {
-        const color = m.severity === 'critical' || m.severity === 'high' ? '#E14245' : m.severity === 'moderate' ? '#E8A33D' : '#3B82C4';
+        const isTaskForceOrGeneral = m.alarm && (m.alarm.indexOf('task_force') !== -1 || m.alarm === 'general_alarm');
+        const isHighAlarm = m.alarm === '3rd_alarm' || m.alarm === '4th_alarm' || m.alarm === '5th_alarm';
+        const color = isTaskForceOrGeneral ? '#E14245' : isHighAlarm ? '#F4622B' : m.alarm === '2nd_alarm' ? '#E8A33D' : '#3B82C4';
         const marker = L.circleMarker([m.lat, m.lng], { radius: 8, color: '#FFFFFF', weight: 2, fillColor: color, fillOpacity: 0.9 }).addTo(map);
         const dateLabel = new Date(m.date.replace(' ', 'T')).toLocaleDateString();
-        marker.bindPopup('<b>' + m.barangay + '</b><br/>' + m.type + ' &middot; ' + m.severity + '<br/>' + dateLabel);
+        const alarmText = m.alarm ? ' &middot; ' + m.alarm.replace(/_/g, ' ').toUpperCase() : '';
+        marker.bindPopup('<b>' + m.barangay + '</b><br/>' + (m.type || 'Fire') + alarmText + '<br/>' + dateLabel);
       });
     }
   </script>

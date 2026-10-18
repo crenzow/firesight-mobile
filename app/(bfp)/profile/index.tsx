@@ -155,8 +155,23 @@ export default function BFPProfileScreen() {
         </Text>
         <View style={{ marginHorizontal: spacing.lg }}>
           <GlassCard>
-            <InfoRow icon={<IdCard size={18} color="#FFFFFF" />} label="RANK" value="Fire Officer II" />
-            <InfoRow icon={<Building2 size={18} color="#FFFFFF" />} label="STATION" value="BFP Lian Fire Station" />
+            <InfoRow
+              icon={<IdCard size={18} color="#FFFFFF" />}
+              label="RANK"
+              value={user.personnel_details?.rank || 'Fire Officer II'}
+            />
+            <InfoRow
+              icon={<Building2 size={18} color="#FFFFFF" />}
+              label="STATION"
+              value={user.personnel_details?.station_assigned || 'BFP Lian Fire Station'}
+            />
+            {user.personnel_details?.employee_number ? (
+              <InfoRow
+                icon={<ShieldCheck size={18} color="#FFFFFF" />}
+                label="BADGE #"
+                value={user.personnel_details.employee_number}
+              />
+            ) : null}
             <InfoRow icon={<Phone size={18} color="#FFFFFF" />} label="CONTACT" value={user.contact_number ?? 'Not set'} isLast />
           </GlassCard>
         </View>

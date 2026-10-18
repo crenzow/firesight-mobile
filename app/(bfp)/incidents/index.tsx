@@ -71,7 +71,10 @@ export default function IncidentsListScreen() {
       if (pA !== pB) {
         return pA - pB; // lower number = higher priority
       }
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      const timeA = new Date(a.created_at.replace(' ', 'T')).getTime() || 0;
+      const timeB = new Date(b.created_at.replace(' ', 'T')).getTime() || 0;
+      if (timeA !== timeB) return timeB - timeA;
+      return b.report_id - a.report_id;
     });
   }, [incidents, statusFilter, search]);
 

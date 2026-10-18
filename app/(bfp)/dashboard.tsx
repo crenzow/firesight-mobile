@@ -44,7 +44,15 @@ export default function DashboardScreen() {
     ]);
 
     if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value);
-    if (incidentsResult.status === 'fulfilled') setRecentIncidents(incidentsResult.value.slice(0, 5));
+    if (incidentsResult.status === 'fulfilled') {
+      const sorted = [...incidentsResult.value].sort((a, b) => {
+        const timeA = new Date(a.created_at.replace(' ', 'T')).getTime() || 0;
+        const timeB = new Date(b.created_at.replace(' ', 'T')).getTime() || 0;
+        if (timeA !== timeB) return timeB - timeA;
+        return b.report_id - a.report_id;
+      });
+      setRecentIncidents(sorted.slice(0, 5));
+    }
     setIsRefreshing(false);
   }, []);
 
