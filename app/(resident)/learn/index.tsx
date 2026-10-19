@@ -9,6 +9,7 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Search, X, BookOpen, Bookmark } from "lucide-react-native";
@@ -28,11 +29,14 @@ import { useBookmarks } from "../../../hooks/useBookmarks";
 
 export default function LearnScreen() {
   const { colors, spacing, typography, isDark } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = windowWidth - spacing.lg * 2;
   const [articles, setArticles] = useState<FireEducationArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [category, setCategory] = useState<LearnCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeFeaturedIndex, setActiveFeaturedIndex] = useState(0);
 
   const { bookmarkedIds } = useBookmarks();
 
@@ -58,10 +62,15 @@ export default function LearnScreen() {
   const isSearching = searchQuery.trim().length > 0;
   const isSavedTab = category === "saved";
 
-  // Hide featured card when searching or viewing saved tab
-  const featured = useMemo(
-    () => (!isSearching && !isSavedTab ? articles.find((a) => a.is_featured) : undefined),
+  // Hide featured card/carousel when searching or viewing saved tab
+  const featuredArticles = useMemo(
+    () => (!isSearching && !isSavedTab ? articles.filter((a) => a.is_featured) : []),
     [articles, isSearching, isSavedTab],
+  );
+
+  const featuredIds = useMemo(
+    () => new Set(featuredArticles.map((a) => a.content_id)),
+    [featuredArticles],
   );
 
   const filtered = useMemo(() => {
@@ -85,9 +94,9 @@ export default function LearnScreen() {
       if (isSearching || isSavedTab) {
         return matchesCategory && matchesSearch;
       }
-      return a.content_id !== featured?.content_id && matchesCategory && matchesSearch;
+      return !featuredIds.has(a.content_id) && matchesCategory && matchesSearch;
     });
-  }, [articles, category, featured, searchQuery, isSearching, isSavedTab, bookmarkedIds]);
+  }, [articles, category, featuredIds, searchQuery, isSearching, isSavedTab, bookmarkedIds]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -153,15 +162,85 @@ export default function LearnScreen() {
             )}
           </View>
 
-          {/* Featured Hero Card (Shown only when not searching and not on Saved tab) */}
-          {featured && (
+          {/* Featured Hero Card or Carousel (Shown only when not searching and not on Saved tab) */}
+          {featuredArticles.length > 0 && (
             <View style={{ marginTop: spacing.lg }}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={[styles.sectionHeading, { color: colors.textMuted }]}>
-                  FEATURED TODAY
+                  {featuredArticles.length > 1 ? "FEATURED GUIDES" : "FEATURED TODAY"}
                 </Text>
+                {featuredArticles.length > 1 && (
+                  <View style={[styles.countBadge, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                    <Text style={[styles.countText, { color: colors.brandOrange, fontWeight: "700" }]}>
+                      {activeFeaturedIndex + 1} of {featuredArticles.length}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <FeaturedArticleCard article={featured} />
+
+              {featuredArticles.length === 1 ? (
+                <FeaturedArticleCard article={featuredArticles[0]} />
+              ) : (
+                <>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled={false}
+                    snapToInterval={cardWidth + spacing.md}
+                    decelerationRate="fast"
+                    snapToAlignment="start"
+                    showsHorizontalScrollIndicator={false}
+                    nestedScrollEnabled
+                    onScroll={(e) => {
+                      const x = e.nativeEvent.contentOffset.x;
+                      const idx = Math.round(x / (cardWidth + spacing.md));
+                      if (idx !== activeFeaturedIndex && idx >= 0 && idx < featuredArticles.length) {
+                        setActiveFeaturedIndex(idx);
+                      }
+                    }}
+                    scrollEventThrottle={16}
+                  >
+                    {featuredArticles.map((article, idx) => (
+                      <View
+                        key={article.content_id}
+                        style={{
+                          width: cardWidth,
+                          marginRight: idx < featuredArticles.length - 1 ? spacing.md : 0,
+                        }}
+                      >
+                        <FeaturedArticleCard article={article} />
+                      </View>
+                    ))}
+                  </ScrollView>
+
+                  {/* Pagination Dots */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 12,
+                    }}
+                  >
+                    {featuredArticles.map((_, i) => (
+                      <View
+                        key={i}
+                        style={{
+                          width: i === activeFeaturedIndex ? 18 : 6,
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor:
+                            i === activeFeaturedIndex
+                              ? colors.brandOrange
+                              : isDark
+                              ? "rgba(255,255,255,0.2)"
+                              : "rgba(0,0,0,0.15)",
+                        }}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
             </View>
           )}
 

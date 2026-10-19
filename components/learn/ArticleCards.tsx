@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Image, StyleProp, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronRight, Flame, ShieldAlert, BookOpen, Sparkles, ArrowRight, Bookmark } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,7 +26,10 @@ const CATEGORY_GRADIENT = {
   awareness: ['#6366F1', '#4F46E5'],
 } as const;
 
-export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = ({ article }) => {
+export const FeaturedArticleCard: React.FC<{
+  article: FireEducationArticle;
+  style?: StyleProp<ViewStyle>;
+}> = ({ article, style }) => {
   const { colors, spacing, radius, typography } = useTheme();
   const { isBookmarked } = useBookmarks();
   const isSaved = isBookmarked(article.content_id);
@@ -41,6 +44,7 @@ export const FeaturedArticleCard: React.FC<{ article: FireEducationArticle }> = 
           borderColor: pressed ? colors.brandOrange : colors.border,
           transform: [{ scale: pressed ? 0.98 : 1 }],
         },
+        style,
       ]}
       accessibilityRole="button"
       accessibilityLabel={article.title}
