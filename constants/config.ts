@@ -37,7 +37,9 @@ export const getStorageImageUrl = (imagePath?: string | null): string | null => 
   ) {
     return imagePath;
   }
-  const cleanBase = (APP_CONFIG.API_BASE_URL || '').replace(/\/+$/, '');
+  const cleanBase = (APP_CONFIG.API_BASE_URL || '')
+    .replace(/\/api\/?$/, '')
+    .replace(/\/+$/, '');
   const cleanPath = imagePath.replace(/^\/+/, '');
   const storagePath = cleanPath.startsWith('storage/') ? cleanPath : `storage/${cleanPath}`;
   return cleanBase ? `${cleanBase}/${storagePath}` : null;
