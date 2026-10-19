@@ -23,3 +23,22 @@ export const APP_CONFIG = {
   DEFAULT_PROVINCE: 'Batangas',
   SUPPORT_EMAIL: 'support@firesight.gov.ph',
 };
+
+/**
+ * Resolves a backend storage path (e.g. 'uploads/...') to an absolute URL via the public/storage bridge.
+ */
+export const getStorageImageUrl = (imagePath?: string | null): string | null => {
+  if (!imagePath) return null;
+  if (
+    imagePath.startsWith('http://') ||
+    imagePath.startsWith('https://') ||
+    imagePath.startsWith('file://') ||
+    imagePath.startsWith('data:')
+  ) {
+    return imagePath;
+  }
+  const cleanBase = (APP_CONFIG.API_BASE_URL || '').replace(/\/+$/, '');
+  const cleanPath = imagePath.replace(/^\/+/, '');
+  const storagePath = cleanPath.startsWith('storage/') ? cleanPath : `storage/${cleanPath}`;
+  return cleanBase ? `${cleanBase}/${storagePath}` : null;
+};

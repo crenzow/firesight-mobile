@@ -32,9 +32,17 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evi
   const [isSourceDialogVisible, setIsSourceDialogVisible] = useState(false);
   const [expandedPhoto, setExpandedPhoto] = useState<EvidencePhoto | null>(null);
 
+  const resolveUri = (path: string) => {
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const cleanBase = (APP_CONFIG.API_BASE_URL || '').replace(/\/+$/, '');
+    const cleanPath = path.replace(/^\/+/, '');
+    const storagePath = cleanPath.startsWith('storage/') ? cleanPath : `storage/${cleanPath}`;
+    return `${cleanBase}/${storagePath}`;
+  };
+
   const photos: EvidencePhoto[] = [
-    ...(mainPhoto ? [{ key: 'main', uri: `${APP_CONFIG.API_BASE_URL}/${mainPhoto}`, caption: 'Original submission' }] : []),
-    ...evidencePhotos.map((e) => ({ key: String(e.evidence_id), uri: `${APP_CONFIG.API_BASE_URL}/${e.image_path}`, caption: e.caption })),
+    ...(mainPhoto ? [{ key: 'main', uri: resolveUri(mainPhoto), caption: 'Original submission' }] : []),
+    ...evidencePhotos.map((e) => ({ key: String(e.evidence_id), uri: resolveUri(e.image_path), caption: e.caption })),
   ];
 
   const handleAddFromLibrary = async () => {

@@ -35,7 +35,7 @@ import {
   ReportStatusHistoryEntry,
 } from '../../../services/api/models';
 import { formatFullDate, formatTime } from '../../../utils/formatters';
-import { APP_CONFIG } from '../../../constants/config';
+import { APP_CONFIG, getStorageImageUrl } from '../../../constants/config';
 import { reverseGeocode } from '../../../utils/geocoding';
 
 interface StepDefinition {
@@ -136,11 +136,7 @@ export default function ReportDetailScreen() {
     ? TIMELINE_STEPS.findIndex((s) => s.key === report.status)
     : -1;
 
-  const photoUri = report?.report_image
-    ? report.report_image.startsWith('http')
-      ? report.report_image
-      : `${APP_CONFIG.API_BASE_URL}/${report.report_image}`
-    : null;
+  const photoUri = getStorageImageUrl(report?.report_image);
 
   const referenceNo = report
     ? `FR-${new Date(report.created_at).getFullYear()}-${String(report.report_id).padStart(4, '0')}`

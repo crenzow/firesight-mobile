@@ -6,7 +6,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { CommunityReport } from '../../services/api/models';
 import { StatusBadge } from './StatusBadge';
 import { formatRelativeDate, formatTime } from '../../utils/formatters';
-import { APP_CONFIG } from '../../constants/config';
+import { APP_CONFIG, getStorageImageUrl } from '../../constants/config';
 import { reverseGeocode, getCachedGeocode } from '../../utils/geocoding';
 
 interface ReportListItemProps {
@@ -38,9 +38,7 @@ export const ReportListItem: React.FC<ReportListItemProps> = ({ report, paddingH
   }, [report.latitude, report.longitude]);
 
   const hasPhoto = !!report.report_image && !imageError;
-  const photoUri = report.report_image?.startsWith('http')
-    ? report.report_image
-    : `${APP_CONFIG.API_BASE_URL}/${report.report_image}`;
+  const photoUri = getStorageImageUrl(report.report_image);
 
   return (
     <Pressable
@@ -61,7 +59,7 @@ export const ReportListItem: React.FC<ReportListItemProps> = ({ report, paddingH
           {/* Photo Thumbnail or Fallback Icon */}
           {hasPhoto ? (
             <Image
-              source={{ uri: photoUri }}
+              source={{ uri: photoUri ?? undefined }}
               style={[
                 styles.thumbnail,
                 {

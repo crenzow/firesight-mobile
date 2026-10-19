@@ -6,7 +6,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { BFPIncident } from '../../services/api/bfpModels';
 import { IncidentStatusBadge } from './IncidentStatusBadge';
 import { formatRelativeDate, formatTime } from '../../utils/formatters';
-import { APP_CONFIG } from '../../constants/config';
+import { APP_CONFIG, getStorageImageUrl } from '../../constants/config';
 import { InteractiveCard } from './InteractiveCard';
 import { reverseGeocode, getCachedGeocode } from '../../utils/geocoding';
 
@@ -48,7 +48,7 @@ export const IncidentListItem: React.FC<{ incident: BFPIncident; from?: 'dashboa
     >
       {incident.report_image ? (
         <Image
-          source={{ uri: `${APP_CONFIG.API_BASE_URL}/${incident.report_image}` }}
+          source={{ uri: getStorageImageUrl(incident.report_image) ?? '' }}
           style={[styles.thumb, { borderRadius: radius.md }]}
         />
       ) : (
