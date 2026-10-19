@@ -72,6 +72,12 @@ function formatArticleDate(dateString?: string): string {
 function getArticleImageCredit(article: FireEducationArticle | null): string {
   if (!article) return '';
 
+  // Only the original existing seed articles (IDs 1-17) display photo credits.
+  // Any future additions will have no photo credits.
+  if (article.content_id > 17) {
+    return '';
+  }
+
   const path = (article.image_path ?? '').toLowerCase();
   const title = (article.title ?? '').toLowerCase();
 
@@ -86,7 +92,7 @@ function getArticleImageCredit(article: FireEducationArticle | null): string {
     return 'Source: BFP Lian Fire Station';
   }
 
-  // 2. Default for other safety educational photos
+  // 2. Default for other existing seed safety educational photos
   return 'Photo: Public Safety Reference';
 }
 
@@ -106,6 +112,7 @@ export default function LearnArticleScreen() {
   const bookmarked = article ? isBookmarked(article.content_id) : false;
 
   const imageSource = getArticleImageSource(article?.image_path);
+  const photoCredit = getArticleImageCredit(article);
 
   useEffect(() => {
     if (imageSource && typeof imageSource === 'object' && 'uri' in imageSource && imageSource.uri) {
@@ -353,10 +360,10 @@ export default function LearnArticleScreen() {
                   />
                 </View>
               )}
-              {imageSource ? (
+              {imageSource && photoCredit ? (
                 <View style={styles.photoCreditRow}>
                   <Text style={[styles.photoCreditText, { color: colors.textMuted }]}>
-                    {getArticleImageCredit(article)}
+                    {photoCredit}
                   </Text>
                 </View>
               ) : null}
@@ -479,7 +486,7 @@ export default function LearnArticleScreen() {
         visible={lightboxVisible}
         imageSource={imageSource}
         title={article?.title}
-        caption={getArticleImageCredit(article)}
+        caption={photoCredit}
         onClose={() => setLightboxVisible(false)}
       />
 

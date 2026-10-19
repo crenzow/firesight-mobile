@@ -21,7 +21,7 @@ export default function SplashScreen() {
     const timeout = setTimeout(() => {
       if (!isAuthenticated) {
         router.replace('/(auth)/welcome');
-      } else if (user?.role === 'personnel') {
+      } else if (user?.role === 'bfp_personnel') {
         router.replace('/(bfp)/dashboard');
       } else {
         router.replace('/(resident)/home');

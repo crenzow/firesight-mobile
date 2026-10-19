@@ -28,13 +28,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // On app launch, restore session from secure storage rather than
-  // forcing the resident to log in every time they open the app.
+  // On app launch, restore session from secure storage.
+  // Validate against the current database: if the database changed or the token
+  // expired (401), automatically clear the session and return to the login screen.
   useEffect(() => {
     (async () => {
       try {
         const [token, savedUser] = await Promise.all([secureStorage.getToken(), secureStorage.getUser<AppUser>()]);
-        if (token && savedUser) setUser(savedUser);
+        if (token && savedUser) {
+          try {
+            const verified = await profileService.get();
+            setUser(verified);
+            await secureStorage.setUser(verified);
+          } catch (err: any) {
+            if (err?.status === 401 || err?.status === 403 || err?.status === 404) {
+              await Promise.all([secureStorage.clearToken(), secureStorage.clearUser()]);
+              setUser(null);
+            } else {
+              // Retain cached user if offline or network unreachable
+              setUser(savedUser);
+            }
+          }
+        }
       } finally {
         setIsBootstrapping(false);
       }

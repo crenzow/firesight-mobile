@@ -900,7 +900,7 @@ export default function IncidentDetailScreen() {
                 <InfoRow 
                   icon={<Bell size={16} color={colors.brandNavy} />} 
                   label="Alarm Level" 
-                  value={incident.alarm_level ? (ALARM_LEVEL_LABELS[incident.alarm_level as AlarmLevel] || incident.alarm_level) : 'Not yet assigned'} 
+                  value={incident.alarm_level ? (ALARM_LEVEL_LABELS[incident.alarm_level as AlarmLevel] || incident.alarm_level) : 'Unspecified'} 
                 />
 
                 <InfoRow icon={<AlertTriangle size={16} color={colors.brandNavy} />} label="Cause of Fire" value={incident.cause_of_fire || 'Not yet determined'} />

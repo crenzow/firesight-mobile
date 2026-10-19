@@ -9,7 +9,12 @@ import { useNotifications } from '../../context/NotificationContext';
 import { Notification } from '../../services/api/models';
 import { formatRelativeDate } from '../../utils/formatters';
 
-const ICONS = { alert: AlertTriangle, update: RefreshCw, system: Info } as const;
+const ICONS: Record<string, any> = {
+  incident_alert: AlertTriangle,
+  status_update: RefreshCw,
+  system: Info,
+  reminder: Clock,
+};
 
 export default function NotificationsScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -107,7 +112,8 @@ export default function NotificationsScreen() {
           )}
           renderItem={({ item }) => {
             const Icon = ICONS[item.notification_type] ?? Info;
-            const iconColor = item.notification_type === 'alert' ? colors.danger : colors.brandOrange;
+            const isAlert = item.notification_type === 'incident_alert';
+            const iconColor = isAlert ? colors.danger : colors.brandOrange;
             return (
               <Pressable
                 onPress={() => handlePress(item)}

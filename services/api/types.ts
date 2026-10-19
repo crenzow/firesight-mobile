@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'personnel' | 'resident';
+export type UserRole = 'resident' | 'bfp_personnel' | 'bfp_admin';
 
 export interface AppUser {
   user_id: number;

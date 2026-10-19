@@ -29,7 +29,7 @@ export default function LoginScreen() {
     try {
       const loggedInUser = await login({ email: email.trim(), password });
       // Route to the correct home screen based on the user's role
-      if (loggedInUser && loggedInUser.role === 'personnel') {
+      if (loggedInUser && loggedInUser.role === 'bfp_personnel') {
         router.replace('/(bfp)/dashboard');
       } else {
         router.replace('/(resident)/home');
