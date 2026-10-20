@@ -14,20 +14,25 @@ interface ReportListItemProps {
   paddingHorizontal?: number;
 }
 
-export const ReportListItem: React.FC<ReportListItemProps> = ({ report, paddingHorizontal }) => {
+const ReportListItemComponent: React.FC<ReportListItemProps> = ({ report, paddingHorizontal }) => {
   const { colors, spacing, typography, radius, isDark } = useTheme();
   const [imageError, setImageError] = useState(false);
+  const cached = getCachedGeocode(report.latitude, report.longitude);
   const [locationName, setLocationName] = useState<string>(
-    () => getCachedGeocode(report.latitude, report.longitude) || report.barangay_name || 'Loading location…'
+    () => cached || report.barangay_name || 'Loading location…'
   );
 
   const horizontalPadding = paddingHorizontal ?? spacing.md;
 
   useEffect(() => {
     let isMounted = true;
+    if (cached) {
+      setLocationName(cached);
+      return;
+    }
     if (report.latitude && report.longitude) {
       reverseGeocode(report.latitude, report.longitude).then((name) => {
-        if (isMounted && name !== 'Unknown area') {
+        if (isMounted && name && name !== 'Unknown area') {
           setLocationName(name);
         }
       });
@@ -35,7 +40,7 @@ export const ReportListItem: React.FC<ReportListItemProps> = ({ report, paddingH
     return () => {
       isMounted = false;
     };
-  }, [report.latitude, report.longitude]);
+  }, [report.latitude, report.longitude, cached]);
 
   const hasPhoto = !!report.report_image && !imageError;
   const photoUri = getStorageImageUrl(report.report_image);
@@ -131,6 +136,8 @@ export const ReportListItem: React.FC<ReportListItemProps> = ({ report, paddingH
     </Pressable>
   );
 };
+
+export const ReportListItem = React.memo(ReportListItemComponent);
 
 const styles = StyleSheet.create({
   row: {

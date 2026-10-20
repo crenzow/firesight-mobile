@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, RefreshControl, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Search, ClipboardList } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -78,6 +78,13 @@ export default function IncidentsListScreen() {
     });
   }, [incidents, statusFilter, search]);
 
+  const renderItem = useCallback(
+    ({ item }: { item: BFPIncident }) => <IncidentListItem incident={item} />,
+    []
+  );
+
+  const keyExtractor = useCallback((item: BFPIncident) => String(item.report_id), []);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <GlassHeader title="Incidents" subtitle={`${filtered.length} record${filtered.length === 1 ? '' : 's'}`} unreadCount={unreadCount} />
@@ -106,8 +113,13 @@ export default function IncidentsListScreen() {
 
       <FlatList
         data={filtered}
-        keyExtractor={(item) => String(item.report_id)}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl * 2 }}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -123,11 +135,9 @@ export default function IncidentsListScreen() {
             <ClipboardList size={32} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, marginTop: spacing.sm }}>
               No incidents match this filter.
-              
             </Text>
           </View>
         }
-        renderItem={({ item }) => <IncidentListItem incident={item} />}
       />
 
       {/* Temporarily disabled manual incident creation button. */}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router, useFocusEffect } from "expo-router";
 import { Search, X, BookOpen, Bookmark } from "lucide-react-native";
 import { useTheme } from "../../../theme/ThemeContext";
 import { AppHeader } from "../../../components/navigation/AppHeader";
@@ -40,7 +41,10 @@ export default function LearnScreen() {
 
   const { bookmarkedIds } = useBookmarks();
 
-  const load = () => {
+  const load = useCallback((silent = false) => {
+    if (!silent) {
+      setIsLoading(articles.length === 0);
+    }
     educationService
       .list()
       .then((data) => {
@@ -53,11 +57,20 @@ export default function LearnScreen() {
         setIsRefreshing(false);
         setIsLoading(false);
       });
-  };
+  }, [articles.length]);
 
-  useEffect(() => {
-    load();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      load(true);
+
+      // Auto-refresh every 15 seconds while screen is focused so database updates appear live
+      const timer = setInterval(() => {
+        load(true);
+      }, 15000);
+
+      return () => clearInterval(timer);
+    }, [load])
+  );
 
   const isSearching = searchQuery.trim().length > 0;
   const isSavedTab = category === "saved";

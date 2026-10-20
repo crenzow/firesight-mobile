@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Platform } from 'react-native';
 import { Bell, AlertTriangle, RefreshCw, Info } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { GlassHeader } from '../../components/glass/GlassHeader';
@@ -95,6 +95,10 @@ export default function BFPNotificationsScreen() {
         data={notifications}
         keyExtractor={(item) => String(item.notification_id)}
         contentContainerStyle={{ padding: spacing.lg }}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}

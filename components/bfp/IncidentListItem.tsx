@@ -10,25 +10,35 @@ import { APP_CONFIG, getStorageImageUrl } from '../../constants/config';
 import { InteractiveCard } from './InteractiveCard';
 import { reverseGeocode, getCachedGeocode } from '../../utils/geocoding';
 
-export const IncidentListItem: React.FC<{ incident: BFPIncident; from?: 'dashboard' | 'incidents' }> = ({ incident, from = 'incidents' }) => {
-  const { colors, spacing, radius, typography, isDark } = useTheme();
-  const [locationName, setLocationName] = React.useState<string>(
-    () => getCachedGeocode(incident.latitude, incident.longitude) || incident.barangay_name || 'Loading location…'
-  );
+interface IncidentListItemProps {
+  incident: BFPIncident;
+  from?: 'dashboard' | 'incidents';
+}
 
-  React.useEffect(() => {
-    let isMounted = true;
-    if (incident.latitude && incident.longitude) {
-      reverseGeocode(incident.latitude, incident.longitude).then((name) => {
-        if (isMounted && name !== 'Unknown area') {
-          setLocationName(name);
-        }
-      });
-    }
-    return () => {
-      isMounted = false;
-    };
-  }, [incident.latitude, incident.longitude]);
+const IncidentListItemComponent: React.FC<IncidentListItemProps> = ({ incident, from = 'incidents' }) => {
+    const { colors, spacing, radius, typography, isDark } = useTheme();
+    const cached = getCachedGeocode(incident.latitude, incident.longitude);
+    const [locationName, setLocationName] = React.useState<string>(
+      () => cached || incident.barangay_name || 'Loading location…'
+    );
+
+    React.useEffect(() => {
+      let isMounted = true;
+      if (cached) {
+        setLocationName(cached);
+        return;
+      }
+      if (incident.latitude && incident.longitude) {
+        reverseGeocode(incident.latitude, incident.longitude).then((name) => {
+          if (isMounted && name && name !== 'Unknown area') {
+            setLocationName(name);
+          }
+        });
+      }
+      return () => {
+        isMounted = false;
+      };
+    }, [incident.latitude, incident.longitude, cached]);
 
   return (
     <InteractiveCard
@@ -91,6 +101,8 @@ export const IncidentListItem: React.FC<{ incident: BFPIncident; from?: 'dashboa
     </InteractiveCard>
   );
 };
+
+export const IncidentListItem = React.memo(IncidentListItemComponent);
 
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'flex-start' },

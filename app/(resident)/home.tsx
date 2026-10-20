@@ -48,6 +48,13 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
+
+      // Poll every 20s while focused so advisory and area status update live
+      const timer = setInterval(() => {
+        loadData();
+      }, 20000);
+
+      return () => clearInterval(timer);
     }, [loadData])
   );
 

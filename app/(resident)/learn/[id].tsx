@@ -24,7 +24,6 @@ import {
   BookOpen,
   Sparkles,
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../theme/ThemeContext';
 import { educationService, contactService } from '../../../services/api';
 import { FireEducationArticle, EmergencyContact } from '../../../services/api/models';
@@ -107,6 +106,7 @@ export default function LearnArticleScreen() {
   const [textSizeModalVisible, setTextSizeModalVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
   const { isBookmarked, toggleBookmark } = useBookmarks();
   const bookmarked = article ? isBookmarked(article.content_id) : false;
@@ -115,6 +115,7 @@ export default function LearnArticleScreen() {
   const photoCredit = getArticleImageCredit(article);
 
   useEffect(() => {
+    setImageLoadFailed(false);
     if (imageSource && typeof imageSource === 'object' && 'uri' in imageSource && imageSource.uri) {
       Image.getSize(
         imageSource.uri,
@@ -320,9 +321,9 @@ export default function LearnArticleScreen() {
               </Text>
             </View>
 
-            {/* 5. Cinematic Photo Hero (Squircle 24px) */}
-            <View style={styles.mediaContainer}>
-              {imageSource ? (
+            {/* 5. Cinematic Photo Hero (Squircle 24px) - Only rendered when an image exists */}
+            {imageSource && !imageLoadFailed ? (
+              <View style={styles.mediaContainer}>
                 <Pressable
                   onPress={() => setLightboxVisible(true)}
                   style={({ pressed }) => [
@@ -344,30 +345,22 @@ export default function LearnArticleScreen() {
                         : { height: 220 },
                     ]}
                     resizeMode="contain"
+                    onError={() => setImageLoadFailed(true)}
                   />
                   <View style={styles.zoomPill}>
                     <ZoomIn size={12} color="#FFFFFF" />
                     <Text style={styles.zoomPillText}>Tap to view</Text>
                   </View>
                 </Pressable>
-              ) : (
-                <View style={[styles.heroImageWrap, { height: 180 }]}>
-                  <LinearGradient
-                    colors={['#0A1330', '#132147', '#25254A', '#452622']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                </View>
-              )}
-              {imageSource && photoCredit ? (
-                <View style={styles.photoCreditRow}>
-                  <Text style={[styles.photoCreditText, { color: colors.textMuted }]}>
-                    {photoCredit}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
+                {photoCredit ? (
+                  <View style={styles.photoCreditRow}>
+                    <Text style={[styles.photoCreditText, { color: colors.textMuted }]}>
+                      {photoCredit}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
 
             {/* 6. Editorial Body Content */}
             <EditorialContent content={article.body} fontSizeStep={fontSizeStep} />

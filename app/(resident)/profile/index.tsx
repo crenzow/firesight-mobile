@@ -27,6 +27,7 @@ import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
 import { getInitials, formatFullName } from '../../../utils/formatters';
 import { getProfileImageUri } from '../../../utils/avatar';
 import { profileService } from '../../../services/api/profileService';
+import { ApiError } from '../../../services/api/client';
 import { PhotoOptionsModal, PhotoPreviewModal } from '../../../components/profile/PhotoPickerModal';
 import { PhotoCropModal } from '../../../components/profile/PhotoCropModal';
 
@@ -66,8 +67,9 @@ export default function ProfileScreen() {
       setLocalImage(pendingPhotoUri);
       setShowPhotoPreview(false);
       setPendingPhotoUri(null);
-    } catch {
-      Alert.alert('Upload Failed', 'Unable to upload profile photo. Please try again.');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Unable to upload profile photo. Please try again.';
+      Alert.alert('Upload Failed', msg);
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -331,6 +333,13 @@ export default function ProfileScreen() {
           if (!isUploadingPhoto) {
             setShowPhotoPreview(false);
             setPendingPhotoUri(null);
+          }
+        }}
+        onChooseAnother={() => {
+          if (!isUploadingPhoto) {
+            setShowPhotoPreview(false);
+            setPendingPhotoUri(null);
+            setShowPhotoOptions(true);
           }
         }}
         onConfirm={handleConfirmUpload}

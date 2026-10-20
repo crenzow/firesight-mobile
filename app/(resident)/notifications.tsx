@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, BackHandler, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Bell, AlertTriangle, RefreshCw, Info, Clock } from 'lucide-react-native';
@@ -76,6 +76,10 @@ export default function NotificationsScreen() {
             paddingTop: spacing.xs,
             paddingBottom: spacing.xxxl,
           }}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}

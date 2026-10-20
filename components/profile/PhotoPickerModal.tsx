@@ -224,6 +224,7 @@ export interface PhotoPreviewModalProps {
   imageUri: string | null;
   onClose: () => void;
   onConfirm: () => void;
+  onChooseAnother?: () => void;
   isLoading?: boolean;
   title?: string;
   subtitle?: string;
@@ -234,6 +235,7 @@ export const PhotoPreviewModal: React.FC<PhotoPreviewModalProps> = ({
   imageUri,
   onClose,
   onConfirm,
+  onChooseAnother,
   isLoading = false,
   title = 'Update Profile Photo',
   subtitle = 'Preview your photo before saving it to your account',
@@ -302,8 +304,14 @@ export const PhotoPreviewModal: React.FC<PhotoPreviewModalProps> = ({
               disabled={isLoading}
             />
             <Button
-              label="Choose Another / Cancel"
+              label="Choose Another"
               variant="outline"
+              onPress={onChooseAnother ?? onClose}
+              disabled={isLoading}
+            />
+            <Button
+              label="Cancel"
+              variant="ghost"
               onPress={onClose}
               disabled={isLoading}
             />

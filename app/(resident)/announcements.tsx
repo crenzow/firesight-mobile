@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Share, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Share, BackHandler, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Megaphone, Share2, ShieldCheck } from 'lucide-react-native';
@@ -28,19 +28,25 @@ export default function AnnouncementsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      load();
+
+      // Poll every 15s while user views announcements
+      const timer = setInterval(() => {
+        load();
+      }, 15000);
+
       const onBackPress = () => {
         router.back();
         return true;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-      return () => subscription.remove();
-    }, [])
+      return () => {
+        clearInterval(timer);
+        subscription.remove();
+      };
+    }, [load])
   );
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const handleShare = async (item: Announcement) => {
     try {
@@ -65,6 +71,10 @@ export default function AnnouncementsScreen() {
             paddingTop: spacing.md,
             paddingBottom: spacing.xxxl,
           }}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}

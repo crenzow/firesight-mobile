@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Image, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Dimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Plus, Camera, X } from 'lucide-react-native';
+import { Plus, Camera } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
-import { APP_CONFIG } from '../../constants/config';
+import { APP_CONFIG, getStorageImageUrl } from '../../constants/config';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
+import { PhotoLightboxModal } from '../ui/PhotoLightboxModal';
 
 interface EvidencePhoto {
   key: string;
@@ -33,11 +33,7 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evi
   const [expandedPhoto, setExpandedPhoto] = useState<EvidencePhoto | null>(null);
 
   const resolveUri = (path: string) => {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    const cleanBase = (APP_CONFIG.API_BASE_URL || '').replace(/\/+$/, '');
-    const cleanPath = path.replace(/^\/+/, '');
-    const storagePath = cleanPath.startsWith('storage/') ? cleanPath : `storage/${cleanPath}`;
-    return `${cleanBase}/${storagePath}`;
+    return getStorageImageUrl(path) ?? path;
   };
 
   const photos: EvidencePhoto[] = [
@@ -49,10 +45,10 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evi
     setIsSourceDialogVisible(false);
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission needed', 'Photo library access is required to attach evidence.');
+      Alert.alert('Permission needed', 'Photo library access is required to attach photos.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
       await uploadEvidence(result.assets[0].uri);
     }
@@ -62,7 +58,7 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evi
     setIsSourceDialogVisible(false);
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission needed', 'Camera access is required to capture evidence.');
+      Alert.alert('Permission needed', 'Camera access is required to capture photos.');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
@@ -76,7 +72,7 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evi
     try {
       await onAddEvidence(uri);
     } catch {
-      Alert.alert('Upload failed', 'Unable to attach this evidence photo right now. Please try again.');
+      Alert.alert('Upload failed', 'Unable to attach this photo right now. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -88,32 +84,20 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evi
 
   return (
     <View>
-      {/* Full screen image modal */}
-      <Modal visible={!!expandedPhoto} transparent={true} animationType="fade" onRequestClose={() => setExpandedPhoto(null)}>
-        <View style={styles.modalOverlay}>
-          <SafeAreaView style={styles.modalSafeArea}>
-            <View style={styles.modalHeader}>
-              <Pressable onPress={() => setExpandedPhoto(null)} style={styles.closeBtn}>
-                <X size={24} color="#FFF" />
-              </Pressable>
-            </View>
-            {expandedPhoto && (
-              <View style={styles.modalImageContainer}>
-                <Image source={{ uri: expandedPhoto.uri }} style={styles.modalImage} resizeMode="contain" />
-                {expandedPhoto.caption ? (
-                  <Text style={styles.modalCaption}>{expandedPhoto.caption}</Text>
-                ) : null}
-              </View>
-            )}
-          </SafeAreaView>
-        </View>
-      </Modal>
+      {/* Full screen drag-and-zoom lightbox modal */}
+      <PhotoLightboxModal
+        visible={!!expandedPhoto}
+        imageSource={expandedPhoto ? { uri: expandedPhoto.uri } : null}
+        title={expandedPhoto?.key === 'main' ? 'Initial Submission Photo' : 'Fire Scene Photo'}
+        caption={expandedPhoto?.caption ?? undefined}
+        onClose={() => setExpandedPhoto(null)}
+      />
 
       <ConfirmationDialog
         visible={isSourceDialogVisible}
         type="info"
-        title="Add Photo Evidence"
-        message="Choose how you want to attach an investigation photo."
+        title="Add Fire Scene Photo"
+        message="Choose how you want to attach a photo of the fire scene."
         confirmText="Take Photo"
         cancelText="Photo Library"
         icon={<Camera size={28} color="#FFFFFF" strokeWidth={2.5} />}
@@ -122,18 +106,20 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evi
         onClose={() => setIsSourceDialogVisible(false)}
       />
       <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700', marginBottom: spacing.sm }}>
-        Evidence ({photos.length})
+        Fire Scene Photos ({photos.length})
       </Text>
       
       {photos.length === 0 && !canAdd ? (
         <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, fontStyle: 'italic' }}>
-          No evidence photos attached.
+          No fire scene photos attached.
         </Text>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
           {photos.map((photo) => (
             <Pressable key={photo.key} style={{ width: 140 }} onPress={() => setExpandedPhoto(photo)}>
-              <Image source={{ uri: photo.uri }} style={[styles.photo, { borderRadius: radius.md }]} />
+              <View style={[styles.photo, { borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surfaceElevated }]}>
+                <Image source={{ uri: photo.uri }} style={styles.photo} resizeMode="cover" />
+              </View>
               {photo.caption ? (
                 <Text numberOfLines={1} style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
                   {photo.caption}

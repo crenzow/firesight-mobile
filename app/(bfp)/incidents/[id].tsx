@@ -559,9 +559,9 @@ export default function IncidentDetailScreen() {
 
         <View style={{ paddingHorizontal: spacing.lg }}>
 
-          {/* ── EVIDENCE GALLERY ─────────────────────────────────── */}
+          {/* ── FIRE SCENE PHOTOS ───────────────────────────────── */}
           <View style={{ marginTop: spacing.md }}>
-            <SectionPill icon={<Flame size={12} color={colors.brandOrange} />} title="EVIDENCE" />
+            <SectionPill icon={<Flame size={12} color={colors.brandOrange} />} title="FIRE SCENE PHOTOS" />
             <Card>
               <EvidenceGallery
                 mainPhoto={incident.report_image}
