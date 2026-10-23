@@ -13,7 +13,7 @@ import { profileService } from '../../../services/api/profileService';
 import { ApiError } from '../../../services/api/client';
 import { getInitials, formatFullName } from '../../../utils/formatters';
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
-import { ShinyCard } from '../../../components/ui/ShinyCard';
+import { Card } from '../../../components/ui/Card';
 import { getProfileImageUri } from '../../../utils/avatar';
 import { PhotoOptionsModal } from '../../../components/profile/PhotoPickerModal';
 import { PhotoCropModal } from '../../../components/profile/PhotoCropModal';
@@ -122,7 +122,7 @@ export default function BFPEditProfileScreen() {
             OFFICER IDENTIFICATION (LOCKED)
           </Text>
           <View style={{ marginBottom: spacing.lg }}>
-            <ShinyCard padding={spacing.md}>
+            <Card padding={spacing.md}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <UserCheck size={18} color={colors.brandOrange} />
                 <View style={{ flex: 1 }}>
@@ -135,7 +135,7 @@ export default function BFPEditProfileScreen() {
                 </View>
                 <ShieldCheck size={16} color={colors.success} />
               </View>
-            </ShinyCard>
+            </Card>
           </View>
 
           {/* Editable Fields */}

@@ -21,7 +21,7 @@ const LABELS: Record<string, string> = {
   'profile/index': 'Profile',
 };
 
-// The ONLY route names that should ever appear as tabs.
+// The ONLY route names that should ever appear as resident tabs.
 const VISIBLE_TAB_ORDER = ['home', 'map', 'learn/index', 'profile/index'] as const;
 
 interface TabItemProps {
@@ -106,7 +106,7 @@ const TabItem: React.FC<TabItemProps> = ({ route, isFocused, onPress, brandOrang
   );
 };
 
-export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
+export const ResidentTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -365,6 +365,9 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation })
     </View>
   );
 };
+
+// Backward-compatible alias
+export const CustomTabBar = ResidentTabBar;
 
 const styles = StyleSheet.create({
   container: {

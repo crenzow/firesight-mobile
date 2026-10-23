@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { BFPTabBar } from '../../components/glass/BFPTabBar';
+import { BFPTabBar } from '../../components/navigation/BFPTabBar';
 
 export default function BFPLayout() {
   const { colors } = useTheme();

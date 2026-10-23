@@ -40,7 +40,7 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
 }) => {
   const risk = RISK_CONFIG[normalizeRiskLevel(riskLevel)];
   const locality = `${municipality ?? APP_CONFIG.DEFAULT_MUNICIPALITY}, ${province ?? APP_CONFIG.DEFAULT_PROVINCE}`;
-  const eyebrowText = scopeLabel ?? (isExternal ? 'PILOT COVERAGE · MUNICIPAL AVERAGE' : 'AREA STATUS');
+  const eyebrowText = scopeLabel ?? (isExternal ? 'PILOT COVERAGE' : 'AREA STATUS');
 
   return (
     <View style={styles.shadow}>

@@ -6,8 +6,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { ShieldCheck, Settings as SettingsIcon, LogOut, Phone, Building2, IdCard, Edit3, Camera } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
-import { GlassHeader } from '../../../components/glass/GlassHeader';
-import { GlassCard } from '../../../components/glass/GlassCard';
+import { AppHeader } from '../../../components/navigation/AppHeader';
+import { Card } from '../../../components/ui/Card';
 import { ProfileMenuRow } from '../../../components/profile/ProfileMenuRow';
 import { Button } from '../../../components/ui/Button';
 import { getInitials, formatFullName } from '../../../utils/formatters';
@@ -91,7 +91,7 @@ export default function BFPProfileScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <GlassHeader title="Profile" />
+      <AppHeader variant="dark" />
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
         {/* ── Premium Identity Hero Card ── */}
         <View style={[styles.heroShadow, { marginHorizontal: spacing.lg, marginTop: spacing.md }]}>
@@ -156,7 +156,7 @@ export default function BFPProfileScreen() {
           ASSIGNMENT
         </Text>
         <View style={{ marginHorizontal: spacing.lg }}>
-          <GlassCard>
+          <Card>
             <InfoRow
               icon={<IdCard size={18} color="#FFFFFF" />}
               label="RANK"
@@ -175,14 +175,14 @@ export default function BFPProfileScreen() {
               />
             ) : null}
             <InfoRow icon={<Phone size={18} color="#FFFFFF" />} label="CONTACT" value={user.contact_number ?? 'Not set'} isLast />
-          </GlassCard>
+          </Card>
         </View>
 
         <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginTop: spacing.xl, marginBottom: spacing.sm, marginHorizontal: spacing.lg }}>
           ACCOUNT
         </Text>
         <View style={{ marginHorizontal: spacing.lg }}>
-          <GlassCard padding={0}>
+          <Card padding={0}>
             <View style={{ paddingHorizontal: spacing.lg }}>
               <ProfileMenuRow
                 icon={<SettingsIcon size={18} color="#FFFFFF" />}
@@ -192,7 +192,7 @@ export default function BFPProfileScreen() {
                 onPress={() => router.push('/(bfp)/profile/settings?from=profile')}
               />
             </View>
-          </GlassCard>
+          </Card>
         </View>
 
         <View style={{ marginTop: spacing.xl, marginHorizontal: spacing.lg }}>

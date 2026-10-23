@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, RefreshControl, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, RefreshControl, Platform, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Search, ClipboardList } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
-import { GlassHeader } from '../../../components/glass/GlassHeader';
-import { SegmentedControl } from '../../../components/glass/SegmentedControl';
+import { AppHeader } from '../../../components/navigation/AppHeader';
+import { SegmentedControl } from '../../../components/ui/SegmentedControl';
 import { IncidentListItem } from '../../../components/bfp/IncidentListItem';
 import { incidentService } from '../../../services/api/incidentService';
 import { BFPIncident } from '../../../services/api/bfpModels';
@@ -32,16 +32,24 @@ export default function IncidentsListScreen() {
   const [incidents, setIncidents] = useState<BFPIncident[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = useCallback(() => {
     incidentService
       .list()
-      .then((data) => data.length > 0 && setIncidents(data))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setIncidents(data);
+        }
+      })
       .catch(() => {
         // Keep whatever's already showing (fallback or last successful load).
       })
-      .finally(() => setIsRefreshing(false));
+      .finally(() => {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      });
 
   }, []);
 
@@ -57,8 +65,8 @@ export default function IncidentsListScreen() {
       const query = search.trim().toLowerCase();
       const matchesSearch =
         !query ||
-        incident.barangay_name.toLowerCase().includes(query) ||
-        incident.description.toLowerCase().includes(query) ||
+        (incident.barangay_name ?? '').toLowerCase().includes(query) ||
+        (incident.description ?? '').toLowerCase().includes(query) ||
         (incident.reporter_name ?? '').toLowerCase().includes(query);
       return matchesStatus && matchesSearch;
     });
@@ -71,8 +79,8 @@ export default function IncidentsListScreen() {
       if (pA !== pB) {
         return pA - pB; // lower number = higher priority
       }
-      const timeA = new Date(a.created_at.replace(' ', 'T')).getTime() || 0;
-      const timeB = new Date(b.created_at.replace(' ', 'T')).getTime() || 0;
+      const timeA = new Date((a.created_at || '').replace(' ', 'T')).getTime() || 0;
+      const timeB = new Date((b.created_at || '').replace(' ', 'T')).getTime() || 0;
       if (timeA !== timeB) return timeB - timeA;
       return b.report_id - a.report_id;
     });
@@ -87,9 +95,17 @@ export default function IncidentsListScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <GlassHeader title="Incidents" subtitle={`${filtered.length} record${filtered.length === 1 ? '' : 's'}`} unreadCount={unreadCount} />
+      <AppHeader variant="dark" />
 
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+          <Text style={{ color: colors.textPrimary, fontSize: typography.size.lg, fontWeight: '800' }}>
+            Incidents
+          </Text>
+          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs }}>
+            {`${filtered.length} record${filtered.length === 1 ? '' : 's'}`}
+          </Text>
+        </View>
         <View
           style={[
             styles.searchBar,
@@ -131,12 +147,21 @@ export default function IncidentsListScreen() {
           />
         }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
+          isLoading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={colors.brandOrange} />
+              <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, marginTop: spacing.md }}>
+                Loading incidents…
+              </Text>
+              </View>
+          ) : (
+            <View style={styles.emptyState}>
             <ClipboardList size={32} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, marginTop: spacing.sm }}>
               No incidents match this filter.
             </Text>
-          </View>
+            </View>
+          )
         }
       />
 

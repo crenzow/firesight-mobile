@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
 import { Smartphone, Sun, Moon, MoonStar } from 'lucide-react-native';
 import { useTheme, ThemePreference } from '../../../theme/ThemeContext';
-import { GlassHeader } from '../../../components/glass/GlassHeader';
-import { GlassCard } from '../../../components/glass/GlassCard';
+import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
+import { Card } from '../../../components/ui/Card';
 import { RadioOptionRow } from '../../../components/profile/RadioOptionRow';
 
 import { router, useLocalSearchParams } from 'expo-router';
@@ -31,7 +31,7 @@ export default function BFPSettingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <GlassHeader title="Settings" showBack onBack={handleBack} />
+      <SecondaryHeader title="Settings" onBack={handleBack} />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }}>
         <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginBottom: spacing.sm }}>
           APPEARANCE
@@ -51,13 +51,13 @@ export default function BFPSettingsScreen() {
         <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginTop: spacing.xl, marginBottom: spacing.sm }}>
           ALERTS
         </Text>
-        <GlassCard padding={0}>
+        <Card padding={0}>
           <View style={{ paddingHorizontal: spacing.lg }}>
             <ToggleRow title="Real-Time Alerts" subtitle="Push notification on new incidents" value={realTimeAlerts} onValueChange={setRealTimeAlerts} />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <ToggleRow title="Alert Sounds" subtitle="Sound for emergency alerts" value={alertSounds} onValueChange={setAlertSounds} />
           </View>
-        </GlassCard>
+        </Card>
       </ScrollView>
     </View>
   );

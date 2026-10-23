@@ -22,7 +22,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { AppHeader } from '../../../components/navigation/AppHeader';
 import { ProfileMenuRow } from '../../../components/profile/ProfileMenuRow';
 import { Button } from '../../../components/ui/Button';
-import { ShinyCard } from '../../../components/ui/ShinyCard';
+import { Card } from '../../../components/ui/Card';
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
 import { getInitials, formatFullName } from '../../../utils/formatters';
 import { getProfileImageUri } from '../../../utils/avatar';
@@ -202,7 +202,7 @@ export default function ProfileScreen() {
             PERSONAL INFORMATION
           </Text>
           <View style={{ marginHorizontal: spacing.lg }}>
-            <ShinyCard padding={spacing.lg}>
+            <Card padding={spacing.lg}>
               <InfoRow label="USERNAME" icon={<User size={18} color="#FFFFFF" />}>
                 {user.email.split('@')[0]}
               </InfoRow>
@@ -220,7 +220,7 @@ export default function ProfileScreen() {
                   ? `${user.address.house_no_street ? user.address.house_no_street + ', ' : ''}${user.address.barangay_name ?? ''}, ${user.address.municipality}`
                   : 'Not set'}
               </InfoRow>
-            </ShinyCard>
+            </Card>
           </View>
 
           {/* ── Account ── */}
@@ -239,7 +239,7 @@ export default function ProfileScreen() {
             ACCOUNT
           </Text>
           <View style={{ marginHorizontal: spacing.lg }}>
-            <ShinyCard padding={0}>
+            <Card padding={0}>
               <View style={{ paddingHorizontal: spacing.lg }}>
                 <ProfileMenuRow
                   icon={<FileText size={18} color="#FFFFFF" />}
@@ -265,7 +265,7 @@ export default function ProfileScreen() {
                   onPress={() => router.push({ pathname: '/(resident)/profile/settings', params: { from: pathname } } as any)}
                 />
               </View>
-            </ShinyCard>
+            </Card>
           </View>
 
           <View style={{ marginTop: spacing.xl, marginHorizontal: spacing.lg }}>

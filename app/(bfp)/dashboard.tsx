@@ -11,8 +11,8 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { GlassHeader } from '../../components/glass/GlassHeader';
-import { GlassCard } from '../../components/glass/GlassCard';
+import { AppHeader } from '../../components/navigation/AppHeader';
+import { Card } from '../../components/ui/Card';
 import { StatTile } from '../../components/bfp/StatTile';
 import { IncidentListItem } from '../../components/bfp/IncidentListItem';
 import { InteractiveCard } from '../../components/bfp/InteractiveCard';
@@ -64,7 +64,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <GlassHeader unreadCount={unreadCount} />
+      <AppHeader variant="dark" />
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }}
@@ -178,11 +178,11 @@ export default function DashboardScreen() {
         </View>
 
         {recentIncidents.length === 0 ? (
-          <GlassCard>
+          <Card>
             <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, textAlign: 'center' }}>
               No incidents reported yet today.
             </Text>
-          </GlassCard>
+          </Card>
         ) : (
           recentIncidents.map((incident) => <IncidentListItem key={incident.report_id} incident={incident} from="dashboard" />)
         )}

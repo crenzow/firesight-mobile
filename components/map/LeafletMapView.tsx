@@ -26,6 +26,7 @@ const DB_TO_GEOJSON_MAP: Record<string, string> = {
 export interface LeafletMapRef {
   flyTo: (lat: number, lng: number, zoom?: number) => void;
   panToUserLocation: (lat: number, lng: number) => void;
+  removeUserMarker?: () => void;
   switchMapType: (type: 'standard' | 'satellite' | 'terrain') => void;
   focusBarangay: (name: string) => void;
   highlightBarangay: (name: string | null) => void;
@@ -77,6 +78,11 @@ export const LeafletMapView = React.forwardRef<LeafletMapRef, LeafletMapViewProp
     panToUserLocation: (lat: number, lng: number) => {
       webviewRef.current?.injectJavaScript(
         `if (window.panToUserLocation) { window.panToUserLocation(${lat}, ${lng}); } true;`
+      );
+    },
+    removeUserMarker: () => {
+      webviewRef.current?.injectJavaScript(
+        `if (window.removeUserMarker) { window.removeUserMarker(); } true;`
       );
     },
     switchMapType: (type: 'standard' | 'satellite' | 'terrain') => {
@@ -133,6 +139,10 @@ export const LeafletMapView = React.forwardRef<LeafletMapRef, LeafletMapViewProp
     if (userLocation && webviewRef.current) {
       webviewRef.current.injectJavaScript(
         `if (window.setUserMarker) { window.setUserMarker(${userLocation.latitude}, ${userLocation.longitude}); } true;`
+      );
+    } else if (!userLocation && webviewRef.current) {
+      webviewRef.current.injectJavaScript(
+        `if (window.removeUserMarker) { window.removeUserMarker(); } true;`
       );
     }
   }, [userLocation?.latitude, userLocation?.longitude]);
@@ -218,13 +228,13 @@ function buildMapHtml({
 
   const incidentData = JSON.stringify(
     incidents.map((i: any) => ({
-      id: i.incident_id,
+      id: i.incident_id ?? (i as any).report_id ?? (i as any).id,
       lat: i.latitude,
       lng: i.longitude,
       barangay: i.barangay_name,
       type: i.incident_type,
       alarm: i.alarm_level,
-      date: i.data_time,
+      date: (i as any).created_at ?? i.data_time,
       cause: i.cause_of_fire || null,
       casualties: i.casualties ?? null,
       notes: i.notes || null,
@@ -378,6 +388,13 @@ function buildMapHtml({
         fillColor: '#F4622B',
         fillOpacity: 1,
       }).addTo(map);
+    };
+
+    window.removeUserMarker = function() {
+      if (window.userMarker) {
+        map.removeLayer(window.userMarker);
+        window.userMarker = null;
+      }
     };
 
     window.panToUserLocation = function(lat, lng) {
@@ -577,10 +594,15 @@ function buildMapHtml({
       window.highlightBarangay(currentSelectedKey);
     } else {
       incidents.forEach((i) => {
+        if (!i.lat || !i.lng) return;
+        const lat = parseFloat(i.lat);
+        const lng = parseFloat(i.lng);
+        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+
         const isTaskForceOrGeneral = i.alarm && (i.alarm.indexOf('task_force') !== -1 || i.alarm === 'general_alarm');
         const isHighAlarm = i.alarm === '3rd_alarm' || i.alarm === '4th_alarm' || i.alarm === '5th_alarm';
         const color = isTaskForceOrGeneral ? '#E14245' : isHighAlarm ? '#F4622B' : i.alarm === '2nd_alarm' ? '#E8A33D' : '#3B82C4';
-        const marker = L.circleMarker([i.lat, i.lng], {
+        const marker = L.circleMarker([lat, lng], {
           radius: 8,
           color: '#FFFFFF',
           weight: 2,
@@ -588,40 +610,63 @@ function buildMapHtml({
           fillOpacity: 0.9,
         }).addTo(map);
         let popupHtml;
-        const timeString = i.date || new Date().toISOString();
         if (isBFP) {
           const fmt = function(v) { return v != null && v !== '' ? v : '-'; };
-          const dateLabel = new Date(timeString.replace(' ', 'T')).toLocaleString();
+          let dateLabel = 'Date not recorded';
+          if (i.date && typeof i.date === 'string' && i.date.trim() !== '') {
+            try {
+              const d = new Date(i.date.replace(' ', 'T'));
+              if (!isNaN(d.getTime())) {
+                dateLabel = d.toLocaleString();
+              }
+            } catch (e) {}
+          }
           const sc = isTaskForceOrGeneral ? '#E14245' : isHighAlarm ? '#F4622B' : i.alarm === '2nd_alarm' ? '#E8A33D' : '#3B82C4';
+          const incidentStatus = i.status || 'resolved';
+          const stc = incidentStatus === 'resolved' ? '#22C55E' : incidentStatus === 'dispatched' ? '#F4622B' : incidentStatus === 'accepted' ? '#3B82F6' : '#EAB308';
           const alarmBadgeHtml = i.alarm
             ? '<span style="background:' + sc + ';color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase">' + i.alarm.replace(/_/g, ' ').toUpperCase() + '</span>'
             : '';
+          const hasReporter = i.reporter && String(i.reporter).trim() !== '';
+          const hasContact = i.contact && String(i.contact).trim() !== '';
+          const hasCause = i.cause && String(i.cause).trim() !== '';
+          const hasCasualties = i.casualties != null && String(i.casualties).trim() !== '';
+          const hasNotes = i.notes && String(i.notes).trim() !== '';
+
           popupHtml =
             '<div style="font-family:-apple-system,Roboto,sans-serif;min-width:220px;max-width:280px">' +
               '<div style="background:#0F1C3F;color:#fff;padding:8px 10px;border-radius:6px 6px 0 0;margin:-8px -10px 8px;">' +
-                '<div style="font-weight:800;font-size:13px">' + fmt(i.barangay) + '</div>' +
-                '<div style="display:flex;gap:6px;margin-top:4px;align-items:center">' +
+                '<div style="font-weight:800;font-size:13px">' + (i.barangay || 'Lian Incident') + '</div>' +
+                '<div style="display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap">' +
                   alarmBadgeHtml +
-                  '<span style="background:' + stc + ';color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase">' + fmt(i.status) + '</span>' +
-                  '<span style="color:rgba(255,255,255,0.7);font-size:9px;text-transform:uppercase">' + fmt(i.type) + '</span>' +
+                  '<span style="background:' + stc + ';color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase">' + fmt(incidentStatus) + '</span>' +
+                  (i.type ? '<span style="color:rgba(255,255,255,0.7);font-size:9px;text-transform:uppercase">' + i.type + '</span>' : '') +
                 '</div>' +
               '</div>' +
               '<table style="width:100%;border-collapse:collapse;font-size:11px">' +
                 '<tr><td style="color:#666;padding:3px 0;width:42%">Date/Time</td><td style="font-weight:600;color:#111">' + dateLabel + '</td></tr>' +
-                (i.cause ? '<tr><td style="color:#666;padding:3px 0">Cause</td><td style="font-weight:600;color:#111">' + i.cause + '</td></tr>' : '') +
-                (i.casualties != null ? '<tr><td style="color:#666;padding:3px 0">Casualties</td><td style="font-weight:600;color:' + (i.casualties > 0 ? '#E14245' : '#111') + '">' + i.casualties + '</td></tr>' : '') +
-                (i.reporter ? '<tr><td colspan="2" style="border-top:1px solid #eee;padding-top:5px"></td></tr><tr><td style="color:#666;padding:3px 0">Reporter</td><td style="font-weight:600;color:#111">' + i.reporter + '</td></tr>' : '') +
-                (i.contact ? '<tr><td style="color:#666;padding:3px 0">Contact</td><td style="font-weight:600;color:#0F1C3F">' + i.contact + '</td></tr>' : '') +
-                (i.description ? '<tr><td colspan="2" style="color:#444;font-size:10px;padding-top:4px;border-top:1px solid #eee">' + i.description + '</td></tr>' : '') +
-                (i.notes ? '<tr><td colspan="2" style="color:#666;font-size:10px;padding-top:4px;font-style:italic">Note: ' + i.notes + '</td></tr>' : '') +
+                (hasCause ? '<tr><td style="color:#666;padding:3px 0">Cause</td><td style="font-weight:600;color:#111">' + i.cause + '</td></tr>' : '') +
+                (hasCasualties ? '<tr><td style="color:#666;padding:3px 0">Casualties</td><td style="font-weight:600;color:' + (Number(i.casualties) > 0 ? '#E14245' : '#111') + '">' + i.casualties + '</td></tr>' : '') +
+                (hasReporter || hasContact ? '<tr><td colspan="2" style="border-top:1px solid #eee;padding-top:5px"></td></tr>' : '') +
+                (hasReporter ? '<tr><td style="color:#666;padding:3px 0">Reporter</td><td style="font-weight:600;color:#111">' + i.reporter + '</td></tr>' : '') +
+                (hasContact ? '<tr><td style="color:#666;padding:3px 0">Contact</td><td style="font-weight:600;color:#0F1C3F">' + i.contact + '</td></tr>' : '') +
+                (hasNotes ? '<tr><td colspan="2" style="color:#666;font-size:10px;padding-top:4px;font-style:italic">Note: ' + i.notes + '</td></tr>' : '') +
               '</table>' +
             '</div>';
         } else {
-          const dateLabel = new Date(timeString.replace(' ', 'T')).toLocaleDateString();
+          let dateLabel = 'Date not recorded';
+          if (i.date && typeof i.date === 'string' && i.date.trim() !== '') {
+            try {
+              const d = new Date(i.date.replace(' ', 'T'));
+              if (!isNaN(d.getTime())) {
+                dateLabel = d.toLocaleDateString();
+              }
+            } catch (e) {}
+          }
           const alarmLabel = i.alarm ? ' &middot; ' + i.alarm.replace(/_/g, ' ').toUpperCase() : '';
-          popupHtml = '<b>' + i.barangay + '</b><br/>' + (i.type || 'Fire') + alarmLabel + '<br/>' + dateLabel;
-          if (i.cause) popupHtml += '<br/>Cause: ' + i.cause;
-          if (i.casualties) popupHtml += '<br/>Casualties: ' + i.casualties;
+          popupHtml = '<b>' + (i.barangay || 'Lian Incident') + '</b><br/>' + (i.type || 'Fire') + alarmLabel + '<br/>' + dateLabel;
+          if (i.cause && String(i.cause).trim() !== '') popupHtml += '<br/>Cause: ' + i.cause;
+          if (i.casualties != null && String(i.casualties).trim() !== '') popupHtml += '<br/>Casualties: ' + i.casualties;
         }
         marker.bindPopup(popupHtml);
       });
@@ -634,13 +679,7 @@ function buildMapHtml({
     }
 
     if (userLocation) {
-      L.circleMarker([userLocation.latitude, userLocation.longitude], {
-        radius: 7,
-        color: '#FFFFFF',
-        weight: 2,
-        fillColor: '#0F1C3F',
-        fillOpacity: 1,
-      }).addTo(map);
+      window.setUserMarker(userLocation.latitude, userLocation.longitude);
     }
   </script>
 </body>

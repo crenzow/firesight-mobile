@@ -2,21 +2,20 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
-interface Segment {
+export interface Segment {
   key: string;
   label: string;
 }
 
-interface SegmentedControlProps {
+export interface SegmentedControlProps {
   segments: Segment[];
   value: string;
   onChange: (key: string) => void;
 }
 
 /**
- * iOS-style segmented control (like the Settings app's grouped toggle
- * switches) — a pill-shaped track with a solid highlighted pill behind the
- * active segment. Used for status/severity filters across BFP screens.
+ * iOS-style segmented control (pill-shaped track with a solid highlighted pill
+ * behind the active segment). Used for status/severity filters across screens.
  */
 export const SegmentedControl: React.FC<SegmentedControlProps> = ({ segments, value, onChange }) => {
   const { colors, radius, typography, isDark } = useTheme();

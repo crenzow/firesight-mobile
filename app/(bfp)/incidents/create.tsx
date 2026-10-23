@@ -5,8 +5,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { CalendarClock, Camera, MapPin, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
-import { GlassHeader } from '../../../components/glass/GlassHeader';
-import { GlassCard } from '../../../components/glass/GlassCard';
+import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
+import { Card } from '../../../components/ui/Card';
 import { SelectField } from '../../../components/ui/SelectField';
 import { Button } from '../../../components/ui/Button';
 import { AlarmLevel, ALARM_LEVEL_OPTIONS } from '../../../components/bfp/AlarmLevelBadge';
@@ -114,12 +114,12 @@ export default function CreateManualIncidentScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <GlassHeader title="Manual Incident Entry" subtitle="For incidents not reported via the app" showBack onBack={handleBack} />
+      <SecondaryHeader title="Manual Incident Entry" subtitle="For incidents not reported via the app" onBack={handleBack} />
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }} keyboardShouldPersistTaps="handled">
         
         {/* Location GPS Card */}
-        <GlassCard>
+        <Card>
           <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginBottom: 6 }}>
             LOCATION
           </Text>
@@ -136,7 +136,7 @@ export default function CreateManualIncidentScreen() {
               <RefreshCw size={16} color={colors.textMuted} />
             </Pressable>
           </View>
-        </GlassCard>
+        </Card>
 
         {/* Dropdowns Section */}
         <View style={{ marginTop: spacing.md, gap: spacing.md }}>

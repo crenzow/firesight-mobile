@@ -41,7 +41,7 @@ import {
   Bell,
 } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
-import { GlassHeader } from '../../../components/glass/GlassHeader';
+import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { SelectField } from '../../../components/ui/SelectField';
@@ -488,7 +488,7 @@ export default function IncidentDetailScreen() {
   if (isLoading || !incident) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <GlassHeader title="Incident" showBack onBack={() => router.replace(backRoute as any)} />
+        <SecondaryHeader title="Incident" onBack={() => router.replace(backRoute as any)} />
         <View style={styles.center}>
           {isLoading ? (
             <ActivityIndicator color={colors.brandOrange} />
@@ -504,10 +504,9 @@ export default function IncidentDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <GlassHeader
+      <SecondaryHeader
         title={`Report #${incident.report_id}`}
         subtitle={locationName}
-        showBack
         onBack={() => router.replace(backRoute as any)}
       />
 

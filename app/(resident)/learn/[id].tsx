@@ -29,7 +29,7 @@ import { educationService, contactService } from '../../../services/api';
 import { FireEducationArticle, EmergencyContact } from '../../../services/api/models';
 import { getArticleImageSource } from '../../../constants/educationImages';
 import { EditorialContent } from '../../../components/learn/EditorialContent';
-import { PhotoLightboxModal } from '../../../components/learn/PhotoLightboxModal';
+import { PhotoLightboxModal } from '../../../components/ui/PhotoLightboxModal';
 import { TextSizeModal, TextSizeStep } from '../../../components/learn/TextSizeModal';
 import { useBookmarks } from '../../../hooks/useBookmarks';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';

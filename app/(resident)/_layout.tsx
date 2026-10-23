@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { CustomTabBar } from '../../components/navigation/CustomTabBar';
+import { ResidentTabBar } from '../../components/navigation/ResidentTabBar';
 
 export default function ResidentLayout() {
   const { colors } = useTheme();
@@ -16,7 +16,7 @@ export default function ResidentLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />}
+      tabBar={(props) => <ResidentTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },

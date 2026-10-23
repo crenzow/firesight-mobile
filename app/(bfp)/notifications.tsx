@@ -2,8 +2,8 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Platform } from 'react-native';
 import { Bell, AlertTriangle, RefreshCw, Info } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
-import { GlassHeader } from '../../components/glass/GlassHeader';
-import { GlassCard } from '../../components/glass/GlassCard';
+import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
+import { Card } from '../../components/ui/Card';
 import { Notification } from '../../services/api/models';
 import { formatRelativeDate, formatFullDate, formatTime } from '../../utils/formatters';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -27,7 +27,7 @@ const PersonnelNotification: React.FC<{
 
   return (
     <Pressable onPress={onPress} style={{ marginBottom: spacing.sm }}>
-      <GlassCard style={{ opacity: notification.is_read ? 0.7 : 1 }}>
+      <Card style={{ opacity: notification.is_read ? 0.7 : 1 }}>
         <View style={styles.row}>
           <View style={[styles.iconCircle, { backgroundColor: `${iconColor}1F` }]}>
             <Icon size={16} color={iconColor} />
@@ -47,7 +47,7 @@ const PersonnelNotification: React.FC<{
             </Text>
           </View>
         </View>
-      </GlassCard>
+      </Card>
     </Pressable>
   );
 };
@@ -89,7 +89,7 @@ export default function BFPNotificationsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <GlassHeader title="Alerts" subtitle={`${unreadCount} unread`} showBack onBack={handleBack} />
+      <SecondaryHeader title="Alerts" subtitle={`${unreadCount} unread`} onBack={handleBack} />
 
       <FlatList
         data={notifications}

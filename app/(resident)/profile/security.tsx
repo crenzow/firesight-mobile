@@ -6,7 +6,7 @@ import { Lock, Shield, FileText } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { ProfileMenuRow } from '../../../components/profile/ProfileMenuRow';
-import { ShinyCard } from '../../../components/ui/ShinyCard';
+import { Card } from '../../../components/ui/Card';
 
 export default function SecurityScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -44,7 +44,7 @@ export default function SecurityScreen() {
           <Text style={[styles.sectionTitle, { color: colors.textMuted, fontSize: typography.size.xs, marginBottom: spacing.sm }]}>
             ACCOUNT SECURITY
           </Text>
-          <ShinyCard padding={0}>
+          <Card padding={0}>
             <View style={{ paddingHorizontal: spacing.lg }}>
               <ProfileMenuRow
                 icon={<Lock size={18} color="#FFFFFF" />}
@@ -56,12 +56,12 @@ export default function SecurityScreen() {
                 }}
               />
             </View>
-          </ShinyCard>
+          </Card>
 
           <Text style={[styles.sectionTitle, { color: colors.textMuted, fontSize: typography.size.xs, marginTop: spacing.xl, marginBottom: spacing.sm }]}>
             DATA & PRIVACY
           </Text>
-          <ShinyCard padding={0}>
+          <Card padding={0}>
             <View style={{ paddingHorizontal: spacing.lg }}>
               <ProfileMenuRow
                 icon={<FileText size={18} color="#FFFFFF" />}
@@ -84,7 +84,7 @@ export default function SecurityScreen() {
                 }}
               />
             </View>
-          </ShinyCard>
+          </Card>
 
         </ScrollView>
       </SafeAreaView>

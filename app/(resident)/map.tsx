@@ -49,6 +49,7 @@ export default function MapScreen() {
 
   // Selected barangay for the detail card
   const [selectedBarangay, setSelectedBarangay] = useState<BarangayRiskFeature | null>(null);
+  const [showUserLocation, setShowUserLocation] = useState(false);
 
   // Modals state
   const [isMapTypeModalOpen, setIsMapTypeModalOpen] = useState(false);
@@ -121,6 +122,12 @@ export default function MapScreen() {
 
   const handleLocateMe = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (showUserLocation) {
+      setShowUserLocation(false);
+      mapRef.current?.removeUserMarker?.();
+      return;
+    }
+    setShowUserLocation(true);
     if (location) {
       mapRef.current?.panToUserLocation(location.latitude, location.longitude);
       return;
@@ -181,7 +188,7 @@ export default function MapScreen() {
           barangays={filteredBarangays}
           selectedBarangayName={selectedBarangay?.barangay_name || null}
           incidents={EMPTY_INCIDENTS}
-          userLocation={location}
+          userLocation={showUserLocation ? location : null}
           centerLat={LIAN_CENTER.lat}
           centerLng={LIAN_CENTER.lng}
           zoom={12}
@@ -388,6 +395,7 @@ export default function MapScreen() {
           }}
           onLocateUser={handleLocateMe}
           isLocating={isLocating}
+          isLocationActive={showUserLocation}
           onToggleLegend={() => {
             Haptics.selectionAsync().catch(() => {});
             setIsLegendVisible((prev) => !prev);

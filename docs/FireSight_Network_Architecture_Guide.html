@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FireSight Network & Port Architecture Guide 🚒✨</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    :root {
+      --bg: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --text: #1E293B;
+      --text-muted: #64748B;
+      --primary: #F97316;
+      --primary-light: #FFEDD5;
+      --blue: #3B82F6;
+      --blue-light: #EFF6FF;
+      --purple: #8B5CF6;
+      --purple-light: #F5F3FF;
+      --green: #10B981;
+      --green-light: #ECFDF5;
+      --border: #E2E8F0;
+      --shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: 28px;
+      padding: 48px;
+      box-shadow: 0 10px 40px -4px rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 30px;
+      border-bottom: 2px dashed #E2E8F0;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: #FEF3C7;
+      color: #B45309;
+      font-weight: 700;
+      font-size: 13px;
+      border-radius: 9999px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: -0.8px;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    .intro-card {
+      background: linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%);
+      border: 1.5px solid #FDE68A;
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .intro-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #9A3412;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .intro-card p {
+      color: #78350F;
+      font-size: 14.5px;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0F172A;
+      margin: 36px 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .grid-ports {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .port-card {
+      background: #FFFFFF;
+      border: 1.5px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .port-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+
+    .port-card.orange::before { background: #F97316; }
+    .port-card.blue::before { background: #3B82F6; }
+    .port-card.green::before { background: #10B981; }
+    .port-card.purple::before { background: #8B5CF6; }
+    .port-card.amber::before { background: #F59E0B; }
+
+    .port-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .port-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+
+    .port-role {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .port-card.orange .port-role { background: var(--primary-light); color: var(--primary); }
+    .port-card.blue .port-role { background: var(--blue-light); color: var(--blue); }
+    .port-card.green .port-role { background: var(--green-light); color: var(--green); }
+    .port-card.purple .port-role { background: var(--purple-light); color: var(--purple); }
+    .port-card.amber .port-role { background: #FEF3C7; color: #B45309; }
+
+    .port-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1E293B;
+      margin-bottom: 6px;
+    }
+
+    .port-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .flow-box {
+      background: #F1F5F9;
+      border-radius: 20px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #E2E8F0;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+      position: relative;
+    }
+
+    .step:last-child {
+      margin-bottom: 0;
+    }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #0F172A;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-content h4 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 2px;
+    }
+
+    .step-content p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      text-align: left;
+    }
+
+    th {
+      background: #F8FAFC;
+      color: #475569;
+      font-weight: 700;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      color: #334155;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      background: #F1F5F9;
+      color: #0F172A;
+      padding: 2px 6px;
+      border-radius: 5px;
+      border: 1px solid #E2E8F0;
+    }
+
+    .command-box {
+      background: #0F172A;
+      color: #F8FAFC;
+      border-radius: 16px;
+      padding: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      margin: 16px 0;
+    }
+
+    .command-box .comment {
+      color: #94A3B8;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: #94A3B8;
+    }
+
+    .btn-print {
+      display: inline-block;
+      margin: 15px auto 0 auto;
+      padding: 10px 20px;
+      background: #0F172A;
+      color: #FFFFFF;
+      font-weight: 600;
+      font-size: 13.5px;
+      border-radius: 9999px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+    }
+
+    .btn-print:hover {
+      background: #334155;
+    }
+
+    @media print {
+      body {
+        background: #FFFFFF;
+        padding: 0;
+      }
+      .container {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+      }
+      .btn-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge-pill">🚒 FIRESIGHT CAPSTONE ARCHITECTURE</span>
+      <h1>Network Ports & Service Architecture</h1>
+      <p class="subtitle">A visual, beginner-friendly guide to how ports, servers, and AI verification connect.</p>
+      <button class="btn-print" onclick="window.print()">🖨️ Save as PDF / Print</button>
+    </div>
+
+    <!-- The Analogy -->
+    <div class="intro-card">
+      <h3>🏢 The Apartment Building Analogy</h3>
+      <p>
+        Think of your computer as a large apartment building:
+        <br>• <strong>Your IP Address (<code>192.168.1.14</code> or <code>127.0.0.1</code>)</strong> is the building's street address.
+        <br>• <strong>Ports (<code>80</code>, <code>8000</code>, <code>8001</code>, <code>5173</code>)</strong> are the individual apartment doors inside!
+        <br><strong>The Golden Rule:</strong> Only ONE program can live inside an apartment door at any time.
+      </p>
+    </div>
+
+    <!-- The Port Directory -->
+    <h2>🚪 The Active Port Directory</h2>
+    <div class="grid-ports">
+      <div class="port-card blue">
+        <div class="port-header">
+          <span class="port-num">80</span>
+          <span class="port-role">Apache</span>
+        </div>
+        <div class="port-title">XAMPP Web Server</div>
+        <div class="port-desc">Serves the Laravel dashboard in your browser when using <code>http://firesight-web.test</code>.</div>
+      </div>
+
+      <div class="port-card orange">
+        <div class="port-header">
+          <span class="port-num">8000</span>
+          <span class="port-role">Laravel CLI</span>
+        </div>
+        <div class="port-title">Unified Mobile API</div>
+        <div class="port-desc">Listens for incoming requests from resident and BFP mobile phones via <code>php artisan serve</code>.</div>
+      </div>
+
+      <div class="port-card green">
+        <div class="port-header">
+          <span class="port-num">8001</span>
+          <span class="port-role">Python AI</span>
+        </div>
+        <div class="port-title">Fire Verification AI</div>
+        <div class="port-desc">Runs MobileNetV3 ONNX model via FastAPI to classify uploaded fire photos (fire / non-fire).</div>
+      </div>
+
+      <div class="port-card purple">
+        <div class="port-header">
+          <span class="port-num">5173</span>
+          <span class="port-role">Vite Dev</span>
+        </div>
+        <div class="port-title">React Hot Reloading</div>
+        <div class="port-desc">Compiles React, TypeScript, and Tailwind CSS styles instantly as you make code changes.</div>
+      </div>
+
+      <div class="port-card amber">
+        <div class="port-header">
+          <span class="port-num">3306</span>
+          <span class="port-role">Database</span>
+        </div>
+        <div class="port-title">MySQL Database</div>
+        <div class="port-desc">Stores all users, incident records, fire reports, and boundary polygons in <code>firesight_db2</code>.</div>
+      </div>
+    </div>
+
+    <!-- Why it worked before vs now -->
+    <h2>🔍 The Mystery Solved: Why did it work before?</h2>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Timeframe</th>
+            <th>Laravel Port</th>
+            <th>AI Microservice Port</th>
+            <th>Why there was no error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Before</strong></td>
+            <td><code>80</code> (via Apache)</td>
+            <td><code>8000</code> (Python)</td>
+            <td>You only ran <code>npm run dev</code>. Apache handled Laravel on Port 80, leaving Port 8000 free for Python!</td>
+          </tr>
+          <tr>
+            <td><strong>Now</strong></td>
+            <td><code>8000</code> (Artisan)</td>
+            <td><code>8001</code> (Python)</td>
+            <td>The mobile app connects to Laravel on <code>8000</code>, so Python was moved to <code>8001</code> to prevent conflicts.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Step by step journey -->
+    <h2>📸 The Journey of a Fire Incident Photo</h2>
+    <div class="flow-box">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Resident Snaps & Submits Photo</h4>
+          <p>The mobile app sends an HTTP POST with the photo to <code>http://192.168.1.14:8000/api/reports</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Laravel Saves File & Forwards to AI</h4>
+          <p>Laravel saves the image into <code>storage/app/public/uploads/</code>, then makes an internal cURL call to <code>http://127.0.0.1:8001/predict</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Python AI Runs Neural Inference</h4>
+          <p>FastAPI loads the image into <code>fire_verification_model.onnx</code> and responds: <code>{"fire": true, "confidence": 0.97}</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Database Updated & Real-time Alert</h4>
+          <p>Laravel saves the AI label and confidence into MySQL (Port 3306), and the incident instantly appears on the BFP Dashboard map!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Workflow -->
+    <h2>⚡ Daily Workflow: 3 Terminals to Run FireSight (Local)</h2>
+    <div class="command-box">
+<span class="comment"># Terminal 1: Python AI Verification Service (Port 8001)</span>
+cd C:\xampp\htdocs\FireSight-Web\fire-verification-service
+uvicorn main:app --reload --port 8001
+
+<span class="comment"># Terminal 2: Laravel Web Server, Queue & Vite (Port 8000 & 5173)</span>
+cd C:\xampp\htdocs\FireSight-Web
+composer run dev
+
+<span class="comment"># Terminal 3: Mobile Application (Expo)</span>
+cd C:\Users\Clarence\Desktop\capstone_firesight\firesight-mobile
+npx expo start
+    </div>
+
+    <!-- Production Deployment Checklist -->
+    <h2>🚀 Production Deployment Checklist: Every URL & Setting to Change</h2>
+    <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">
+      This table lists <strong>every single URL, IP address, and configuration</strong> across the entire codebase that must be updated when deploying to a live VPS/Cloud server:
+    </p>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Repository / Component</th>
+            <th>File Location</th>
+            <th>Current Local Value</th>
+            <th>Change To (Production)</th>
+            <th>Impact & What it Controls</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>📱 Mobile App</strong><br><small style="color:#64748B">firesight-mobile</small></td>
+            <td><code>.env</code></td>
+            <td><code>http://192.168.1.14:8000/api</code></td>
+            <td><code>https://your-domain.com/api</code></td>
+            <td>Controls all API endpoints and report submissions. All photo URLs (<code>getStorageImageUrl</code>) automatically derive from this!</td>
+          </tr>
+          <tr>
+            <td><strong>🌐 Web App URL</strong><br><small style="color:#64748B">FireSight-Web</small></td>
+            <td><code>.env</code></td>
+            <td><code>http://firesight-web.test</code></td>
+            <td><code>https://your-domain.com</code></td>
+            <td>Controls public image URLs (<code>/storage/...</code>), password reset links, notification links, and email templates.</td>
+          </tr>
+          <tr>
+            <td><strong>🌐 Laravel Environment</strong><br><small style="color:#64748B">FireSight-Web</small></td>
+            <td><code>.env</code></td>
+            <td><code>APP_ENV=local<br>APP_DEBUG=true</code></td>
+            <td><code>APP_ENV=production<br>APP_DEBUG=false</code></td>
+            <td>Disables error/stack-trace leakage and boosts performance for live production users.</td>
+          </tr>
+          <tr>
+            <td><strong>🗄️ Database Connection</strong><br><small style="color:#64748B">FireSight-Web</small></td>
+            <td><code>.env</code></td>
+            <td><code>DB_USERNAME=root<br>DB_PASSWORD=</code></td>
+            <td><code>DB_USERNAME=firesight_user<br>DB_PASSWORD=SecurePassword123!</code></td>
+            <td>Secures the production MySQL database credentials.</td>
+          </tr>
+          <tr>
+            <td><strong>🧠 AI Verification URL</strong><br><small style="color:#64748B">FireSight-Web</small></td>
+            <td><code>.env</code></td>
+            <td><code>http://127.0.0.1:8001/predict</code></td>
+            <td><code>http://127.0.0.1:8001/predict</code></td>
+            <td><strong>Keep as 127.0.0.1!</strong> The AI service runs locally inside the same server, protected behind the firewall.</td>
+          </tr>
+          <tr>
+            <td><strong>💾 Standby Backup API</strong><br><small style="color:#64748B">firesight-api</small></td>
+            <td><code>includes/fire_verification_helper.php</code></td>
+            <td><code>http://127.0.0.1:8001/predict</code></td>
+            <td><code>http://127.0.0.1:8001/predict</code></td>
+            <td>Ensures the standby PHP API forwards verification requests to the local AI service.</td>
+          </tr>
+          <tr>
+            <td><strong>💾 Standby Backup DB</strong><br><small style="color:#64748B">firesight-api</small></td>
+            <td><code>config/database.php</code></td>
+            <td><code>DB_USER: root<br>DB_PASS: ''</code></td>
+            <td>Update to production MySQL user & password</td>
+            <td>Connects the backup API to the live production database.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- The 5 Services Running on the Server -->
+    <h2>🖥️ The 5 Essential Services That Must Run on the Server</h2>
+    <div class="flow-box">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Nginx Web Server & Reverse Proxy (Port 80 & 443)</h4>
+          <p>Accepts public incoming web traffic with SSL/HTTPS certificates (Let's Encrypt / Certbot). Routes <code>/api</code> and web traffic to PHP-FPM.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>PHP-FPM (FastCGI Process Manager)</h4>
+          <p>Executes Laravel PHP code in the background without needing <code>php artisan serve</code>. High performance and multi-threaded.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>MySQL / MariaDB Database (Port 3306)</h4>
+          <p>Maintains persistent records for incidents, user accounts, barangay polygons, and fire risk assessment history.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Python AI Microservice (Systemd Service on Port 8001)</h4>
+          <p>Managed via Linux Systemd (<code>/etc/systemd/system/fire-verification.service</code>) to auto-start on server boot and auto-restart on crashes.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h4>Laravel Background Queue & Cron Worker (Supervisor)</h4>
+          <p>Managed via Supervisor to run <code>php artisan queue:work --tries=3</code> for async jobs and Linux crontab (<code>* * * * * php artisan schedule:run</code>) for daily duty shifts and risk calculations.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Copy Paste Server Configs -->
+    <h2>📋 Production Configuration Snippets (Copy & Paste)</h2>
+
+    <p style="font-size: 13.5px; font-weight:700; color:#0F172A; margin-top:16px;">A. Python AI Service Unit (<code>/etc/systemd/system/fire-verification.service</code>):</p>
+    <div class="command-box">
+[Unit]
+Description=FireSight AI Fire Verification Microservice
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/var/www/FireSight-Web/fire-verification-service
+ExecStart=/var/www/FireSight-Web/fire-verification-service/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8001 --workers 2
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+    </div>
+
+    <p style="font-size: 13.5px; font-weight:700; color:#0F172A; margin-top:16px;">B. Laravel Queue Worker Unit (<code>/etc/supervisor/conf.d/firesight-worker.conf</code>):</p>
+    <div class="command-box">
+[program:firesight-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/FireSight-Web/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+user=www-data
+numprocs=2
+redirect_stderr=true
+stdout_logfile=/var/log/firesight-worker.log
+    </div>
+
+    <p style="font-size: 13.5px; font-weight:700; color:#0F172A; margin-top:16px;">C. One-Time Production Optimization Commands:</p>
+    <div class="command-box">
+<span class="comment"># Inside /var/www/FireSight-Web:</span>
+composer install --no-dev --optimize-autoloader
+npm run build
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan migrate --force
+    </div>
+
+    <div class="footer">
+      FireSight Capstone System • Lian Fire Station & Batangas State University • Prepared October 2026 🚒
+    </div>
+  </div>
+</body>
+</html>

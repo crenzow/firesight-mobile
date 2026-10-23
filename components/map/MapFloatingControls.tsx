@@ -7,6 +7,7 @@ interface MapFloatingControlsProps {
   onOpenMapType: () => void;
   onLocateUser?: () => void;
   isLocating?: boolean;
+  isLocationActive?: boolean;
   onOpenFilter?: () => void;
   isFilterActive?: boolean;
   onToggleLegend?: () => void;
@@ -17,6 +18,7 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
   onOpenMapType,
   onLocateUser,
   isLocating = false,
+  isLocationActive = false,
   onOpenFilter,
   isFilterActive = false,
   onToggleLegend,
@@ -60,14 +62,19 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
             style={({ pressed }) => [
               styles.button,
               { opacity: pressed ? 0.7 : 1 },
+              isLocationActive && { backgroundColor: `${colors.brandOrange}18` },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Locate my position"
           >
             {isLocating ? (
-              <ActivityIndicator size="small" color={colors.textPrimary} />
+              <ActivityIndicator size="small" color={colors.brandOrange} />
             ) : (
-              <LocateFixed size={19} color={colors.textPrimary} strokeWidth={2} />
+              <LocateFixed
+                size={19}
+                color={isLocationActive ? colors.brandOrange : colors.textPrimary}
+                strokeWidth={isLocationActive ? 2.4 : 2}
+              />
             )}
           </Pressable>
         </>
