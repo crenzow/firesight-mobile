@@ -98,8 +98,13 @@ export const LeafletPickerMap: React.FC<LeafletPickerMapProps> = ({
         style={styles.webview}
         javaScriptEnabled
         domStorageEnabled
+        cacheEnabled
+        cacheMode="LOAD_DEFAULT"
         startInLoadingState={false}
         scrollEnabled={false}
+        overScrollMode="never"
+        androidLayerType="hardware"
+        renderToHardwareTextureAndroid={true}
         onMessage={handleMessage}
         onLoad={handleLoad}
       />
@@ -132,6 +137,9 @@ const ATTRIBUTION = {
 };
 
 function buildMapHtml(lat: number, lng: number, zoom: number, initialMapType: PickerMapType): string {
+  const isSatInit = initialMapType === 'satellite';
+  const initialBg = isSatInit ? '#0D1B2A' : '#F2EFE9';
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -139,7 +147,28 @@ function buildMapHtml(lat: number, lng: number, zoom: number, initialMapType: Pi
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    html, body, #map { height: 100%; margin: 0; padding: 0; background: #0D1B2A; }
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: ${initialBg};
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+      transition: background-color 0.2s ease;
+    }
+    .leaflet-container {
+      background: ${initialBg} !important;
+    }
+    .leaflet-tile {
+      image-rendering: auto;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
+    }
+    .leaflet-tile-container {
+      background-color: transparent !important;
+    }
     .leaflet-control-attribution { font-size: 8px; opacity: 0.5; }
   </style>
 </head>
@@ -149,35 +178,55 @@ function buildMapHtml(lat: number, lng: number, zoom: number, initialMapType: Pi
   <script>
     var INIT_TYPE = '${initialMapType}';
     var TILES = {
-      standard:  '${TILES.standard}',
+      standard:  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       satellite: '${TILES.satellite}'
     };
     var ATTR = {
-      standard:  '${ATTRIBUTION.standard}',
+      standard:  '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
       satellite: '${ATTRIBUTION.satellite}'
     };
 
     var map = L.map('map', {
       zoomControl: false,
-      attributionControl: true
+      attributionControl: true,
+      minZoom: 10,
+      maxZoom: 19,
+      bounceAtZoomLimits: false,
     }).setView([${lat}, ${lng}], ${zoom});
 
+    var isSatInit = INIT_TYPE === 'satellite';
     var currentLayer = L.tileLayer(TILES[INIT_TYPE], {
+      maxNativeZoom: isSatInit ? 17 : 19,
       maxZoom: 19,
-      subdomains: INIT_TYPE === 'standard' ? 'abc' : '',
-      attribution: ATTR[INIT_TYPE]
+      subdomains: 'abc',
+      attribution: ATTR[INIT_TYPE],
+      keepBuffer: 6,
+      updateWhenIdle: false,
+      updateInterval: 100,
+      fadeAnimation: true,
     }).addTo(map);
 
     /* Switch tile layer from React Native without reloading */
     window.switchLayer = function(type) {
       if (!TILES[type]) return;
+      var isSat = type === 'satellite';
+      var targetBg = isSat ? '#0D1B2A' : '#F2EFE9';
+      var mapEl = document.getElementById('map');
+      if (mapEl) mapEl.style.backgroundColor = targetBg;
+      document.body.style.backgroundColor = targetBg;
+
       if (currentLayer) {
         map.removeLayer(currentLayer);
       }
       currentLayer = L.tileLayer(TILES[type], {
+        maxNativeZoom: isSat ? 17 : 19,
         maxZoom: 19,
-        subdomains: type === 'standard' ? 'abc' : '',
-        attribution: ATTR[type] || ''
+        subdomains: 'abc',
+        attribution: ATTR[type] || '',
+        keepBuffer: 6,
+        updateWhenIdle: false,
+        updateInterval: 100,
+        fadeAnimation: true,
       }).addTo(map);
     };
 

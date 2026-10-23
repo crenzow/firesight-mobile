@@ -161,7 +161,13 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                 <Button
                   label={cancelText}
                   onPress={onCancel}
-                  variant="outline"
+                  variant="ghost"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceElevated,
+                    borderRadius: radius.full,
+                  }}
                   disabled={loading}
                 />
               </View>
@@ -172,6 +178,14 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                 label={defaultConfirmText()}
                 onPress={onConfirm}
                 variant={getConfirmButtonVariant()}
+                style={{
+                  borderRadius: radius.full,
+                  shadowColor: type === 'danger' || type === 'error' ? colors.danger : colors.brandOrange,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  elevation: 2,
+                }}
                 loading={loading}
               />
             </View>

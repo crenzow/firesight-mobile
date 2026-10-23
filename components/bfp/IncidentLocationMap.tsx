@@ -69,6 +69,8 @@ export const IncidentLocationMap: React.FC<IncidentLocationMapProps> = ({
   const cfg = TILE_CONFIGS[mapType];
   const tilesJson = JSON.stringify(cfg.tiles);
   const overlayJson = cfg.overlay ? `'${cfg.overlay}'` : 'null';
+  const isSatellite = mapType === 'satellite' || mapType === 'hybrid';
+  const mapBgColor = isSatellite ? '#080E28' : '#F2EFE9';
 
   /**
    * Inject GPS position into the live WebView WITHOUT reloading HTML.
@@ -78,10 +80,14 @@ export const IncidentLocationMap: React.FC<IncidentLocationMapProps> = ({
   useEffect(() => {
     if (!currentGPS || !isNavigating || !webViewRef.current) return;
     const { latitude: lat, longitude: lng } = currentGPS;
-    // expo-location gives speed in m/s; convert to km/h for display
-    const speedKmh = Math.round((currentGPS.speed ?? 0) * 3.6);
+    // expo-location gives speed in m/s; protect against negative values and convert to km/h
+    // Apply industry-standard GPS noise deadband (2.5 km/h or ~0.7 m/s) to eliminate stationary jitter
+    const rawSpeed = currentGPS.speed && currentGPS.speed > 0.7 ? currentGPS.speed : 0;
+    const kmh = rawSpeed * 3.6;
+    const speedKmh = kmh < 2.5 ? 0 : Math.round(kmh);
+    const headingDeg = Math.round(currentGPS.heading ?? 0);
     webViewRef.current.injectJavaScript(
-      `window.onGPSUpdate && window.onGPSUpdate(${lat},${lng},0,${speedKmh},${currentGPS.accuracy ?? 999}); true;`
+      `window.onGPSUpdate && window.onGPSUpdate(${lat},${lng},${headingDeg},${speedKmh},${currentGPS.accuracy ?? 999}); true;`
     );
   }, [currentGPS, isNavigating]);
 
@@ -93,80 +99,47 @@ export const IncidentLocationMap: React.FC<IncidentLocationMapProps> = ({
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"/>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body,#map{width:100%;height:100%;background:#080E28;overflow:hidden}
+  html,body,#map{width:100%;height:100%;background:${mapBgColor};overflow:hidden}
 
   /* ── Navigation HUD ──────────────── */
   #hud{
-    position:absolute;top:100px;left:0;right:0;z-index:200;
-    display:none;flex-direction:column;gap:8px;padding:10px;
+    position:absolute;top:108px;left:16px;right:16px;z-index:200;
+    display:none;flex-direction:column;gap:8px;
     pointer-events:none;
   }
   #turn-card{
     display:none; /* User requested removal */
-    background:rgba(8,14,40,0.93);
-    border:1px solid rgba(255,255,255,0.12);
-    border-radius:18px;padding:12px 14px;
-    align-items:center;gap:12px;
-    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
-    box-shadow:0 8px 32px rgba(0,0,0,0.55);
-  }
-  #arrow-box{
-    width:58px;height:58px;border-radius:16px;flex-shrink:0;
-    background:linear-gradient(135deg,#F4622B,#c93c16);
-    display:flex;align-items:center;justify-content:center;
-    font-size:30px;
-    box-shadow:0 4px 18px rgba(244,98,43,0.45);
-  }
-  #turn-dist{color:#fff;font-size:23px;font-weight:800;font-family:-apple-system,Helvetica,sans-serif;line-height:1}
-  #turn-street{
-    color:rgba(255,255,255,0.55);font-size:12px;margin-top:4px;
-    font-family:-apple-system,Helvetica,sans-serif;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;
   }
   #info-bar{
-    background:rgba(8,14,40,0.88);
-    border:1px solid rgba(255,255,255,0.09);
-    border-radius:13px;padding:10px 14px;
+    background:#FFFFFF;
+    border:1px solid rgba(0,0,0,0.08);
+    border-radius:22px;padding:12px 20px;
     display:flex;justify-content:space-between;align-items:center;
-    -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
-    box-shadow:0 4px 16px rgba(0,0,0,0.35);
+    box-shadow:0 4px 20px rgba(0,0,0,0.08);
   }
   .s{display:flex;flex-direction:column}
-  .sl{color:rgba(255,255,255,0.4);font-size:9px;font-weight:700;letter-spacing:0.8px;font-family:-apple-system,Helvetica,sans-serif;text-transform:uppercase}
-  .sv{color:#fff;font-size:16px;font-weight:800;font-family:-apple-system,Helvetica,sans-serif;margin-top:2px}
+  .sl{color:#8992A6;font-size:10px;font-weight:800;letter-spacing:0.8px;font-family:-apple-system,Helvetica,sans-serif;text-transform:uppercase}
+  .sv{color:#101827;font-size:17px;font-weight:800;font-family:-apple-system,Helvetica,sans-serif;margin-top:2px}
   #speed-pill{
-    background:rgba(244,98,43,0.18);border:1px solid rgba(244,98,43,0.38);
+    background:rgba(244,98,43,0.12);border:1px solid rgba(244,98,43,0.3);
     border-radius:30px;padding:4px 14px;
     display:flex;flex-direction:column;align-items:center;
   }
-  #speed-val{color:#F4622B;font-size:18px;font-weight:900;font-family:-apple-system,Helvetica,sans-serif}
-  #speed-unit{color:rgba(244,98,43,0.65);font-size:8px;font-weight:700;letter-spacing:0.5px;font-family:-apple-system,Helvetica,sans-serif}
-
-  /* GPS signal waiting */
-  #gps-wait{
-    position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
-    background:rgba(8,14,40,0.9);color:rgba(255,255,255,0.8);
-    padding:8px 16px;border-radius:50px;
-    font-family:-apple-system,Helvetica,sans-serif;font-size:12px;font-weight:600;
-    display:none;align-items:center;gap:6px;z-index:300;
-    border:1px solid rgba(255,255,255,0.1);
-  }
-  .pulse-dot{
-    width:8px;height:8px;border-radius:50%;background:#3B82F6;
-    animation:blink 1.2s ease-in-out infinite;
-  }
+  #speed-val{color:#F4622B;font-size:18px;font-weight:900;font-family:-apple-system,Helvetica,sans-serif;line-height:1.1}
+  #speed-unit{color:#F4622B;font-size:8.5px;font-weight:800;letter-spacing:0.5px;font-family:-apple-system,Helvetica,sans-serif}
 
   /* Loading */
   #loading{
     position:absolute;top:50%;left:50%;
     transform:translate(-50%,-50%);
-    background:rgba(8,14,40,0.92);color:#fff;
+    background:#FFFFFF;color:#101827;
     padding:12px 20px;border-radius:50px;
-    font-family:-apple-system,Helvetica,sans-serif;font-size:13px;font-weight:600;
+    font-family:-apple-system,Helvetica,sans-serif;font-size:13px;font-weight:700;
     display:none;align-items:center;gap:8px;z-index:300;
-    border:1px solid rgba(255,255,255,0.1);
+    border:1px solid rgba(0,0,0,0.08);
+    box-shadow:0 4px 16px rgba(0,0,0,0.1);
   }
-  .spin{width:14px;height:14px;border:2px solid rgba(255,255,255,0.15);border-top-color:#F4622B;border-radius:50%;animation:spin 0.7s linear infinite}
+  .spin{width:14px;height:14px;border:2px solid rgba(0,0,0,0.1);border-top-color:#F4622B;border-radius:50%;animation:spin 0.7s linear infinite}
 
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
@@ -200,9 +173,6 @@ export const IncidentLocationMap: React.FC<IncidentLocationMapProps> = ({
     </div>
   </div>
 </div>
-
-<!-- GPS Acquiring indicator (nav mode only) -->
-<div id="gps-wait"><div class="pulse-dot"></div> Acquiring GPS signal…</div>
 
 <!-- Loading route spinner -->
 <div id="loading"><div class="spin"></div> Loading route…</div>
@@ -254,23 +224,53 @@ function getArrow(type,mod){
 /* ── Map setup ── */
 var styleSpec={
   version:8,
-  sources:{base:{type:'raster',tiles:TILES,tileSize:256,attribution:'Map data'}},
-  layers:[{id:'base',type:'raster',source:'base'}]
+  sources:{
+    base:{
+      type:'raster',
+      tiles:TILES,
+      tileSize:256,
+      maxzoom:${isSatellite ? 17 : 19},
+      attribution:'Map data'
+    }
+  },
+  layers:[{
+    id:'base',
+    type:'raster',
+    source:'base',
+    paint:{
+      'raster-fade-duration':0
+    }
+  }]
 };
 if(OVERLAY){
-  styleSpec.sources.ovl={type:'raster',tiles:[OVERLAY],tileSize:256};
-  styleSpec.layers.push({id:'ovl',type:'raster',source:'ovl',paint:{'raster-opacity':0.78}});
+  styleSpec.sources.ovl={
+    type:'raster',
+    tiles:[OVERLAY],
+    tileSize:256,
+    maxzoom:19
+  };
+  styleSpec.layers.push({
+    id:'ovl',
+    type:'raster',
+    source:'ovl',
+    paint:{
+      'raster-opacity':0.78,
+      'raster-fade-duration':0
+    }
+  });
 }
 
 var map=new maplibregl.Map({
   container:'map',
   style:styleSpec,
-  center:[DEST_LNG,DEST_LAT],
+  center:(IS_NAV && HAS_ROUTE) ? [ORIGIN_LNG, ORIGIN_LAT] : [DEST_LNG, DEST_LAT],
   zoom: IS_NAV ? 16 : (HAS_ROUTE ? 13 : 15),
   pitch: 0,
   bearing:0,
   attributionControl:false,
-  antialias:true
+  antialias:true,
+  maxTileCacheSize:60,
+  maxTileCacheZoomLevels:4
 });
 
 /* ── State ── */
@@ -279,17 +279,35 @@ var navSteps=[];       // OSRM step objects
 var cumDistEnd=[];     // Cumulative distance from each coord to end (m)
 var stepBounds=[];     // {start:coordIdx, stepIdx} for each step
 var lastSnapIdx=0;
+var lastSnapDist=0;
+var hasJoinedRoad=false;
 var gpsMarkerEl=null;
 var gpsMarker=null;
 var gpsReceived=false;
 var lastGps=null;
-var MIN_MOVE_METERS=10;
+var MIN_MOVE_METERS=2;
 var totalDist=0, totalDur=0;
+var offRoadDistEnd=0;
+var originConnectorCoords=null;
+var destConnectorCoords=null;
+var isUserPanning=false;
+var userPanTimer=null;
 
 /* ── Markers ── */
-function mkFireStation(){
+function mkOriginMarker(){
+  var isStation = ORIGIN_LBL.toLowerCase().indexOf('station') !== -1;
   var el=document.createElement('div');
-  el.innerHTML='<div style="width:40px;height:40px;border-radius:12px;background:#0F1C3F;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,0.5)">🚒</div>';
+  if(isStation){
+    el.innerHTML='<div style="width:40px;height:40px;border-radius:12px;background:#0F1C3F;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,0.5)">🚒</div>';
+  }else{
+    el.innerHTML=
+      '<div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;pointer-events:none">'+
+        '<div style="position:absolute;width:40px;height:40px;border-radius:50%;background:#3B82F6;opacity:0.25;animation:pulse 2s ease-out infinite"></div>'+
+        '<div style="position:relative;z-index:2;width:24px;height:24px;border-radius:50%;background:#3B82F6;border:3px solid #fff;box-shadow:0 3px 12px rgba(59,130,246,0.6);display:flex;align-items:center;justify-content:center">'+
+          '<div style="width:7px;height:7px;border-radius:50%;background:#fff"></div>'+
+        '</div>'+
+      '</div>';
+  }
   new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([ORIGIN_LNG,ORIGIN_LAT]).addTo(map);
 }
 function mkIncident(){
@@ -303,15 +321,252 @@ function mkIncident(){
 }
 function mkGPSArrow(initLng,initLat){
   gpsMarkerEl=document.createElement('div');
-  gpsMarkerEl.style.cssText='position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;transition:transform 0.5s ease';
+  // NOTE: Never put CSS transition:transform on the root marker element in MapLibre!
+  // Doing so causes dragging/panning to lag, float, and bounce instead of sticking to the map.
+  gpsMarkerEl.style.cssText='position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;pointer-events:none';
   gpsMarkerEl.innerHTML=
-    '<div style="position:absolute;width:40px;height:40px;border-radius:50%;background:#3B82F6;opacity:0.25;animation:pulse 2.5s ease-out infinite"></div>'+
-    '<div style="position:relative;z-index:2;width:28px;height:28px;border-radius:50%;background:#3B82F6;border:3px solid #fff;box-shadow:0 3px 12px rgba(59,130,246,0.55);display:flex;align-items:center;justify-content:center">'+
-      '<svg viewBox="0 0 24 24" width="14" height="14" fill="#fff"><path d="M12 2L3 21l9-4 9 4L12 2z"/></svg>'+
+    '<div style="position:absolute;width:46px;height:46px;border-radius:50%;background:#3B82F6;opacity:0.22;animation:pulse 2s ease-out infinite"></div>'+
+    '<div id="gps-arrow-icon" style="position:relative;z-index:2;width:30px;height:30px;border-radius:50%;background:#2563EB;border:3px solid #fff;box-shadow:0 3px 14px rgba(37,99,235,0.6);display:flex;align-items:center;justify-content:center;transition:transform 0.2s linear">'+
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M12 2L3 21l9-4 9 4L12 2z"/></svg>'+
     '</div>';
   gpsMarker=new maplibregl.Marker({element:gpsMarkerEl,anchor:'center'})
     .setLngLat([initLng,initLat])
     .addTo(map);
+}
+
+/* ── Smooth Tangent Arc for Off-Road Connectors ── */
+function makeTangentArc(pRoad, pPrev, pTarget, isRoadEnd){
+  var dLng = pRoad[0] - pPrev[0];
+  var dLat = pRoad[1] - pPrev[1];
+  var len = Math.sqrt(dLng*dLng + dLat*dLat);
+  if(len === 0) return [pRoad, pTarget];
+
+  // Tangent direction: exiting the road or entering the road
+  var dir = isRoadEnd ? [dLng/len, dLat/len] : [-dLng/len, -dLat/len];
+
+  var tLng = pTarget[0] - pRoad[0];
+  var tLat = pTarget[1] - pRoad[1];
+  var tDist = Math.sqrt(tLng*tLng + tLat*tLat);
+  if(tDist === 0) return [pRoad];
+
+  // Dot product to project tangent smoothly
+  var dot = (dir[0]*tLng + dir[1]*tLat) / tDist;
+  var ext = tDist * (dot > 0 ? 0.42 : 0.22);
+  var ctrl = [pRoad[0] + dir[0]*ext, pRoad[1] + dir[1]*ext];
+
+  // High-resolution curved vector line (adapts dynamically as user zooms)
+  var pts = [];
+  var steps = 24;
+  for(var s=0; s<=steps; s++){
+    var t = s / steps;
+    var inv = 1 - t;
+    var x = inv*inv*pRoad[0] + 2*inv*t*ctrl[0] + t*t*pTarget[0];
+    var y = inv*inv*pRoad[1] + 2*inv*t*ctrl[1] + t*t*pTarget[1];
+    pts.push([x, y]);
+  }
+  return pts;
+}
+
+/* ── Refresh Dotted Connectors GeoJSON Source ── */
+function refreshConnectorsSource(){
+  var features = [];
+  var junctions = [];
+
+  if(originConnectorCoords && originConnectorCoords.length > 0){
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: originConnectorCoords }
+    });
+    if(routeCoords.length > 0) junctions.push(routeCoords[0]);
+  }
+
+  if(destConnectorCoords && destConnectorCoords.length > 0){
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: destConnectorCoords }
+    });
+    if(routeCoords.length > 0) junctions.push(routeCoords[routeCoords.length - 1]);
+  }
+
+  if(map.getSource('route-connectors')){
+    map.getSource('route-connectors').setData({
+      type: 'FeatureCollection',
+      features: features
+    });
+  }
+
+  if(map.getSource('route-junctions')){
+    map.getSource('route-junctions').setData({
+      type: 'FeatureCollection',
+      features: junctions.map(function(pt){
+        return { type: 'Feature', geometry: { type: 'Point', coordinates: pt } };
+      })
+    });
+  }
+}
+
+/* ── Keep origin dotted connector line locked to live location ── */
+function updateOriginConnector(liveLng, liveLat, snapIdx, snapDist){
+  if(routeCoords.length === 0) return;
+
+  // Once vehicle has joined the road network or advanced along the route, never show origin connector
+  if(hasJoinedRoad || (snapIdx != null && snapIdx > 0) || (snapDist != null && snapDist <= 8)){
+    hasJoinedRoad = true;
+    if(originConnectorCoords !== null){
+      originConnectorCoords = null;
+      refreshConnectorsSource();
+    }
+    return;
+  }
+
+  var startRoad = routeCoords[0];
+  var startDist = getDist([liveLng, liveLat], startRoad);
+  if(startDist > 8){
+    var prevStart = routeCoords[1] || startRoad;
+    var arcOrigin = makeTangentArc(startRoad, prevStart, [liveLng, liveLat], false);
+    arcOrigin.reverse();
+    originConnectorCoords = arcOrigin;
+  } else {
+    // When vehicle drives onto the road (within 8m), remove the off-road dotted trail permanently
+    hasJoinedRoad = true;
+    originConnectorCoords = null;
+  }
+  refreshConnectorsSource();
+}
+
+/* ── Dotted Off-Road Connectors (Google Maps style) ── */
+function drawConnectors(curLng, curLat){
+  if(routeCoords.length === 0) return;
+  var startRoad = routeCoords[0];
+  var endRoad = routeCoords[routeCoords.length - 1];
+
+  var liveLng = curLng != null ? curLng : (lastGps ? lastGps.lng : ORIGIN_LNG);
+  var liveLat = curLat != null ? curLat : (lastGps ? lastGps.lat : ORIGIN_LAT);
+  var startPt = [liveLng, liveLat];
+  var destPt = [DEST_LNG, DEST_LAT];
+
+  var startDist = getDist(startPt, startRoad);
+  var endDist = getDist(endRoad, destPt);
+
+  // 1. Origin to Road Start connector
+  // If the user is already on the road (<= 8m), hide origin dots
+  if(startDist > 8){
+    hasJoinedRoad = false;
+    var prevStart = routeCoords[1] || startRoad;
+    var arcOrigin = makeTangentArc(startRoad, prevStart, startPt, false);
+    arcOrigin.reverse();
+    originConnectorCoords = arcOrigin;
+  } else {
+    hasJoinedRoad = true;
+    originConnectorCoords = null;
+  }
+
+  // 2. Road End to Destination Pin connector
+  // If the incident pin is already on the road (<= 8m), hide destination dots
+  if(endDist > 8){
+    offRoadDistEnd = endDist;
+    var prevEnd = routeCoords[routeCoords.length - 2] || endRoad;
+    var arcDest = makeTangentArc(endRoad, prevEnd, destPt, true);
+    destConnectorCoords = arcDest;
+  } else {
+    destConnectorCoords = null;
+  }
+
+  if(!map.getSource('route-connectors')){
+    map.addSource('route-connectors', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    });
+
+    // 1. Outer casing: mathematically synchronized period to produce a crisp 1px white border
+    map.addLayer({
+      id: 'rc-casing',
+      type: 'line',
+      source: 'route-connectors',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#FFFFFF',
+        'line-width': 6.5,
+        'line-dasharray': [0.01, 1.52],
+        'line-opacity': 0.95
+      }
+    });
+
+    // 2. Core slate dots: identical period ensures perfect concentric circles without drifting
+    map.addLayer({
+      id: 'rc-dots',
+      type: 'line',
+      source: 'route-connectors',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#475569',
+        'line-width': 4.5,
+        'line-dasharray': [0.01, 2.2],
+        'line-opacity': 1.0
+      }
+    });
+  }
+
+  // Transition junction circle at the end of the solid road line
+  if(!map.getSource('route-junctions')){
+    map.addSource('route-junctions', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    });
+
+    map.addLayer({
+      id: 'rj-circle',
+      type: 'circle',
+      source: 'route-junctions',
+      paint: {
+        'circle-radius': 5,
+        'circle-color': '#FFFFFF',
+        'circle-stroke-color': '#475569',
+        'circle-stroke-width': 2
+      }
+    });
+  }
+
+  refreshConnectorsSource();
+}
+
+/* ── Fallback Direct Dotted Route (when no drivable roads exist) ── */
+function drawDirectFallbackRoute(){
+  var directCoords = [[ORIGIN_LNG, ORIGIN_LAT], [DEST_LNG, DEST_LAT]];
+  map.addSource('route-direct', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: directCoords }
+    }
+  });
+
+  map.addLayer({
+    id: 'rd-casing',
+    type: 'line',
+    source: 'route-direct',
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: {
+      'line-color': '#FFFFFF',
+      'line-width': 6.5,
+      'line-dasharray': [0.01, 1.52],
+      'line-opacity': 0.95
+    }
+  });
+
+  map.addLayer({
+    id: 'rd-dots',
+    type: 'line',
+    source: 'route-direct',
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: {
+      'line-color': '#475569',
+      'line-width': 4.5,
+      'line-dasharray': [0.01, 2.2],
+      'line-opacity': 1.0
+    }
+  });
+  fitRoute(directCoords);
 }
 
 /* ── Route drawing ── */
@@ -342,7 +597,9 @@ function drawRoute(geom){
 function fitRoute(coords){
   var b=new maplibregl.LngLatBounds();
   coords.forEach(function(c){b.extend(c);});
-  map.fitBounds(b,{padding:{top:60,bottom:80,left:40,right:40},duration:1200});
+  b.extend([ORIGIN_LNG,ORIGIN_LAT]);
+  b.extend([DEST_LNG,DEST_LAT]);
+  map.fitBounds(b,{padding:{top:80,bottom:120,left:50,right:50},duration:1200});
 }
 
 /* ── Precompute cumulative distances ── */
@@ -373,14 +630,22 @@ function getStepIdx(coordIdx){
 
 /* ── Route snapping (forward-biased, O(window) not O(n)) ── */
 function snapToRoute(lng,lat){
-  var lo=Math.max(0,lastSnapIdx-3);
+  var lo=Math.max(0,lastSnapIdx-6);
   var hi=Math.min(routeCoords.length-1,lastSnapIdx+60);
   var bestD=Infinity,bestI=lastSnapIdx;
   for(var i=lo;i<=hi;i++){
     var d=getDist([lng,lat],routeCoords[i]);
     if(d<bestD){bestD=d;bestI=i;}
   }
+  // If GPS jumped or vehicle deviated (>45m), search full route to cleanly re-acquire
+  if(bestD>45 && routeCoords.length>0){
+    for(var j=0;j<routeCoords.length;j++){
+      var dj=getDist([lng,lat],routeCoords[j]);
+      if(dj<bestD){bestD=dj;bestI=j;}
+    }
+  }
   lastSnapIdx=bestI;
+  lastSnapDist=bestD;
   return bestI;
 }
 
@@ -389,9 +654,9 @@ function hudUpdate(snapIdx,speedKmh){
   var si=getStepIdx(snapIdx);
   var step=navSteps[si];
   var next=navSteps[si+1];
-  var remDist=cumDistEnd[snapIdx]||0;
-  var progress=1-(remDist/(totalDist||1));
-  var remDur=totalDur*(1-progress);
+  var remDist=(cumDistEnd[snapIdx]||0) + offRoadDistEnd;
+  var progress=Math.max(0, Math.min(1, 1-(remDist/(totalDist||1))));
+  var remDur=Math.max(0, totalDur*(1-progress));
 
   var ar=next?getArrow(next.maneuver.type,next.maneuver.modifier):'🏁';
   var street=next?(next.name||'Continue forward'):'You have arrived!';
@@ -402,7 +667,8 @@ function hudUpdate(snapIdx,speedKmh){
   document.getElementById('turn-street').textContent=street;
   document.getElementById('stat-rem').textContent=fmtD(remDist);
   document.getElementById('stat-eta').textContent=fmtT(remDur);
-  document.getElementById('speed-val').textContent=String(speedKmh||0);
+  var safeSpeed = (speedKmh && speedKmh >= 2.5) ? Math.round(speedKmh) : 0;
+  document.getElementById('speed-val').textContent=String(safeSpeed);
 
   if(remDist<15){
     setTimeout(function(){
@@ -414,6 +680,15 @@ function hudUpdate(snapIdx,speedKmh){
 
 /* ── OSRM fetch ── */
 async function fetchRoute(){
+  var cacheKey='osrm_'+ORIGIN_LNG.toFixed(4)+'_'+ORIGIN_LAT.toFixed(4)+'_'+DEST_LNG.toFixed(4)+'_'+DEST_LAT.toFixed(4);
+  try{
+    var cached=sessionStorage.getItem(cacheKey);
+    if(cached){
+      var parsed=JSON.parse(cached);
+      if(parsed && parsed.geometry)return parsed;
+    }
+  }catch(_){}
+
   document.getElementById('loading').style.display='flex';
   try{
     var url='https://router.project-osrm.org/route/v1/driving/'
@@ -423,6 +698,9 @@ async function fetchRoute(){
     var r=await fetch(url);
     var d=await r.json();
     if(d.code!=='Ok')throw new Error('no route');
+    try{
+      sessionStorage.setItem(cacheKey,JSON.stringify(d.routes[0]));
+    }catch(_){}
     return d.routes[0];
   }catch(e){
     document.getElementById('loading').textContent='Route unavailable';
@@ -441,25 +719,36 @@ async function fetchRoute(){
 window.onGPSUpdate=function(lat,lng,heading,speedKmh,accuracy){
   if(!IS_NAV)return;
 
-  if(!isFinite(accuracy)||accuracy>50)return;
-  var moved=lastGps?getDist([lastGps.lng,lastGps.lat],[lng,lat]):Infinity;
-  if(lastGps && moved<MIN_MOVE_METERS)return;
-  lastGps={lng:lng,lat:lat};
+  if(!isFinite(accuracy)||accuracy>65)return;
 
-  /* First update: hide "waiting" indicator */
-  if(!gpsReceived){
-    gpsReceived=true;
-    document.getElementById('gps-wait').style.display='none';
+  /* Always update live speed display immediately */
+  var safeSpeed = (speedKmh && speedKmh >= 2.5) ? Math.round(speedKmh) : 0;
+  var spdEl=document.getElementById('speed-val');
+  if(spdEl)spdEl.textContent=String(safeSpeed);
+
+  /* Always update vehicle heading rotation immediately */
+  if(heading!=null && heading!==0){
+    var arrowIcon=document.getElementById('gps-arrow-icon');
+    if(arrowIcon)arrowIcon.style.transform='rotate('+heading+'deg)';
   }
 
-  /* Move the blue GPS arrow */
+  /* First update */
+  if(!gpsReceived){
+    gpsReceived=true;
+  }
+
+  /* Move the blue GPS arrow without any floating or bouncing */
   if(gpsMarker)gpsMarker.setLngLat([lng,lat]);
+  lastGps={lng:lng,lat:lat};
 
   /* Snap position to nearest route coordinate */
   if(routeCoords.length>0){
     var si=snapToRoute(lng,lat);
 
-    /* Trim remaining route so the blue line shrinks as you drive */
+    /* Dynamically update the origin dotted connector: permanently hides once on the road */
+    updateOriginConnector(lng,lat,si,lastSnapDist);
+
+    /* Trim remaining route so the line shrinks as you drive */
     if(map.getSource('route-rem')){
       map.getSource('route-rem').setData({
         type:'LineString',
@@ -470,28 +759,51 @@ window.onGPSUpdate=function(lat,lng,heading,speedKmh,accuracy){
     /* Update HUD with real data */
     hudUpdate(si,speedKmh);
   }
+
+  /* Smoothly track camera if user is not currently panning */
+  if(!isUserPanning){
+    map.easeTo({
+      center:[lng,lat],
+      duration:800,
+      easing:function(t){return t;}
+    });
+  }
 };
 
 /* ── Main ── */
 map.on('load',async function(){
   mkIncident();
 
+  /* Listen for user pan gestures to pause/resume auto-camera tracking */
+  map.on('dragstart',function(){
+    isUserPanning=true;
+    if(userPanTimer)clearTimeout(userPanTimer);
+  });
+  map.on('dragend',function(){
+    if(userPanTimer)clearTimeout(userPanTimer);
+    userPanTimer=setTimeout(function(){
+      isUserPanning=false;
+    },4000);
+  });
+
   if(HAS_ROUTE){
-    mkFireStation();
+    if(!IS_NAV){
+      mkOriginMarker();
+    }
     var route=await fetchRoute();
     if(route){
       routeCoords=route.geometry.coordinates;
       navSteps=route.legs[0].steps;
-      totalDist=route.distance;
-      totalDur=route.duration;
       buildCumDist(routeCoords);
       buildStepBounds(navSteps);
       drawRoute(route.geometry);
+      drawConnectors();
+      totalDist=route.distance + offRoadDistEnd;
+      totalDur=route.duration;
 
       if(IS_NAV){
-        /* Show HUD, GPS arrow at origin, wait for real GPS */
+        /* Show HUD, GPS arrow at origin */
         document.getElementById('hud').style.display='flex';
-        document.getElementById('gps-wait').style.display='flex';
         mkGPSArrow(ORIGIN_LNG,ORIGIN_LAT);
         /* Keep the initial camera fixed at the route origin. */
         map.jumpTo({center:[ORIGIN_LNG,ORIGIN_LAT],zoom:16,pitch:0,bearing:0});
@@ -501,6 +813,8 @@ map.on('load',async function(){
       }else{
         fitRoute(routeCoords);
       }
+    }else{
+      drawDirectFallbackRoute();
     }
   }
 });
@@ -524,7 +838,14 @@ map.on('load',async function(){
       originWhitelist={['*']}
       style={styles.webview}
       javaScriptEnabled
+      domStorageEnabled
+      cacheEnabled
+      cacheMode="LOAD_DEFAULT"
+      startInLoadingState={false}
       scrollEnabled={false}
+      overScrollMode="never"
+      androidLayerType="hardware"
+      renderToHardwareTextureAndroid={true}
       onMessage={handleMessage}
     />
   );

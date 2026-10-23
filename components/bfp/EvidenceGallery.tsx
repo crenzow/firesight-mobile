@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Dimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Plus, Camera } from 'lucide-react-native';
+import { Plus, Image as ImageIcon } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { APP_CONFIG, getStorageImageUrl } from '../../constants/config';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
@@ -18,6 +18,7 @@ interface EvidenceGalleryProps {
   evidencePhotos: { evidence_id: number; image_path: string; caption: string | null }[];
   onAddEvidence: (localUri: string) => Promise<void>;
   canAdd?: boolean; // Whether the user is allowed to add new evidence
+  showTitle?: boolean; // Defaults to false to avoid duplicate headers with SectionPill
 }
 
 /**
@@ -26,7 +27,13 @@ interface EvidenceGalleryProps {
  * added. If canAdd is true, shows an "Add" tile to attach more.
  * Photos can be tapped to view full screen.
  */
-export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evidencePhotos, onAddEvidence, canAdd = true }) => {
+export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({
+  mainPhoto,
+  evidencePhotos,
+  onAddEvidence,
+  canAdd = true,
+  showTitle = false,
+}) => {
   const { colors, spacing, radius, typography } = useTheme();
   const [isUploading, setIsUploading] = useState(false);
   const [isSourceDialogVisible, setIsSourceDialogVisible] = useState(false);
@@ -49,19 +56,6 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evi
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-    if (!result.canceled && result.assets[0]) {
-      await uploadEvidence(result.assets[0].uri);
-    }
-  };
-
-  const handleAddFromCamera = async () => {
-    setIsSourceDialogVisible(false);
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Camera access is required to capture photos.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
       await uploadEvidence(result.assets[0].uri);
     }
@@ -97,17 +91,19 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({ mainPhoto, evi
         visible={isSourceDialogVisible}
         type="info"
         title="Add Fire Scene Photo"
-        message="Choose how you want to attach a photo of the fire scene."
-        confirmText="Take Photo"
-        cancelText="Photo Library"
-        icon={<Camera size={28} color="#FFFFFF" strokeWidth={2.5} />}
-        onConfirm={handleAddFromCamera}
-        onCancel={handleAddFromLibrary}
+        message="Select an incident photo from your photo library to attach to this resolved incident report."
+        confirmText="Choose Photo"
+        cancelText="Cancel"
+        icon={<ImageIcon size={28} color="#FFFFFF" strokeWidth={2.5} />}
+        onConfirm={handleAddFromLibrary}
+        onCancel={() => setIsSourceDialogVisible(false)}
         onClose={() => setIsSourceDialogVisible(false)}
       />
-      <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700', marginBottom: spacing.sm }}>
-        Fire Scene Photos ({photos.length})
-      </Text>
+      {showTitle ? (
+        <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700', marginBottom: spacing.sm }}>
+          {photos.length === 1 ? 'Fire Scene Photo (1)' : `Fire Scene Photos (${photos.length})`}
+        </Text>
+      ) : null}
       
       {photos.length === 0 && !canAdd ? (
         <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, fontStyle: 'italic' }}>

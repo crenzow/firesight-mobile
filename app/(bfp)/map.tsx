@@ -60,6 +60,7 @@ export default function BFPMapScreen() {
   // Selected barangay for the detail card
   const [selectedBarangay, setSelectedBarangay] = useState<BarangayRiskFeature | null>(null);
   const [showUserLocation, setShowUserLocation] = useState(false);
+  const [headerBottom, setHeaderBottom] = useState<number>(0);
 
   // Filters state
   const [selectedRisk, setSelectedRisk] = useState<'all' | RiskLevel>('all');
@@ -157,6 +158,7 @@ export default function BFPMapScreen() {
   const handleModeChange = (nextMode: 'risk' | 'incidents') => {
     Haptics.selectionAsync().catch(() => {});
     setMode(nextMode);
+    setSelectedBarangay(null);
   };
 
   return (
@@ -172,10 +174,11 @@ export default function BFPMapScreen() {
       ) : (
         <LeafletMapView
           ref={mapRef}
-          key={`${mode}-${selectedRisk}`}
+          key={mode}
           mode={mode}
           mapType={mapType}
-          barangays={filteredBarangays}
+          barangays={barangays}
+          selectedRiskFilter={selectedRisk}
           selectedBarangayName={selectedBarangay?.barangay_name || null}
           incidents={incidents}
           userLocation={showUserLocation ? location : null}
@@ -190,6 +193,10 @@ export default function BFPMapScreen() {
       {/* 2. Apple Maps Floating Frosted Glass Header */}
       <SafeAreaView edges={['top']} pointerEvents="box-none" style={styles.headerSafeArea}>
         <View
+          onLayout={(e) => {
+            const { y, height } = e.nativeEvent.layout;
+            setHeaderBottom(y + height);
+          }}
           style={[
             styles.floatingHeader,
             {
@@ -405,95 +412,105 @@ export default function BFPMapScreen() {
         </View>
       </SafeAreaView>
 
-      {/* 3. Floating Action Island (Right Side) */}
-      <View
-        style={[
-          styles.floatingControlsIsland,
-          {
-            top:
-              mode === 'risk'
-                ? Platform.OS === 'ios'
-                  ? 220
-                  : 195
-                : Platform.OS === 'ios'
-                ? 175
-                : 150,
-          },
-        ]}
-      >
-        <MapFloatingControls
-          onOpenMapType={() => {
-            Haptics.selectionAsync().catch(() => {});
-            setIsMapTypeModalOpen(true);
-          }}
-          onLocateUser={handleLocateMe}
-          isLocating={isLocating}
-          isLocationActive={showUserLocation}
-          onToggleLegend={() => {
-            Haptics.selectionAsync().catch(() => {});
-            setIsLegendVisible((prev) => !prev);
-          }}
-          isLegendVisible={isLegendVisible}
-        />
-      </View>
+      {/* 3. Floating Action Island (Right Side) & Legend (Left Side) */}
+      {(() => {
+        const floatingTop =
+          headerBottom > 0
+            ? headerBottom + 12
+            : mode === 'risk'
+            ? Platform.OS === 'ios'
+              ? 220
+              : 195
+            : Platform.OS === 'ios'
+            ? 180
+            : 155;
 
-      {/* 4. Hazard Risk / Incident Legend (Collapsible) */}
-      {isLegendVisible && (
-        mode === 'risk' ? (
-          <RiskLegend
-            style={[
-              styles.legendPosition,
-              {
-                top: Platform.OS === 'ios' ? 220 : 195,
-              },
-            ]}
-            onClose={() => {
-              Haptics.selectionAsync().catch(() => {});
-              setIsLegendVisible(false);
-            }}
-          />
-        ) : (
-          <View
-            style={[
-              styles.incidentLegendCard,
-              {
-                left: 16,
-                top: Platform.OS === 'ios' ? 175 : 150,
-                backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.96)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-              },
-              shadow.card,
-            ]}
-          >
-            <View style={styles.legendHeaderRow}>
-              <Text style={[styles.legendTitle, { color: colors.textMuted, fontSize: typography.size.xs }]}>
-                ALARM LEVEL CODING
-              </Text>
-              <Pressable
-                onPress={() => {
+        return (
+          <>
+            <View
+              style={[
+                styles.floatingControlsIsland,
+                {
+                  top: floatingTop,
+                },
+              ]}
+            >
+              <MapFloatingControls
+                onOpenMapType={() => {
                   Haptics.selectionAsync().catch(() => {});
-                  setIsLegendVisible(false);
+                  setIsMapTypeModalOpen(true);
                 }}
-                hitSlop={8}
-                style={styles.legendCloseBtn}
-              >
-                <X size={13} color={colors.textMuted} />
-              </Pressable>
+                onLocateUser={handleLocateMe}
+                isLocating={isLocating}
+                isLocationActive={showUserLocation}
+                onToggleLegend={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setIsLegendVisible((prev) => !prev);
+                }}
+                isLegendVisible={isLegendVisible}
+              />
             </View>
 
-            {ALARM_LEGEND_ITEMS.map((item) => (
-              <View key={item.label} style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginLeft: 7, fontWeight: '600' }}>
-                  {item.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )
-      )}
+            {/* 4. Hazard Risk / Incident Legend (Collapsible) */}
+            {isLegendVisible && (
+              mode === 'risk' ? (
+                <RiskLegend
+                  style={[
+                    styles.legendPosition,
+                    {
+                      top: floatingTop,
+                    },
+                  ]}
+                  onClose={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setIsLegendVisible(false);
+                  }}
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.incidentLegendCard,
+                    {
+                      left: 16,
+                      top: floatingTop,
+                      backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.96)',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                    },
+                    shadow.card,
+                  ]}
+                >
+                  <View style={styles.legendHeaderRow}>
+                    <Text style={[styles.legendTitle, { color: colors.textMuted, fontSize: typography.size.xs }]}>
+                      ALARM LEVEL CODING
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setIsLegendVisible(false);
+                      }}
+                      hitSlop={8}
+                      style={styles.legendCloseBtn}
+                    >
+                      <X size={13} color={colors.textMuted} />
+                    </Pressable>
+                  </View>
 
-      {/* 5. Apple Maps-Style Detail Card (Only visible when a barangay is tapped) */}
+                  {ALARM_LEGEND_ITEMS.map((item) => (
+                    <View key={item.label} style={styles.legendRow}>
+                      <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                      <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginLeft: 7, fontWeight: '600' }}>
+                        {item.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )
+            )}
+          </>
+        );
+      })()}
+
+                  {/* 5. Apple Maps-Style Detail Card (Only visible when a barangay is tapped) */}
       {selectedBarangay && (
         <BarangayDetailCard
           barangay={selectedBarangay}

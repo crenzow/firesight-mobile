@@ -42,6 +42,7 @@ export interface LeafletMapViewProps {
   zoom?: number;
   isBFP?: boolean;
   mapType?: 'standard' | 'satellite' | 'terrain';
+  selectedRiskFilter?: 'all' | RiskLevel;
   selectedBarangayName?: string | null;
   onMapDragged?: () => void;
   onSelectBarangay?: (barangayName: string) => void;
@@ -63,6 +64,7 @@ export const LeafletMapView = React.forwardRef<LeafletMapRef, LeafletMapViewProp
   zoom,
   isBFP = false,
   mapType = 'standard',
+  selectedRiskFilter = 'all',
   selectedBarangayName = null,
   onMapDragged,
   onSelectBarangay,
@@ -105,6 +107,7 @@ export const LeafletMapView = React.forwardRef<LeafletMapRef, LeafletMapViewProp
   const initialUserLocationRef = useRef(userLocation);
   const initialMapTypeRef = useRef(mapType);
   const initialSelectedBarangayRef = useRef(selectedBarangayName);
+  const initialSelectedRiskFilterRef = useRef(selectedRiskFilter);
 
   // Serialize arrays so new array references with identical content never reload the WebView
   const barangaysHash = useMemo(
@@ -128,6 +131,7 @@ export const LeafletMapView = React.forwardRef<LeafletMapRef, LeafletMapViewProp
         zoom,
         isBFP,
         mapType: initialMapTypeRef.current,
+        selectedRiskFilter: initialSelectedRiskFilterRef.current,
         selectedBarangayName: initialSelectedBarangayRef.current,
       }),
     // Only re-generate html if core structural data or mode changes
@@ -163,6 +167,14 @@ export const LeafletMapView = React.forwardRef<LeafletMapRef, LeafletMapViewProp
     }
   }, [selectedBarangayName]);
 
+  useEffect(() => {
+    if (webviewRef.current) {
+      webviewRef.current.injectJavaScript(
+        `if (window.setRiskFilter) { window.setRiskFilter(${JSON.stringify(selectedRiskFilter || 'all')}); } true;`
+      );
+    }
+  }, [selectedRiskFilter]);
+
   const handleMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
@@ -188,8 +200,13 @@ export const LeafletMapView = React.forwardRef<LeafletMapRef, LeafletMapViewProp
       style={styles.webview}
       javaScriptEnabled
       domStorageEnabled
+      cacheEnabled
+      cacheMode="LOAD_DEFAULT"
       startInLoadingState={false}
       scrollEnabled={false}
+      overScrollMode="never"
+      androidLayerType="hardware"
+      renderToHardwareTextureAndroid={true}
       onMessage={handleMessage}
     />
   );
@@ -205,6 +222,7 @@ function buildMapHtml({
   zoom,
   isBFP,
   mapType,
+  selectedRiskFilter,
   selectedBarangayName,
 }: LeafletMapViewProps): string {
   const barangayData = JSON.stringify(
@@ -249,6 +267,9 @@ function buildMapHtml({
 
   const userMarker = userLocation ? JSON.stringify(userLocation) : 'null';
 
+  const isSatelliteInit = mapType === 'satellite';
+  const initialBg = isSatelliteInit ? '#080E28' : '#F2EFE9';
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -256,7 +277,137 @@ function buildMapHtml({
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    html, body, #map { height: 100%; margin: 0; padding: 0; background: #F5F6FA; }
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: ${initialBg};
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+      transition: background-color 0.2s ease;
+    }
+    .leaflet-container {
+      background: ${initialBg} !important;
+    }
+    .leaflet-tile {
+      image-rendering: auto;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
+    }
+    .leaflet-tile-container {
+      background-color: transparent !important;
+    }
+    /* ── Apple Maps-Style Premium Popup (Matches Native UI) ────── */
+    .leaflet-popup {
+      margin-bottom: 6px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .leaflet-popup-content-wrapper {
+      background: #FFFFFF;
+      color: #101827;
+      border-radius: 22px;
+      padding: 0;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 14px 40px rgba(15, 28, 63, 0.16), 0 4px 12px rgba(15, 28, 63, 0.08);
+      overflow: hidden;
+    }
+    .leaflet-popup-content {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.4;
+      min-width: 255px;
+      max-width: 290px;
+    }
+    .leaflet-popup-tip-container {
+      width: 28px;
+      height: 14px;
+    }
+    .leaflet-popup-tip {
+      width: 14px;
+      height: 14px;
+      background: #FFFFFF;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 8px rgba(15, 28, 63, 0.1);
+      border-radius: 2px;
+    }
+    .leaflet-container a.leaflet-popup-close-button {
+      top: 11px;
+      right: 12px;
+      color: #8992A6;
+      font-size: 15px;
+      width: 24px;
+      height: 24px;
+      line-height: 22px;
+      text-align: center;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.05);
+      transition: all 0.15s ease;
+      font-weight: 600;
+    }
+    .leaflet-container a.leaflet-popup-close-button:hover {
+      color: #101827;
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Popup interior */
+    .fs-pop-card {
+      padding: 13px 15px 14px 15px;
+    }
+    .fs-pop-hero {
+      padding-bottom: 9px;
+      border-bottom: 1px solid #E3E6ED;
+      margin-bottom: 9px;
+    }
+    .fs-pop-title {
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: -0.2px;
+      color: #101827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+    .fs-pop-badges {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    .fs-pop-pill {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      padding: 2.5px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+    }
+    .fs-pop-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+    }
+    .fs-pop-table tr td {
+      padding: 3.5px 0;
+      vertical-align: top;
+    }
+    .fs-pop-lbl {
+      color: #8992A6;
+      font-weight: 600;
+      width: 33%;
+    }
+    .fs-pop-val {
+      color: #101827;
+      font-weight: 600;
+      text-align: right;
+    }
+
     .risk-dot { border-radius: 50%; border: 2px solid #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
     .incident-pin { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
     .leaflet-popup-content { font-family: -apple-system, Roboto, sans-serif; font-size: 12px; margin: 8px 10px; }
@@ -319,12 +470,19 @@ function buildMapHtml({
     const isBFP = ${JSON.stringify(isBFP)};
     var activeMapType = ${JSON.stringify(mapType || 'standard')};
     var currentSelectedKey = ${JSON.stringify(selectedBarangayName ? selectedBarangayName.toLowerCase().trim() : null)};
+    var currentRiskFilter = ${JSON.stringify(selectedRiskFilter || 'all')};
     const barangays = ${barangayData};
     const incidents = ${incidentData};
     const userLocation = ${userMarker};
 
     const initialZoom = ${zoom || (centerLat === 14.0065 && centerLng === 120.6425 ? 12 : 14)};
-    const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([${centerLat}, ${centerLng}], initialZoom);
+    const map = L.map('map', {
+      zoomControl: false,
+      attributionControl: true,
+      minZoom: 10,
+      maxZoom: 19,
+      bounceAtZoomLimits: false,
+    }).setView([${centerLat}, ${centerLng}], initialZoom);
     
     const baseMaps = {
       "standard": 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -343,14 +501,26 @@ function buildMapHtml({
 
     window.switchMapType = function(type) {
       activeMapType = type || 'standard';
+      var isSat = activeMapType === 'satellite';
+      var targetBg = isSat ? '#080E28' : '#F2EFE9';
+      var mapEl = document.getElementById('map');
+      if (mapEl) mapEl.style.backgroundColor = targetBg;
+      document.body.style.backgroundColor = targetBg;
       if (currentTileLayer) {
         map.removeLayer(currentTileLayer);
       }
       var tileUrl = baseMaps[activeMapType] || baseMaps['standard'];
       var attr = attributions[activeMapType] || attributions['standard'];
+      var maxNative = isSat ? 17 : (activeMapType === 'terrain' ? 17 : 19);
       currentTileLayer = L.tileLayer(tileUrl, {
         attribution: attr,
+        maxNativeZoom: maxNative,
         maxZoom: 19,
+        keepBuffer: 6,
+        updateWhenIdle: false,
+        updateInterval: 100,
+        fadeAnimation: true,
+        subdomains: ['a', 'b', 'c'],
       }).addTo(map);
       if (window.updateBarangayLabels) {
         window.updateBarangayLabels();
@@ -464,6 +634,35 @@ function buildMapHtml({
       }
     };
 
+    window.setRiskFilter = function(filter) {
+      currentRiskFilter = filter || 'all';
+      var keys = Object.keys(barangayEntries);
+
+      keys.forEach(function(k) {
+        var entry = barangayEntries[k];
+        if (!entry) return;
+
+        var matches = currentRiskFilter === 'all' || entry.risk === currentRiskFilter;
+
+        if (entry.layer) {
+          if (entry.layer.setStyle) {
+            entry.layer.setStyle({
+              opacity: matches ? 1 : 0,
+              fillOpacity: matches ? (currentSelectedKey === k ? 0.58 : (currentSelectedKey ? 0.16 : 0.35)) : 0,
+            });
+          }
+        }
+
+        if (entry.labelMarker && entry.labelMarker._icon) {
+          entry.labelMarker._icon.style.display = matches ? '' : 'none';
+        }
+      });
+
+      if (window.updateBarangayLabels) {
+        window.updateBarangayLabels();
+      }
+    };
+
     window.highlightBarangay = function(name) {
       currentSelectedKey = name ? String(name).toLowerCase().trim() : null;
       var keys = Object.keys(barangayEntries);
@@ -471,6 +670,12 @@ function buildMapHtml({
       keys.forEach(function(k) {
         var entry = barangayEntries[k];
         if (!entry || !entry.layer || !entry.layer.setStyle) return;
+
+        var matches = currentRiskFilter === 'all' || entry.risk === currentRiskFilter;
+        if (!matches) {
+          entry.layer.setStyle({ opacity: 0, fillOpacity: 0 });
+          return;
+        }
 
         if (!currentSelectedKey) {
           // Default state — all barangays crisp at normal weight/opacity
@@ -542,6 +747,7 @@ function buildMapHtml({
           barangayEntries[key] = {
             key: key,
             name: b.name,
+            risk: b.risk,
             color: b.color,
             layer: layer,
             isPob: isPob,
@@ -566,6 +772,7 @@ function buildMapHtml({
           barangayEntries[key] = {
             key: key,
             name: b.name,
+            risk: b.risk,
             color: b.color,
             layer: marker,
             isPob: isPob,
@@ -590,9 +797,12 @@ function buildMapHtml({
         window.updateBarangayLabels();
       });
 
-      // Apply initial highlight and label states
-      window.highlightBarangay(currentSelectedKey);
-    } else {
+      // Apply initial highlight, risk filter and label states
+      if (currentRiskFilter !== 'all') {
+        window.setRiskFilter(currentRiskFilter);
+      } else {
+        window.highlightBarangay(currentSelectedKey);
+      }    } else {
       incidents.forEach((i) => {
         if (!i.lat || !i.lng) return;
         const lat = parseFloat(i.lat);
@@ -602,75 +812,65 @@ function buildMapHtml({
         const isTaskForceOrGeneral = i.alarm && (i.alarm.indexOf('task_force') !== -1 || i.alarm === 'general_alarm');
         const isHighAlarm = i.alarm === '3rd_alarm' || i.alarm === '4th_alarm' || i.alarm === '5th_alarm';
         const color = isTaskForceOrGeneral ? '#E14245' : isHighAlarm ? '#F4622B' : i.alarm === '2nd_alarm' ? '#E8A33D' : '#3B82C4';
-        const marker = L.circleMarker([lat, lng], {
-          radius: 8,
-          color: '#FFFFFF',
-          weight: 2,
-          fillColor: color,
-          fillOpacity: 0.9,
-        }).addTo(map);
-        let popupHtml;
-        if (isBFP) {
-          const fmt = function(v) { return v != null && v !== '' ? v : '-'; };
-          let dateLabel = 'Date not recorded';
-          if (i.date && typeof i.date === 'string' && i.date.trim() !== '') {
-            try {
-              const d = new Date(i.date.replace(' ', 'T'));
-              if (!isNaN(d.getTime())) {
-                dateLabel = d.toLocaleString();
-              }
-            } catch (e) {}
-          }
-          const sc = isTaskForceOrGeneral ? '#E14245' : isHighAlarm ? '#F4622B' : i.alarm === '2nd_alarm' ? '#E8A33D' : '#3B82C4';
-          const incidentStatus = i.status || 'resolved';
-          const stc = incidentStatus === 'resolved' ? '#22C55E' : incidentStatus === 'dispatched' ? '#F4622B' : incidentStatus === 'accepted' ? '#3B82F6' : '#EAB308';
-          const alarmBadgeHtml = i.alarm
-            ? '<span style="background:' + sc + ';color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase">' + i.alarm.replace(/_/g, ' ').toUpperCase() + '</span>'
-            : '';
-          const hasReporter = i.reporter && String(i.reporter).trim() !== '';
-          const hasContact = i.contact && String(i.contact).trim() !== '';
-          const hasCause = i.cause && String(i.cause).trim() !== '';
-          const hasCasualties = i.casualties != null && String(i.casualties).trim() !== '';
-          const hasNotes = i.notes && String(i.notes).trim() !== '';
 
-          popupHtml =
-            '<div style="font-family:-apple-system,Roboto,sans-serif;min-width:220px;max-width:280px">' +
-              '<div style="background:#0F1C3F;color:#fff;padding:8px 10px;border-radius:6px 6px 0 0;margin:-8px -10px 8px;">' +
-                '<div style="font-weight:800;font-size:13px">' + (i.barangay || 'Lian Incident') + '</div>' +
-                '<div style="display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap">' +
-                  alarmBadgeHtml +
-                  '<span style="background:' + stc + ';color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase">' + fmt(incidentStatus) + '</span>' +
-                  (i.type ? '<span style="color:rgba(255,255,255,0.7);font-size:9px;text-transform:uppercase">' + i.type + '</span>' : '') +
-                '</div>' +
-              '</div>' +
-              '<table style="width:100%;border-collapse:collapse;font-size:11px">' +
-                '<tr><td style="color:#666;padding:3px 0;width:42%">Date/Time</td><td style="font-weight:600;color:#111">' + dateLabel + '</td></tr>' +
-                (hasCause ? '<tr><td style="color:#666;padding:3px 0">Cause</td><td style="font-weight:600;color:#111">' + i.cause + '</td></tr>' : '') +
-                (hasCasualties ? '<tr><td style="color:#666;padding:3px 0">Casualties</td><td style="font-weight:600;color:' + (Number(i.casualties) > 0 ? '#E14245' : '#111') + '">' + i.casualties + '</td></tr>' : '') +
-                (hasReporter || hasContact ? '<tr><td colspan="2" style="border-top:1px solid #eee;padding-top:5px"></td></tr>' : '') +
-                (hasReporter ? '<tr><td style="color:#666;padding:3px 0">Reporter</td><td style="font-weight:600;color:#111">' + i.reporter + '</td></tr>' : '') +
-                (hasContact ? '<tr><td style="color:#666;padding:3px 0">Contact</td><td style="font-weight:600;color:#0F1C3F">' + i.contact + '</td></tr>' : '') +
-                (hasNotes ? '<tr><td colspan="2" style="color:#666;font-size:10px;padding-top:4px;font-style:italic">Note: ' + i.notes + '</td></tr>' : '') +
-              '</table>' +
-            '</div>';
-        } else {
-          let dateLabel = 'Date not recorded';
-          if (i.date && typeof i.date === 'string' && i.date.trim() !== '') {
-            try {
-              const d = new Date(i.date.replace(' ', 'T'));
-              if (!isNaN(d.getTime())) {
-                dateLabel = d.toLocaleDateString();
-              }
-            } catch (e) {}
-          }
-          const alarmLabel = i.alarm ? ' &middot; ' + i.alarm.replace(/_/g, ' ').toUpperCase() : '';
-          popupHtml = '<b>' + (i.barangay || 'Lian Incident') + '</b><br/>' + (i.type || 'Fire') + alarmLabel + '<br/>' + dateLabel;
-          if (i.cause && String(i.cause).trim() !== '') popupHtml += '<br/>Cause: ' + i.cause;
-          if (i.casualties != null && String(i.casualties).trim() !== '') popupHtml += '<br/>Casualties: ' + i.casualties;
+        const marker = L.circleMarker([lat, lng], {
+          radius: 9,
+          color: '#FFFFFF',
+          weight: 2.5,
+          fillColor: color,
+          fillOpacity: 0.95,
+        }).addTo(map);
+
+        let dateLabel = 'Date not recorded';
+        if (i.date && typeof i.date === 'string' && i.date.trim() !== '') {
+          try {
+            const d = new Date(i.date.replace(' ', 'T'));
+            if (!isNaN(d.getTime())) {
+              dateLabel = d.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              });
+            }
+          } catch (e) {}
         }
-        marker.bindPopup(popupHtml);
+
+        const incidentStatus = (i.status || 'resolved').toUpperCase();
+        const stBg = incidentStatus === 'RESOLVED' ? 'rgba(34, 197, 94, 0.18)' : incidentStatus === 'DISPATCHED' ? 'rgba(244, 98, 43, 0.22)' : 'rgba(59, 130, 246, 0.22)';
+        const stColor = incidentStatus === 'RESOLVED' ? '#4ADE80' : incidentStatus === 'DISPATCHED' ? '#F97316' : '#60A5FA';
+        const stBorder = incidentStatus === 'RESOLVED' ? '#22C55E' : incidentStatus === 'DISPATCHED' ? '#F4622B' : '#3B82F6';
+
+        const alarmText = i.alarm ? i.alarm.replace(/_/g, ' ').toUpperCase() : null;
+
+        var popupHtml =
+          '<div class="fs-pop-card">' +
+            '<div class="fs-pop-hero">' +
+              '<div class="fs-pop-title">' + (i.barangay || 'Lian Incident') + '</div>' +
+              '<div class="fs-pop-badges">' +
+                (alarmText ? '<span class="fs-pop-pill" style="background:' + color + '15;color:' + color + ';border-color:' + color + '55">' + alarmText + '</span>' : '') +
+                (isBFP ? '<span class="fs-pop-pill" style="background:' + stBg + ';color:' + stColor + ';border-color:' + stBorder + '">' + incidentStatus + '</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<table class="fs-pop-table">' +
+              '<tr><td class="fs-pop-lbl">Date/Time</td><td class="fs-pop-val">' + dateLabel + '</td></tr>' +
+              (i.cause ? '<tr><td class="fs-pop-lbl">Cause</td><td class="fs-pop-val">' + i.cause + '</td></tr>' : '') +
+              (i.casualties != null ? '<tr><td class="fs-pop-lbl">Casualties</td><td class="fs-pop-val" style="color:' + (Number(i.casualties) > 0 ? '#E14245' : '#101827') + '">' + i.casualties + ' reported</td></tr>' : '') +
+              (isBFP && i.reporter ? '<tr><td class="fs-pop-lbl">Reporter</td><td class="fs-pop-val">' + i.reporter + (i.contact ? ' &middot; ' + i.contact : '') + '</td></tr>' : '') +
+            '</table>' +
+          '</div>';
+
+        marker.bindPopup(popupHtml, {
+          offset: [0, -10],
+          closeButton: true,
+          autoPan: true,
+          autoPanPaddingTopLeft: [20, 240],
+          autoPanPaddingBottomRight: [20, 60],
+        });
       });
- 
+
       // Auto-zoom to fit all incident markers
       if (incidents.length > 0) {
         var bounds = L.latLngBounds(incidents.map(function(inc) { return [inc.lat, inc.lng]; }));

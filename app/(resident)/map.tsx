@@ -182,10 +182,10 @@ export default function MapScreen() {
       ) : (
         <LeafletMapView
           ref={mapRef}
-          key={selectedRisk}
           mode="risk"
           mapType={mapType}
-          barangays={filteredBarangays}
+          barangays={barangays}
+          selectedRiskFilter={selectedRisk}
           selectedBarangayName={selectedBarangay?.barangay_name || null}
           incidents={EMPTY_INCIDENTS}
           userLocation={showUserLocation ? location : null}

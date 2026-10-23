@@ -96,7 +96,8 @@ export const Button: React.FC<ButtonProps> = ({
         styles.base,
         {
           backgroundColor: getBackgroundColor(pressed),
-          paddingVertical: spacing.md + 2,
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.md,
           borderRadius: radius.md,
           width: fullWidth ? '100%' : undefined,
           transform: [{ scale: pressed && !disabled && !loading ? 0.975 : 1 }],
@@ -112,9 +113,12 @@ export const Button: React.FC<ButtonProps> = ({
           <View style={styles.content}>
             {icon && iconPosition === 'left' ? <View style={{ marginRight: spacing.sm }}>{icon}</View> : null}
             <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
               style={[
                 styles.label,
-                { color: getTextColor(pressed), fontSize: typography.size.md, fontWeight: typography.weight.semibold },
+                { color: getTextColor(pressed), fontSize: typography.size.sm + 1, fontWeight: typography.weight.semibold },
               ]}
             >
               {label}
