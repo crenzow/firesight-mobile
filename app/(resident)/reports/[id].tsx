@@ -390,16 +390,20 @@ export default function ReportDetailScreen() {
                                 style={[
                                   styles.activeBadge,
                                   {
-                                    backgroundColor: `${step.color}18`,
-                                    borderColor: `${step.color}40`,
+                                    backgroundColor: step.key === 'resolved' ? 'rgba(5, 150, 105, 0.12)' : `${step.color}18`,
+                                    borderColor: step.key === 'resolved' ? 'rgba(5, 150, 105, 0.35)' : `${step.color}40`,
                                   },
                                 ]}
                               >
-                                <View
-                                  style={[styles.pulsingDot, { backgroundColor: step.color }]}
-                                />
-                                <Text style={[styles.activeBadgeText, { color: step.color }]}>
-                                  Current Status
+                                {step.key === 'resolved' ? (
+                                  <Check size={11} color="#059669" strokeWidth={3} />
+                                ) : (
+                                  <View
+                                    style={[styles.pulsingDot, { backgroundColor: step.color }]}
+                                  />
+                                )}
+                                <Text style={[styles.activeBadgeText, { color: step.key === 'resolved' ? '#059669' : step.color }]}>
+                                  {step.key === 'resolved' ? 'Resolved' : 'Current Status'}
                                 </Text>
                               </View>
                             </View>
@@ -417,11 +421,7 @@ export default function ReportDetailScreen() {
                                 Updated {formatFullDate(entry.created_at)} at{' '}
                                 {formatTime(entry.created_at)}
                               </Text>
-                            ) : (
-                              <Text style={[styles.activeTimestamp, { color: step.color }]}>
-                                Current stage in progress…
-                              </Text>
-                            )}
+                            ) : null}
                           </View>
                         ) : isComplete ? (
                           /* ── COMPLETED STEP (Clean with full height) ── */

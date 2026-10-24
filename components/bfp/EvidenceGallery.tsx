@@ -44,7 +44,7 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({
   };
 
   const photos: EvidencePhoto[] = [
-    ...(mainPhoto ? [{ key: 'main', uri: resolveUri(mainPhoto), caption: 'Original submission' }] : []),
+    ...(mainPhoto ? [{ key: 'main', uri: resolveUri(mainPhoto), caption: null }] : []),
     ...evidencePhotos.map((e) => ({ key: String(e.evidence_id), uri: resolveUri(e.image_path), caption: e.caption })),
   ];
 
@@ -82,7 +82,7 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({
       <PhotoLightboxModal
         visible={!!expandedPhoto}
         imageSource={expandedPhoto ? { uri: expandedPhoto.uri } : null}
-        title={expandedPhoto?.key === 'main' ? 'Initial Submission Photo' : 'Fire Scene Photo'}
+        title={expandedPhoto?.key === 'main' ? 'Submission Photo' : 'Fire Scene Photo'}
         caption={expandedPhoto?.caption ?? undefined}
         onClose={() => setExpandedPhoto(null)}
       />

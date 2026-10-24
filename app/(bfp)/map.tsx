@@ -289,7 +289,7 @@ export default function BFPMapScreen() {
             <SegmentedControl
               segments={[
                 { key: 'risk', label: 'Hazard Risk' },
-                { key: 'incidents', label: `Incidents (${incidents.length})` },
+                { key: 'incidents', label: 'Incidents' },
               ]}
               value={mode}
               onChange={(k) => handleModeChange(k as 'risk' | 'incidents')}

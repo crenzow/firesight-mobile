@@ -41,6 +41,7 @@ import {
   CheckCircle2,
   Bell,
   Layers,
+  Sparkles,
 } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
@@ -51,7 +52,7 @@ import { IncidentStatusBadge } from '../../../components/bfp/IncidentStatusBadge
 import { AlarmLevel, ALARM_LEVEL_OPTIONS, ALARM_LEVEL_LABELS } from '../../../components/bfp/AlarmLevelBadge';
 import { StatusStepper } from '../../../components/bfp/StatusStepper';
 import { EvidenceGallery } from '../../../components/bfp/EvidenceGallery';
-import { IncidentLocationMap, MapType, GPSUpdate } from '../../../components/bfp/IncidentLocationMap';
+import { IncidentLocationMap, MapType, GPSUpdate, IncidentLocationMapRef } from '../../../components/bfp/IncidentLocationMap';
 import { incidentService } from '../../../services/api/incidentService';
 import { reverseGeocode } from '../../../utils/geocoding';
 import { BFPIncident, BFPIncidentStatusHistoryEntry, IncidentType } from '../../../services/api/bfpModels';
@@ -75,66 +76,74 @@ const ROUTE_STATUSES: BFPIncidentStatus[] = ['dispatched', 'resolved'];
 
 type RouteOrigin = 'station' | 'gps';
 
-// ─── Route Origin Selector ────────────────────────────────────────────────────
+// ─── Route Origin Selector (Apple iOS Segmented Control) ───────────────────────
 const OriginSelector: React.FC<{
   value: RouteOrigin;
   onChange: (o: RouteOrigin) => void;
   gpsAvailable: boolean;
 }> = ({ value, onChange, gpsAvailable }) => {
-  const { colors, spacing } = useTheme();
+  const { isDark } = useTheme();
 
-  const opts: { key: RouteOrigin; icon: React.ReactNode; title: string; sub: string }[] = [
+  const opts: {
+    key: RouteOrigin;
+    icon: any;
+    label: string;
+  }[] = [
     {
       key: 'station',
-      icon: <Building2 size={18} color={value === 'station' ? colors.brandOrange : colors.textMuted} />,
-      title: 'From Fire Station',
-      sub: 'Station → Incident',
+      icon: Building2,
+      label: 'From Fire Station',
     },
     {
       key: 'gps',
-      icon: <Crosshair size={18} color={value === 'gps' ? colors.brandOrange : colors.textMuted} />,
-      title: 'From My Location',
-      sub: gpsAvailable ? 'Current GPS → Incident' : 'GPS unavailable',
+      icon: Crosshair,
+      label: 'From My Location',
     },
   ];
 
   return (
-    <View style={[styles.originRow, { gap: spacing.sm }]}>
+    <View
+      style={[
+        styles.iosSegmentedContainer,
+        { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#EFEFF4' },
+      ]}
+    >
       {opts.map((opt) => {
         const active = value === opt.key;
         const disabled = opt.key === 'gps' && !gpsAvailable;
+        const IconComp = opt.icon;
         return (
           <Pressable
             key={opt.key}
             onPress={() => {
-              if (!disabled) {
+              if (!disabled && !active) {
                 Haptics.selectionAsync().catch(() => {});
                 onChange(opt.key);
               }
             }}
-            style={[
-              styles.originCard,
-              {
-                flex: 1,
-                borderColor: active ? colors.brandOrange : colors.border,
-                borderWidth: active ? 2 : 1,
-                backgroundColor: active ? `${colors.brandOrange}10` : colors.surface,
-                opacity: disabled ? 0.4 : 1,
-              },
+            style={({ pressed }) => [
+              styles.iosSegmentBtn,
+              active && styles.iosSegmentBtnActive,
+              { opacity: disabled ? 0.35 : pressed && !active ? 0.7 : 1 },
             ]}
           >
-            <View style={[styles.originIcon, { backgroundColor: active ? `${colors.brandOrange}18` : `${colors.brandNavy}10` }]}>
-              {opt.icon}
-            </View>
-            <Text style={{ color: active ? colors.brandOrange : colors.textPrimary, fontSize: 13, fontWeight: '700', marginTop: 6 }}>
-              {opt.title}
+            <IconComp
+              size={14}
+              color={active ? '#1C1C1E' : '#8E8E93'}
+              strokeWidth={active ? 2.5 : 2}
+            />
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.iosSegmentText,
+                {
+                  color: active ? '#1C1C1E' : '#8E8E93',
+                  fontWeight: active ? '700' : '500',
+                },
+              ]}
+            >
+              {opt.label}
             </Text>
-            <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
-              {opt.sub}
-            </Text>
-            {active ? (
-              <View style={[styles.originActiveDot, { backgroundColor: colors.brandOrange }]} />
-            ) : null}
           </Pressable>
         );
       })}
@@ -142,59 +151,48 @@ const OriginSelector: React.FC<{
   );
 };
 
-// ─── Section pill header ──────────────────────────────────────────────────────
-const SectionPill: React.FC<{ icon: React.ReactNode; title: string; action?: React.ReactNode }> = ({
-  icon,
+// ─── Section header ───────────────────────────────────────────────────────────
+const SectionPill: React.FC<{ title: string; action?: React.ReactNode }> = ({
   title,
   action,
 }) => {
-  const { colors, typography, spacing } = useTheme();
   return (
-    <View style={[styles.sectionPillRow, { marginBottom: spacing.sm }]}>
-      <View style={[styles.sectionPillLeft, { backgroundColor: `${colors.brandOrange}1A` }]}>
-        {icon}
-        <Text
-          style={{
-            color: colors.brandOrange,
-            fontSize: typography.size.xs,
-            fontWeight: '800',
-            marginLeft: 6,
-            letterSpacing: 0.6,
-          }}
-        >
-          {title}
-        </Text>
-      </View>
+    <View style={styles.sectionHeaderRow}>
+      <Text style={styles.sectionHeaderTitle}>
+        {title}
+      </Text>
       {action}
     </View>
   );
 };
 
-// ─── Icon info row ─────────────────────────────────────────────────────────────
+// ─── Info row (Apple clean grouped table style) ───────────────────────────────
 const InfoRow: React.FC<{
-  icon: React.ReactNode;
   label: string;
   value: string;
   isLast?: boolean;
-}> = ({ icon, label, value, isLast }) => {
-  const { colors, typography, spacing } = useTheme();
+}> = ({ label, value, isLast }) => {
+  const { colors } = useTheme();
+  const isLong = value.length > 32;
+
   return (
     <View
       style={[
         styles.infoRow,
-        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-        { paddingVertical: spacing.md },
+        isLong && { flexDirection: 'column', alignItems: 'flex-start' },
       ]}
     >
-      <View style={[styles.infoRowIcon, { backgroundColor: `${colors.brandNavy}14` }]}>{icon}</View>
-      <View style={{ flex: 1, marginLeft: spacing.md }}>
-        <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 2 }}>
-          {label.toUpperCase()}
-        </Text>
-        <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '500' }}>
-          {value}
-        </Text>
-      </View>
+      <Text style={styles.infoRowLabel}>{label}</Text>
+      <Text
+        style={[
+          styles.infoRowValue,
+          { color: colors.textPrimary },
+          isLong && { marginTop: 4, textAlign: 'left' },
+        ]}
+      >
+        {value}
+      </Text>
+      {!isLast && <View style={styles.infoRowDivider} />}
     </View>
   );
 };
@@ -253,11 +251,18 @@ export default function IncidentDetailScreen() {
   const [isMapTypeModalOpen, setIsMapTypeModalOpen] = useState(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  /** Route distance & duration metrics received from the map engine */
+  const [routeMeta, setRouteMeta] = useState<{ distance: number; duration: number } | null>(null);
 
+  /** Imperative ref to the active navigation map for 60fps/120fps direct sensor bridge */
+  const navMapRef = useRef<IncidentLocationMapRef | null>(null);
   /** Ref holding the active expo-location subscription */
   const locationSub = useRef<Location.LocationSubscription | null>(null);
+  const headingSub = useRef<Location.LocationSubscription | null>(null);
   /** Live GPS position fed into the map via injectJavaScript */
   const [currentGPS, setCurrentGPS] = useState<GPSUpdate | null>(null);
+  /** Departure location locked at the start of navigation so WebView never reloads on GPS ticks */
+  const navOriginRef = useRef<{ lat: number; lng: number } | null>(null);
 
   /**
    * Start/stop real GPS watch whenever navigation mode toggles.
@@ -266,6 +271,8 @@ export default function IncidentDetailScreen() {
     if (!isNavigating) {
       locationSub.current?.remove();
       locationSub.current = null;
+      headingSub.current?.remove();
+      headingSub.current = null;
       setCurrentGPS(null);
       return;
     }
@@ -294,20 +301,34 @@ export default function IncidentDetailScreen() {
           distanceInterval: 2,
         },
         (loc) => {
-          setCurrentGPS({
+          setCurrentGPS((prev) => ({
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
-            heading: loc.coords.heading,
+            heading: loc.coords.heading != null && loc.coords.heading >= 0 ? loc.coords.heading : (prev?.heading ?? null),
             speed: loc.coords.speed,
             accuracy: loc.coords.accuracy,
-          });
+          }));
         }
       );
       locationSub.current = sub;
+
+      // Real-time magnetometer compass heading subscription
+      // High-frequency heading updates are piped directly to the map engine without triggering screen re-renders
+      try {
+        const hSub = await Location.watchHeadingAsync((h) => {
+          const rawHeading = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
+          if (rawHeading >= 0) {
+            navMapRef.current?.updateHeading(rawHeading);
+          }
+        });
+        headingSub.current = hSub;
+      } catch (_) {}
     })();
     return () => {
       locationSub.current?.remove();
       locationSub.current = null;
+      headingSub.current?.remove();
+      headingSub.current = null;
     };
   }, [isNavigating]);
 
@@ -316,6 +337,10 @@ export default function IncidentDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setRouteOrigin('gps');
     setIsMapFullscreen(true);
+
+    const startLoc = currentGPS ? { lat: currentGPS.latitude, lng: currentGPS.longitude } : (userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null);
+    navOriginRef.current = startLoc ?? { lat: FIRE_STATION.latitude, lng: FIRE_STATION.longitude };
+
     setIsNavigating(true);
 
     // Background location refresh without blocking UI transition
@@ -325,15 +350,27 @@ export default function IncidentDetailScreen() {
         if (status !== 'granted') return;
         const lastKnown = await Location.getLastKnownPositionAsync();
         if (lastKnown) {
-          setUserLocation({ latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude });
+          setCurrentGPS({
+            latitude: lastKnown.coords.latitude,
+            longitude: lastKnown.coords.longitude,
+            heading: lastKnown.coords.heading,
+            speed: lastKnown.coords.speed,
+            accuracy: lastKnown.coords.accuracy,
+          });
         }
         const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         if (fresh) {
-          setUserLocation({ latitude: fresh.coords.latitude, longitude: fresh.coords.longitude });
+          setCurrentGPS({
+            latitude: fresh.coords.latitude,
+            longitude: fresh.coords.longitude,
+            heading: fresh.coords.heading,
+            speed: fresh.coords.speed,
+            accuracy: fresh.coords.accuracy,
+          });
         }
       } catch (_) {}
     })();
-  }, []);
+  }, [currentGPS, userLocation]);
   const handleOpenFullscreen = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setIsMapFullscreen(true);
@@ -341,6 +378,7 @@ export default function IncidentDetailScreen() {
   const stopNavigation = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setIsNavigating(false);
+    navOriginRef.current = null;
   };
   const closeFullscreen = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -377,7 +415,7 @@ export default function IncidentDetailScreen() {
     Promise.all([incidentService.getDetail(reportId), incidentService.getStatusHistory(reportId)])
       .then(([detail, historyData]) => {
         setIncident(detail);
-        setHistory(historyData);
+        setHistory(Array.isArray(historyData) ? historyData : []);
         setCauseOfFire(detail.cause_of_fire ?? '');
         setCasualties(String(detail.casualties ?? 0));
         setNotes(detail.notes ?? '');
@@ -405,10 +443,13 @@ export default function IncidentDetailScreen() {
   }, [incident?.latitude, incident?.longitude, incident?.barangay_name]);
 
   // Derived: current routing origin coordinates
-  // Live navigation ALWAYS routes from current user location; preview allows inspecting Fire Station
-  const originCoords = (isNavigating || routeOrigin === 'gps')
-    ? (userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null)
-    : { lat: FIRE_STATION.latitude, lng: FIRE_STATION.longitude };
+  // Live navigation routes from locked departure coordinates so the WebView doesn't reload on GPS ticks;
+  // preview allows inspecting Fire Station or userLocation.
+  const originCoords = isNavigating
+    ? (navOriginRef.current ?? (userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : { lat: FIRE_STATION.latitude, lng: FIRE_STATION.longitude }))
+    : (routeOrigin === 'gps'
+      ? (userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null)
+      : { lat: FIRE_STATION.latitude, lng: FIRE_STATION.longitude });
 
   const handleVerify = () => {
     setDialog({
@@ -529,54 +570,64 @@ export default function IncidentDetailScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SecondaryHeader
         title={`Report #${incident.report_id}`}
-        subtitle={locationName}
         onBack={() => router.replace(backRoute as any)}
       />
 
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
 
-        {/* ── HERO STATUS BAND ────────────────────────────────────── */}
-        <LinearGradient
-          colors={['#F4622B18', '#F4622B06', 'transparent']}
-          style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm }}
-        >
-          <View style={styles.heroBadgeRow}>
-            <IncidentStatusBadge status={incident.status} />
-          </View>
-
-          {incident.description ? (
-            <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, lineHeight: 21, marginTop: spacing.md }}>
-              {incident.description}
-            </Text>
-          ) : null}
-
-          <View style={{ marginTop: spacing.sm, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6, backgroundColor: incident.ai_fire_label === 'fire' ? '#FEE2E2' : incident.ai_fire_label === 'non_fire' ? '#DCFCE7' : colors.background }}>
-            <Text style={{ color: incident.ai_fire_label === 'fire' ? '#991B1B' : incident.ai_fire_label === 'non_fire' ? '#166534' : colors.textMuted, fontSize: typography.size.xs, fontWeight: '700' }}>
-              {incident.ai_fire_label === 'fire'
-                ? `Fire detected${incident.ai_fire_confidence !== null && incident.ai_fire_confidence !== undefined ? ` · ${(incident.ai_fire_confidence * 100).toFixed(1)}% confidence` : ''}`
-                : incident.ai_fire_label === 'non_fire'
-                  ? `No fire detected${incident.ai_fire_confidence !== null && incident.ai_fire_confidence !== undefined ? ` · ${(incident.ai_fire_confidence * 100).toFixed(1)}% confidence` : ''}`
-                  : 'AI scan unavailable'}
-            </Text>
-          </View>
-
-          <View style={[styles.metaStrip, { marginTop: spacing.md }]}>
-            {locationName ? (
-              <View style={styles.metaChip}>
-                <MapPin size={12} color={colors.textMuted} />
-                <Text style={{ color: colors.textMuted, fontSize: 12, marginLeft: 4 }}>{locationName}</Text>
+        {/* ── EXECUTIVE BRIEFING HERO CARD ────────────────────────── */}
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: 16 }}>
+          <View style={styles.briefingCard}>
+            {/* Top row: Incident Headline / Type + Status Badge */}
+            <View style={styles.briefingHeaderRow}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={styles.briefingTitle} numberOfLines={1}>
+                  {INCIDENT_TYPE_OPTIONS.find((t) => t.id === incident.incident_type)?.name || 'Fire Incident'}
+                </Text>
+                <Text style={styles.briefingSubtitle} numberOfLines={1}>
+                  {incident.created_at ? `${formatFullDate(incident.created_at)} · ${formatTime(incident.created_at)}` : ''}
+                </Text>
               </View>
+              <IncidentStatusBadge status={incident.status} />
+            </View>
+
+            {/* Description if present */}
+            {incident.description ? (
+              <Text style={styles.briefingDescription}>
+                {incident.description}
+              </Text>
             ) : null}
-            {incident.created_at ? (
-              <View style={[styles.metaChip, { marginLeft: spacing.md }]}>
-                <Calendar size={12} color={colors.textMuted} />
-                <Text style={{ color: colors.textMuted, fontSize: 12, marginLeft: 4 }}>
-                  {formatFullDate(incident.created_at)} · {formatTime(incident.created_at)}
+
+            {/* Location row */}
+            {locationName ? (
+              <View style={styles.briefingLocationRow}>
+                <MapPin size={13} color="#8E8E93" strokeWidth={2} />
+                <Text style={styles.briefingLocationText} numberOfLines={1}>
+                  {locationName}
                 </Text>
               </View>
             ) : null}
+
+            {/* Subtle Apple Intelligence Vision Pill */}
+            {incident.ai_fire_label ? (
+              <View style={styles.briefingAiRow}>
+                <Sparkles size={12} color="#8E8E93" strokeWidth={2} />
+                <Text style={styles.briefingAiText}>
+                  {incident.ai_fire_label === 'fire'
+                    ? 'AI Vision Verified: Fire pattern detected'
+                    : incident.ai_fire_label === 'non_fire'
+                      ? 'AI Vision: No fire pattern detected'
+                      : 'AI Vision analysis unavailable'}
+                </Text>
+                {incident.ai_fire_confidence !== null && incident.ai_fire_confidence !== undefined ? (
+                  <Text style={styles.briefingAiConfidence}>
+                    · {(incident.ai_fire_confidence * 100).toFixed(0)}% Match
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
-        </LinearGradient>
+        </View>
 
         <View style={{ paddingHorizontal: spacing.lg }}>
 
@@ -585,8 +636,8 @@ export default function IncidentDetailScreen() {
             const photoCount = (incident.report_image ? 1 : 0) + (incident.evidence_photos?.length ?? 0);
             const photoTitle = photoCount === 1 ? `FIRE SCENE PHOTO (${photoCount})` : `FIRE SCENE PHOTOS (${photoCount})`;
             return (
-              <View style={{ marginTop: spacing.md }}>
-                <SectionPill icon={<Flame size={12} color={colors.brandOrange} />} title={photoTitle} />
+              <View>
+                <SectionPill title={photoTitle} />
                 <Card>
                   <EvidenceGallery
                     mainPhoto={incident.report_image}
@@ -600,32 +651,41 @@ export default function IncidentDetailScreen() {
           })()}
 
           {/* ── REPORTER INFORMATION ─────────────────────────────── */}
-          <View style={{ marginTop: spacing.xl }}>
-            <SectionPill icon={<User size={12} color={colors.brandOrange} />} title="REPORTER INFORMATION" />
+          <View>
+            <SectionPill title="REPORTER INFORMATION" />
             <Card padding={0}>
-              <InfoRow icon={<User size={16} color={colors.brandNavy} />} label="Reported By" value={incident.reporter_name ?? 'Unknown'} />
               <InfoRow
-                icon={<Phone size={16} color={colors.brandNavy} />}
+                label="Reported By"
+                value={incident.reporter_name ?? 'Unknown'}
+              />
+              <InfoRow
                 label="Contact Number"
                 value={incident.contact_number || 'No contact provided'}
               />
               <InfoRow
-                icon={<Clock size={16} color={colors.brandNavy} />}
                 label="Reported At"
                 value={incident.created_at ? `${formatFullDate(incident.created_at)} · ${formatTime(incident.created_at)}` : 'Unknown'}
                 isLast={!incident.contact_number}
               />
               {incident.contact_number ? (
-                <View style={{ padding: spacing.md, paddingTop: 0 }}>
+                <View style={{ padding: 14, paddingTop: 4 }}>
                   <Pressable
                     onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
                       const { Linking } = require('react-native');
                       Linking.openURL(`tel:${incident.contact_number}`);
                     }}
-                    style={[styles.callButton, { backgroundColor: colors.success, borderRadius: radius.md }]}
+                    style={({ pressed }) => [
+                      styles.callButton,
+                      {
+                        backgroundColor: '#34C759',
+                        transform: [{ scale: pressed ? 0.98 : 1 }],
+                        opacity: pressed ? 0.9 : 1,
+                      },
+                    ]}
                   >
-                    <Phone size={14} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontSize: typography.size.xs, fontWeight: '700', marginLeft: 6 }}>
+                    <Phone size={15} color="#FFFFFF" strokeWidth={2.4} />
+                    <Text style={styles.callButtonText}>
                       Call Reporter
                     </Text>
                   </Pressable>
@@ -636,28 +696,48 @@ export default function IncidentDetailScreen() {
 
           {/* ── LOCAL OFFICIALS ──────────────────────────────────── */}
           {incident.barangay_contacts && incident.barangay_contacts.length > 0 ? (
-            <View style={{ marginTop: spacing.xl }}>
-              <SectionPill icon={<ShieldCheck size={12} color={colors.brandOrange} />} title="LOCAL OFFICIALS" />
+            <View>
+              <SectionPill title="LOCAL OFFICIALS" />
               <Card padding={0}>
                 {incident.barangay_contacts.map((contact, idx) => {
                   const isLast = idx === incident.barangay_contacts!.length - 1;
                   return (
                     <View key={idx}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md }}>
-                        {/* Avatar / Icon */}
-                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.brandNavy + '15', alignItems: 'center', justifyContent: 'center' }}>
-                          <User size={20} color={colors.brandNavy} />
-                        </View>
-                        
+                      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
                         {/* Details */}
-                        <View style={{ flex: 1, marginLeft: spacing.md, marginRight: spacing.sm }}>
-                          <Text style={{ fontSize: typography.size.md, fontWeight: '700', color: colors.brandNavy }} numberOfLines={1}>
+                        <View style={{ flex: 1, marginRight: 12 }}>
+                          <Text
+                            style={{
+                              fontSize: 15,
+                              fontWeight: '700',
+                              color: isDark ? '#FFFFFF' : '#1C1C1E',
+                              letterSpacing: -0.2,
+                            }}
+                            numberOfLines={1}
+                          >
                             {contact.name}
                           </Text>
-                          <Text style={{ fontSize: typography.size.sm, color: colors.brandNavy, marginTop: 2 }} numberOfLines={1}>
+                          <Text
+                            style={{
+                              fontSize: 12.5,
+                              fontWeight: '500',
+                              color: '#8E8E93',
+                              marginTop: 2,
+                            }}
+                            numberOfLines={1}
+                          >
                             {contact.role}
                           </Text>
-                          <Text style={{ fontSize: typography.size.xs, color: colors.textMuted, marginTop: 2 }}>
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              fontWeight: '500',
+                              color: isDark ? '#AEAEB2' : '#3A3A3C',
+                              marginTop: 4,
+                              letterSpacing: 0.2,
+                            }}
+                            numberOfLines={1}
+                          >
                             {contact.phone_number}
                           </Text>
                         </View>
@@ -665,22 +745,26 @@ export default function IncidentDetailScreen() {
                         {/* Call Button */}
                         <Pressable
                           onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
                             const { Linking } = require('react-native');
                             Linking.openURL(`tel:${contact.phone_number}`);
                           }}
-                          style={({ pressed }) => ({
-                            width: 44, height: 44, borderRadius: 22,
-                            backgroundColor: colors.success,
-                            alignItems: 'center', justifyContent: 'center',
-                            opacity: pressed ? 0.8 : 1,
-                            shadowColor: colors.success, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 2
-                          })}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Call ${contact.name}`}
+                          style={({ pressed }) => [
+                            styles.officialCallBtn,
+                            {
+                              backgroundColor: '#34C759',
+                              transform: [{ scale: pressed ? 0.92 : 1 }],
+                              opacity: pressed ? 0.9 : 1,
+                            },
+                          ]}
                         >
-                          <Phone size={20} color="#FFFFFF" />
+                          <Phone size={16} color="#FFFFFF" strokeWidth={2.4} />
                         </Pressable>
                       </View>
                       
-                      {!isLast && <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg }} />}
+                      {!isLast && <View style={[styles.infoRowDivider, { backgroundColor: 'rgba(0,0,0,0.06)' }]} />}
                     </View>
                   );
                 })}
@@ -690,7 +774,7 @@ export default function IncidentDetailScreen() {
 
           {/* ── VERIFY / FALSE REPORT ACTIONS ────────────────────── */}
           {incident.status === 'pending' ? (
-            <View style={[styles.actionsRow, { marginTop: spacing.xl }]}>
+            <View style={[styles.actionsRow, { marginTop: 20 }]}>
               <View style={{ flex: 1 }}>
                 <Button label="Verify Incident" onPress={handleVerify} loading={isActing} icon={<ShieldCheck size={16} color="#FFFFFF" />} />
               </View>
@@ -702,21 +786,24 @@ export default function IncidentDetailScreen() {
 
           {/* ── RESPONSE STATUS STEPPER ──────────────────────────── */}
           {incident.status !== 'invalid' && incident.status !== 'pending' ? (
-            <View style={{ marginTop: spacing.xl }}>
-              <SectionPill icon={<Navigation2 size={12} color={colors.brandOrange} />} title="RESPONSE STATUS" />
+            <View>
+              <SectionPill title="RESPONSE STATUS" />
               <Card>
-                <StatusStepper status={incident.status} onAdvance={handleAdvanceStatus} disabled={isActing} />
+                <StatusStepper
+                  status={incident.status}
+                  history={history}
+                  createdAt={incident.created_at}
+                  onAdvance={handleAdvanceStatus}
+                  disabled={isActing}
+                />
               </Card>
             </View>
           ) : null}
 
           {/* ── ROUTE TO INCIDENT (dispatched+ only) ─────────────── */}
           {showRoute ? (
-            <View style={{ marginTop: spacing.xl }}>
-              <SectionPill
-                icon={<Map size={12} color={colors.brandOrange} />}
-                title="ROUTE TO INCIDENT"
-              />
+            <View>
+              <SectionPill title="ROUTE TO INCIDENT" />
 
               {/* Origin selector */}
               <OriginSelector
@@ -739,7 +826,7 @@ export default function IncidentDetailScreen() {
                       { opacity: pressed ? 0.94 : 1 },
                     ]}
                   >
-                    <View style={{ height: 200 }} pointerEvents="none">
+                    <View style={{ height: 210 }} pointerEvents="none">
                       <IncidentLocationMap
                         latitude={incident.latitude}
                         longitude={incident.longitude}
@@ -750,19 +837,30 @@ export default function IncidentDetailScreen() {
                       />
                     </View>
 
-                    {/* Expand affordance badge */}
+                    {/* Floating origin indicator pill (top-left) */}
+                    <View style={styles.previewOriginBadge}>
+                      {routeOrigin === 'station' ? (
+                        <Building2 size={11} color="#1C1C1E" strokeWidth={2.2} />
+                      ) : (
+                        <Crosshair size={11} color="#1C1C1E" strokeWidth={2.2} />
+                      )}
+                      <Text style={styles.previewOriginText}>
+                        {routeOrigin === 'station' ? 'Station Route' : 'GPS Route'}
+                      </Text>
+                    </View>
+
+                    {/* Expand affordance badge (top-right) */}
                     <View style={styles.expandAffordanceBadge}>
-                      <Maximize2 size={12} color="#FFFFFF" />
-                      <Text style={styles.expandAffordanceText}>Tap to expand</Text>
+                      <Maximize2 size={11} color="#1C1C1E" strokeWidth={2.4} />
+                      <Text style={styles.expandAffordanceText}>Expand</Text>
                     </View>
                   </Pressable>
 
-                  {/* Map footer: layer type modal trigger */}
+                  {/* Map footer with layer toggle and start nav CTA */}
                   <View
                     style={[
                       styles.mapFooter,
                       {
-                        padding: spacing.md,
                         borderTopColor: colors.border,
                         backgroundColor: colors.surface,
                       },
@@ -785,7 +883,7 @@ export default function IncidentDetailScreen() {
                         },
                       ]}
                     >
-                      <Layers size={14} color={colors.textSecondary} strokeWidth={2} />
+                      <Layers size={13} color="#8E8E93" strokeWidth={2} />
                       <Text
                         style={{
                           fontSize: 12,
@@ -794,62 +892,61 @@ export default function IncidentDetailScreen() {
                           marginLeft: 6,
                         }}
                       >
-                        Change Map Type
+                        {mapType === 'satellite' ? 'Satellite' : 'Road'}
                       </Text>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: '600',
-                          color: colors.textMuted,
-                          marginLeft: 4,
-                        }}
-                      >
-                        · {mapType === 'satellite' ? 'Satellite' : 'Road'}
+                    </Pressable>
+
+                    <Pressable
+                      onPress={openNavigation}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel="Start navigation"
+                      style={({ pressed }) => [
+                        styles.miniStartNavBtn,
+                        {
+                          backgroundColor: colors.brandOrange,
+                          transform: [{ scale: pressed ? 0.97 : 1 }],
+                          opacity: pressed ? 0.9 : 1,
+                        },
+                      ]}
+                    >
+                      <Navigation2 size={13} color="#FFFFFF" strokeWidth={2.5} />
+                      <Text style={styles.miniStartNavBtnText}>
+                        Navigate
                       </Text>
                     </Pressable>
                   </View>
-
-                  {/* Navigate CTA */}
-                  <Pressable
-                    onPress={openNavigation}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel="Start navigation"
-                    style={({ pressed }) => [
-                      styles.navigateBtn,
-                      {
-                        backgroundColor: colors.brandOrange,
-                        opacity: pressed ? 0.88 : 1,
-                      },
-                    ]}
-                  >
-                    <PlayCircle size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginLeft: 8, letterSpacing: 0.3 }}>
-                      Start Navigation
-                    </Text>
-                  </Pressable>
                 </Card>
               </View>
 
               {/* Station info pill */}
               {routeOrigin === 'station' ? (
-                <View style={[styles.stationInfoPill, { backgroundColor: `${colors.brandNavy}10`, borderColor: `${colors.brandNavy}20` }]}>
-                  <Building2 size={13} color={colors.brandNavy} />
-                  <View style={{ marginLeft: 8 }}>
-                    <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: '700' }}>
+                <View style={[styles.stationInfoPill, { backgroundColor: '#FFFFFF', borderColor: 'rgba(0, 0, 0, 0.06)' }]}>
+                  <View style={styles.stationInfoIconBox}>
+                    <Building2 size={16} color="#8E8E93" strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 11 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '700' }}>
                       {FIRE_STATION.name}
                     </Text>
-                    <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1 }}>
                       {FIRE_STATION.address}
                     </Text>
                   </View>
                 </View>
               ) : (
-                <View style={[styles.stationInfoPill, { backgroundColor: `${colors.success}0F`, borderColor: `${colors.success}22` }]}>
-                  <Crosshair size={13} color={colors.success} />
-                  <Text style={{ color: colors.success, fontSize: 12, fontWeight: '700', marginLeft: 8 }}>
-                    {userLocation ? `GPS · ${userLocation.latitude.toFixed(5)}, ${userLocation.longitude.toFixed(5)}` : 'Acquiring GPS…'}
-                  </Text>
+                <View style={[styles.stationInfoPill, { backgroundColor: '#FFFFFF', borderColor: 'rgba(0, 0, 0, 0.06)' }]}>
+                  <View style={styles.stationInfoIconBox}>
+                    <Crosshair size={16} color="#8E8E93" strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 11 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '700' }}>
+                      Real-Time GPS Location
+                    </Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1 }}>
+                      {userLocation ? `${userLocation.latitude.toFixed(5)}, ${userLocation.longitude.toFixed(5)}` : 'Acquiring GPS fix…'}
+                    </Text>
+                  </View>
                 </View>
               )}
             </View>
@@ -857,30 +954,33 @@ export default function IncidentDetailScreen() {
 
           {/* ── INCIDENT DETAILS (available after resolution) ────── */}
           {incident.status === 'resolved' ? (
-          <View style={{ marginTop: spacing.xl }}>
+          <View>
             <SectionPill
-              icon={<ClipboardList size={12} color={colors.brandOrange} />}
               title="INCIDENT DETAILS"
               action={
                 <Pressable
-                  onPress={() => setIsEditingDetails((v) => !v)}
-                  style={[
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setIsEditingDetails((v) => !v);
+                  }}
+                  style={({ pressed }) => [
                     styles.editPill,
                     {
                       backgroundColor: isEditingDetails
-                        ? `${colors.success}1A`
-                        : `${colors.brandOrange}1A`,
+                        ? 'rgba(52, 199, 89, 0.12)'
+                        : 'rgba(0, 0, 0, 0.05)',
+                      transform: [{ scale: pressed ? 0.95 : 1 }],
                     },
                   ]}
                 >
                   {isEditingDetails ? (
-                    <Check size={12} color={colors.success} />
+                    <Check size={12} color="#34C759" strokeWidth={2.4} />
                   ) : (
-                    <Pencil size={12} color={colors.brandOrange} />
+                    <Pencil size={12} color="#1C1C1E" strokeWidth={2.4} />
                   )}
                   <Text
                     style={{
-                      color: isEditingDetails ? colors.success : colors.brandOrange,
+                      color: isEditingDetails ? '#34C759' : '#1C1C1E',
                       fontSize: 11,
                       fontWeight: '700',
                       marginLeft: 4,
@@ -975,54 +1075,77 @@ export default function IncidentDetailScreen() {
             ) : (
               <Card padding={0}>
                 <InfoRow 
-                  icon={<Flame size={16} color={colors.brandNavy} />} 
                   label="Incident Type" 
                   value={INCIDENT_TYPE_OPTIONS.find((t) => t.id === incident.incident_type)?.name || incident.incident_type || 'Unspecified'} 
                 />
                 <InfoRow 
-                  icon={<Bell size={16} color={colors.brandNavy} />} 
                   label="Alarm Level" 
                   value={incident.alarm_level ? (ALARM_LEVEL_LABELS[incident.alarm_level as AlarmLevel] || incident.alarm_level) : 'Unspecified'} 
                 />
-
-                <InfoRow icon={<AlertTriangle size={16} color={colors.brandNavy} />} label="Cause of Fire" value={incident.cause_of_fire || 'Not yet determined'} />
-                <InfoRow icon={<HeartPulse size={16} color={colors.brandNavy} />} label="Casualties" value={String(incident.casualties ?? 0)} />
-                <InfoRow icon={<FileText size={16} color={colors.brandNavy} />} label="Notes" value={incident.notes || 'No additional notes'} isLast />
+                <InfoRow
+                  label="Cause of Fire"
+                  value={incident.cause_of_fire || 'Not yet determined'}
+                />
+                <InfoRow
+                  label="Casualties"
+                  value={String(incident.casualties ?? 0)}
+                />
+                <InfoRow
+                  label="Notes"
+                  value={incident.notes || 'No additional notes'}
+                  isLast
+                />
               </Card>
             )}
           </View>
           ) : null}
 
           {/* ── STATUS HISTORY TIMELINE ──────────────────────────── */}
-          {history.length > 0 ? (
-            <View style={{ marginTop: spacing.xl }}>
-              <SectionPill icon={<Clock size={12} color={colors.brandOrange} />} title="STATUS HISTORY" />
+          {Array.isArray(history) && history.length > 0 ? (
+            <View>
+              <SectionPill title="STATUS HISTORY" />
               <Card padding={0}>
                 {history.map((entry, index) => {
-                  const isLast = index === history.length - 1;
+                  const isLatest = index === history.length - 1;
+                  const isLastInList = index === history.length - 1;
                   return (
                     <View
                       key={entry.history_id}
                       style={[
                         styles.historyRow,
-                        { paddingVertical: spacing.md, paddingHorizontal: spacing.md },
-                        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                        { paddingVertical: 14, paddingHorizontal: 16 },
                       ]}
                     >
                       <View style={styles.timelineDotWrapper}>
-                        <View style={[styles.timelineDot, { backgroundColor: isLast ? colors.brandOrange : colors.success }]} />
-                        {!isLast ? <View style={[styles.timelineLine, { backgroundColor: colors.border }]} /> : null}
-                      </View>
-                      <View style={{ flex: 1, marginLeft: spacing.md }}>
-                        <IncidentStatusBadge status={entry.status} size="sm" />
-                        {entry.notes ? (
-                          <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 4 }}>
-                            {entry.notes}
-                          </Text>
+                        <View
+                          style={[
+                            styles.timelineDot,
+                            {
+                              backgroundColor: isLatest ? colors.brandOrange : '#C7C7CC',
+                            },
+                          ]}
+                        />
+                        {!isLastInList ? (
+                          <View style={[styles.timelineLine, { backgroundColor: 'rgba(0, 0, 0, 0.08)' }]} />
                         ) : null}
-                        <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 3 }}>
-                          {formatFullDate(entry.created_at)} · {formatTime(entry.created_at)}
-                          {entry.changed_by_name ? ` · ${entry.changed_by_name}` : ''}
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 14 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <IncidentStatusBadge status={entry.status} size="sm" />
+                          <Text style={{ color: '#8E8E93', fontSize: 11, fontWeight: '500' }}>
+                            {formatTime(entry.created_at)}
+                          </Text>
+                        </View>
+                        {entry.notes ? (
+                          <View style={styles.historyNotesBox}>
+                            <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
+                              {entry.notes}
+                            </Text>
+                          </View>
+                        ) : null}
+                        <Text style={{ color: '#8E8E93', fontSize: 11, marginTop: 4 }}>
+                          {formatFullDate(entry.created_at)}
+                          {entry.changed_by_name ? ` · Officer ${entry.changed_by_name}` : ''}
                         </Text>
                       </View>
                     </View>
@@ -1042,6 +1165,7 @@ export default function IncidentDetailScreen() {
           {/* Full-bleed map */}
           <View style={{ flex: 1 }}>
             <IncidentLocationMap
+              ref={navMapRef}
               latitude={incident.latitude}
               longitude={incident.longitude}
               originLat={originCoords?.lat}
@@ -1051,6 +1175,7 @@ export default function IncidentDetailScreen() {
               isNavigating={isNavigating}
               currentGPS={currentGPS}
               onNavigationComplete={handleNavComplete}
+              onRouteMeta={setRouteMeta}
             />
           </View>
 
@@ -1088,10 +1213,16 @@ export default function IncidentDetailScreen() {
             {/* Right floating actions column: Close (X) above Map Type (Layers) */}
             <View style={styles.fsHeaderRightCol}>
               <Pressable
-                onPress={closeFullscreen}
+                onPress={() => {
+                  if (isNavigating) {
+                    stopNavigation();
+                  } else {
+                    closeFullscreen();
+                  }
+                }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Close map"
+                accessibilityLabel={isNavigating ? 'Exit live navigation' : 'Close map'}
                 style={({ pressed }) => [
                   styles.fsActionBtn,
                   {
@@ -1128,39 +1259,32 @@ export default function IncidentDetailScreen() {
             </View>
           </View>
 
-          {/* ── Floating BOTTOM controls: Apple Maps-style floating island card ── */}
-          {isNavigating ? (
-            <View style={[styles.fsNavControls, { paddingBottom: Platform.OS === 'ios' ? 36 : 22 }]}>
-              <Pressable
-                onPress={stopNavigation}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Stop Navigation"
-                style={({ pressed }) => [
-                  styles.fsStopBtn,
-                  { opacity: pressed ? 0.82 : 1 },
-                ]}
-              >
-                <StopCircle size={18} color="#FFFFFF" />
-                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginLeft: 8 }}>
-                  Stop Navigation
-                </Text>
-              </Pressable>
-            </View>
-          ) : (
+          {/* ── Floating BOTTOM controls (Route Overview only; hidden during active navigation to avoid redundancy) ── */}
+          {isNavigating ? null : (
             <View
               style={[
                 styles.fsControls,
                 {
-                  backgroundColor: isDark ? 'rgba(21, 26, 48, 0.96)' : '#FFFFFF',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                  backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.8)',
                 },
               ]}
             >
-              <View style={styles.fsControlsHeader}>
-                <Text style={[styles.fsControlsHeaderTitle, { color: colors.textMuted }]}>SHOWING ROUTE TO INCIDENT</Text>
+              {/* Route Duration & Distance Telemetry (Apple Maps style) */}
+              <View style={styles.fsRouteMetricsRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                  <Text style={[styles.fsDurationText, { color: colors.textPrimary }]}>
+                    {routeMeta ? (routeMeta.duration < 60 ? '< 1 min' : `${Math.ceil(routeMeta.duration / 60)} min`) : 'Calculating…'}
+                  </Text>
+                  {routeMeta ? (
+                    <Text style={[styles.fsDistanceText, { color: colors.textSecondary }]}>
+                      ({routeMeta.distance < 1000 ? `${Math.round(routeMeta.distance)} m` : `${(routeMeta.distance / 1000).toFixed(1)} km`})
+                    </Text>
+                  ) : null}
+                </View>
               </View>
 
+              {/* Segmented Origin Toggle (Apple iOS Segmented Control) */}
               <View
                 style={[
                   styles.fsOriginToggle,
@@ -1170,37 +1294,52 @@ export default function IncidentDetailScreen() {
                 ]}
               >
                 {([
-                  { key: 'station', label: '🚒 From Fire Station' },
-                  { key: 'gps',     label: '📍 From My Location' },
+                  { key: 'station', label: 'From Fire Station', icon: Building2 },
+                  { key: 'gps',     label: 'From My Location',  icon: Crosshair },
                 ] as const).map((o) => {
                   const active = routeOrigin === o.key;
                   const disabled = o.key === 'gps' && !userLocation;
+                  const IconComp = o.icon;
                   return (
                     <Pressable
                       key={o.key}
                       onPress={() => {
-                        if (!disabled) {
+                        if (!disabled && routeOrigin !== o.key) {
                           Haptics.selectionAsync().catch(() => {});
+                          setRouteMeta(null);
                           setRouteOrigin(o.key);
                         }
                       }}
                       style={[
                         styles.fsOriginBtn,
-                        {
-                          backgroundColor: active ? colors.brandOrange : 'transparent',
-                          opacity: disabled ? 0.35 : 1,
+                        active && {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.16)' : '#FFFFFF',
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: isDark ? 0.2 : 0.08,
+                          shadowRadius: 4,
+                          elevation: 2,
                         },
+                        { opacity: disabled ? 0.35 : 1 },
                       ]}
                     >
+                      <IconComp
+                        size={14}
+                        color={
+                          active
+                            ? (isDark ? '#FFFFFF' : colors.brandOrange)
+                            : (isDark ? 'rgba(255, 255, 255, 0.5)' : colors.textMuted)
+                        }
+                        strokeWidth={active ? 2.5 : 2}
+                      />
                       <Text
                         style={{
                           color: active
-                            ? '#FFFFFF'
-                            : isDark
-                            ? 'rgba(255, 255, 255, 0.7)'
-                            : colors.textSecondary,
-                          fontSize: 12,
-                          fontWeight: '700',
+                            ? (isDark ? '#FFFFFF' : colors.textPrimary)
+                            : (isDark ? 'rgba(255, 255, 255, 0.5)' : colors.textSecondary),
+                          fontSize: 12.5,
+                          fontWeight: active ? '700' : '600',
+                          marginLeft: 6,
                         }}
                       >
                         {o.label}
@@ -1210,6 +1349,7 @@ export default function IncidentDetailScreen() {
                 })}
               </View>
 
+              {/* Prominent Start Live Navigation Action Button */}
               <Pressable
                 onPress={openNavigation}
                 accessible={true}
@@ -1219,12 +1359,13 @@ export default function IncidentDetailScreen() {
                   styles.fsStartNavBtnFull,
                   {
                     backgroundColor: colors.brandOrange,
-                    opacity: pressed ? 0.88 : 1,
+                    opacity: pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.985 : 1 }],
                   },
                 ]}
               >
-                <PlayCircle size={18} color="#FFFFFF" />
-                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginLeft: 8, letterSpacing: 0.3 }}>
+                <Navigation2 size={17} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={styles.fsStartNavBtnText}>
                   Start Live Navigation
                 </Text>
               </Pressable>
@@ -1274,24 +1415,200 @@ export default function IncidentDetailScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  // Hero
-  heroBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metaStrip: { flexDirection: 'row', flexWrap: 'wrap' },
-  metaChip: { flexDirection: 'row', alignItems: 'center' },
+  // Executive Briefing Card
+  briefingCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+    shadowColor: '#0F1C3F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  briefingHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  briefingTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1C1C1E',
+    letterSpacing: -0.4,
+  },
+  briefingSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  briefingDescription: {
+    fontSize: 14.5,
+    fontWeight: '500',
+    lineHeight: 21,
+    color: '#3A3A3C',
+    marginTop: 12,
+  },
+  briefingLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 5,
+  },
+  briefingLocationText: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    color: '#636366',
+    flex: 1,
+  },
+  briefingAiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0, 0, 0, 0.06)',
+    gap: 6,
+  },
+  briefingAiText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#636366',
+  },
+  briefingAiConfidence: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8E8E93',
+  },
 
-  // Section pill
-  sectionPillRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionPillLeft: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  // iOS Native Segmented Control
+  iosSegmentedContainer: {
+    flexDirection: 'row',
+    borderRadius: 14,
+    padding: 3,
+  },
+  iosSegmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 11,
+  },
+  iosSegmentBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  iosSegmentText: {
+    fontSize: 12.5,
+    marginLeft: 6,
+    letterSpacing: -0.2,
+  },
+
+  // Section Header
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 22,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  sectionHeaderTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8E8E93',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
 
   // Edit pill
-  editPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  editPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+  },
 
   // Info rows
-  infoRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
-  infoRowIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    position: 'relative',
+  },
+  infoRowLabel: {
+    color: '#8E8E93',
+    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: -0.1,
+  },
+  infoRowValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  infoRowDivider: {
+    position: 'absolute',
+    bottom: 0,
+    left: 16,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+  },
 
-  // Reporter
-  callButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
+  // Reporter & Officials
+  callButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 42,
+    borderRadius: 12,
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  callButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 8,
+    letterSpacing: 0.2,
+  },
+  officialAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  officialCallBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
 
   // Actions
   actionsRow: { flexDirection: 'row', gap: 12 },
@@ -1299,13 +1616,20 @@ const styles = StyleSheet.create({
   // Origin selector
   originRow: { flexDirection: 'row' },
   originCard: {
+    flex: 1,
     borderRadius: 16,
     padding: 14,
     alignItems: 'center',
     position: 'relative',
     overflow: 'hidden',
   },
-  originIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  originIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   originActiveDot: {
     position: 'absolute',
     top: 10,
@@ -1320,10 +1644,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  stationInfoIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stationInfoTitle: {
+    color: '#1C1C1E',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  stationInfoSubtitle: {
+    color: '#8E8E93',
+    fontSize: 11,
+    marginTop: 1,
   },
 
   // Map preview card
@@ -1331,25 +1674,55 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  expandAffordanceBadge: {
+  previewOriginBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 12,
+    left: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 9,
     paddingVertical: 5,
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  expandAffordanceText: {
-    color: '#FFFFFF',
+  previewOriginText: {
+    color: '#101827',
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
+  },
+  expandAffordanceBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  expandAffordanceText: {
+    color: '#101827',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
 
   // Map footer
@@ -1357,13 +1730,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   previewMapTypeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 14,
+    backgroundColor: 'rgba(15, 28, 63, 0.05)',
+  },
+  previewMapTypeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+    marginLeft: 6,
+  },
+  miniStartNavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    height: 34,
+    borderRadius: 17,
+    shadowColor: '#F4622B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.28,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  miniStartNavBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '700',
+    marginLeft: 5,
+    letterSpacing: 0.2,
   },
   mapTypeInlineRow: {
     flexDirection: 'row',
@@ -1410,9 +1813,18 @@ const styles = StyleSheet.create({
 
   // History
   historyRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  timelineDotWrapper: { alignItems: 'center', width: 16, marginTop: 2 },
+  timelineDotWrapper: { alignItems: 'center', width: 16, marginTop: 3 },
   timelineDot: { width: 10, height: 10, borderRadius: 5 },
   timelineLine: { width: 2, flex: 1, marginTop: 4 },
+  historyNotesBox: {
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: 'rgba(15, 28, 63, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
 
   // Fullscreen modal
   fsHeader: {
@@ -1474,75 +1886,79 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === 'ios' ? 30 : 18,
     left: 16,
     right: 16,
-    padding: 12,
-    gap: 12,
+    padding: 16,
+    gap: 13,
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowColor: '#0F1C3F',
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.14,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  fsControlsHeader: {
-    alignItems: 'center',
-    marginBottom: -2,
-  },
-  fsControlsHeaderTitle: {
-    color: '#8992A6',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  fsNavControls: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 34 : 22,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    pointerEvents: 'box-none',
-  },
-  fsStopBtn: {
+  fsRouteMetricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(225, 66, 69, 0.94)',
-    paddingVertical: 13,
-    paddingHorizontal: 28,
-    borderRadius: 50,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
-    shadowColor: '#E14245',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingTop: 2,
+  },
+  fsDurationText: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  fsDistanceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  fsRouteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: 12,
+    gap: 5,
+  },
+  fsRouteBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   fsOriginToggle: {
     flexDirection: 'row',
-    borderRadius: 20,
-    padding: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 22,
+    padding: 4,
+    backgroundColor: '#F1F5F9',
   },
   fsOriginBtn: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 18,
   },
   fsStartNavBtnFull: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 13,
-    borderRadius: 50,
+    height: 50,
+    borderRadius: 25,
     shadowColor: '#F4622B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 4,
+  },
+  fsStartNavBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    marginLeft: 8,
+    letterSpacing: 0.3,
   },
 });

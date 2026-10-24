@@ -12,6 +12,10 @@ export interface GPSUpdate {
   accuracy?: number | null;
 }
 
+export interface IncidentLocationMapRef {
+  updateHeading: (heading: number) => void;
+}
+
 interface IncidentLocationMapProps {
   latitude: number;
   longitude: number;
@@ -25,6 +29,7 @@ interface IncidentLocationMapProps {
   /** Live GPS position injected without reloading the WebView */
   currentGPS?: GPSUpdate | null;
   onNavigationComplete?: () => void;
+  onRouteMeta?: (meta: { distance: number; duration: number }) => void;
   /** @deprecated use originLat/originLng */
   userLocation?: { latitude: number; longitude: number } | null;
 }
@@ -48,20 +53,33 @@ const TILE_CONFIGS: Record<MapType, { tiles: string[]; overlay: string | null }>
   },
 };
 
-export const IncidentLocationMap: React.FC<IncidentLocationMapProps> = ({
-  latitude,
-  longitude,
-  originLat,
-  originLng,
-  originLabel = 'Origin',
-  mapType = 'road',
-  markerColor = '#F4622B',
-  isNavigating = false,
-  currentGPS,
-  onNavigationComplete,
-  userLocation,
-}) => {
-  const webViewRef = useRef<any>(null);
+export const IncidentLocationMap = React.forwardRef<IncidentLocationMapRef, IncidentLocationMapProps>(
+  (
+    {
+      latitude,
+      longitude,
+      originLat,
+      originLng,
+      originLabel = 'Origin',
+      mapType = 'road',
+      markerColor = '#F4622B',
+      isNavigating = false,
+      currentGPS,
+      onNavigationComplete,
+      onRouteMeta,
+      userLocation,
+    },
+    ref
+  ) => {
+    const webViewRef = useRef<any>(null);
+
+    React.useImperativeHandle(ref, () => ({
+      updateHeading: (heading: number) => {
+        webViewRef.current?.injectJavaScript(
+          `window.onHeadingUpdate && window.onHeadingUpdate(${Math.round(heading * 10) / 10}); true;`
+        );
+      },
+    }));
 
   const oLat = originLat ?? userLocation?.latitude ?? null;
   const oLng = originLng ?? userLocation?.longitude ?? null;
@@ -111,22 +129,83 @@ export const IncidentLocationMap: React.FC<IncidentLocationMapProps> = ({
     display:none; /* User requested removal */
   }
   #info-bar{
-    background:#FFFFFF;
-    border:1px solid rgba(0,0,0,0.08);
-    border-radius:22px;padding:12px 20px;
+    background:rgba(255,255,255,0.88);
+    backdrop-filter:blur(24px) saturate(190%);
+    -webkit-backdrop-filter:blur(24px) saturate(190%);
+    border:1px solid rgba(255,255,255,0.85);
+    border-radius:24px;padding:12px 22px;
     display:flex;justify-content:space-between;align-items:center;
-    box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    box-shadow:0 10px 32px rgba(15,28,63,0.12),0 2px 6px rgba(0,0,0,0.04);
   }
   .s{display:flex;flex-direction:column}
-  .sl{color:#8992A6;font-size:10px;font-weight:800;letter-spacing:0.8px;font-family:-apple-system,Helvetica,sans-serif;text-transform:uppercase}
-  .sv{color:#101827;font-size:17px;font-weight:800;font-family:-apple-system,Helvetica,sans-serif;margin-top:2px}
+  .sl{color:#8E8E93;font-size:10px;font-weight:700;letter-spacing:0.6px;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;text-transform:uppercase}
+  .sv{color:#1C1C1E;font-size:18px;font-weight:800;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;margin-top:2px;letter-spacing:-0.3px;font-variant-numeric:tabular-nums}
   #speed-pill{
-    background:rgba(244,98,43,0.12);border:1px solid rgba(244,98,43,0.3);
-    border-radius:30px;padding:4px 14px;
-    display:flex;flex-direction:column;align-items:center;
+    background:rgba(244,98,43,0.09);border:1.5px solid rgba(244,98,43,0.35);
+    border-radius:22px;padding:5px 16px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-width:62px;
   }
-  #speed-val{color:#F4622B;font-size:18px;font-weight:900;font-family:-apple-system,Helvetica,sans-serif;line-height:1.1}
-  #speed-unit{color:#F4622B;font-size:8.5px;font-weight:800;letter-spacing:0.5px;font-family:-apple-system,Helvetica,sans-serif}
+  #speed-val{color:#F4622B;font-size:19px;font-weight:800;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;line-height:1;font-variant-numeric:tabular-nums}
+  #speed-unit{color:#F4622B;font-size:8px;font-weight:800;letter-spacing:0.8px;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;margin-top:3px;opacity:0.85}
+
+  /* ── Navigation Actions (Compass & Recenter) ──────── */
+  #nav-actions{
+    position:absolute;top:184px;right:16px;z-index:210;
+    display:none;flex-direction:column;gap:10px;align-items:flex-end;
+    pointer-events:none;
+  }
+  .nav-action-btn{
+    width:44px;height:44px;border-radius:50%;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(20px) saturate(190%);
+    -webkit-backdrop-filter:blur(20px) saturate(190%);
+    border:1px solid rgba(255,255,255,0.85);
+    box-shadow:0 8px 24px rgba(15,28,63,0.12),0 2px 6px rgba(0,0,0,0.04);
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;cursor:pointer;
+    user-select:none;-webkit-tap-highlight-color:transparent;
+    transition:transform 0.15s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.15s ease;
+  }
+  .nav-action-btn:active{
+    transform:scale(0.92);
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  }
+  #compass-btn{
+    width:44px;height:44px;border-radius:50%;
+  }
+  #compass-needle{
+    width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+    will-change:transform;
+  }
+  #recenter-btn{
+    height:40px;padding:0 16px 0 10px;gap:8px;border-radius:20px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(20px) saturate(190%);
+    -webkit-backdrop-filter:blur(20px) saturate(190%);
+    border:1px solid rgba(255,255,255,0.85);
+    box-shadow:0 8px 24px rgba(15,28,63,0.14),0 2px 6px rgba(0,0,0,0.04);
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;cursor:pointer;
+    user-select:none;-webkit-tap-highlight-color:transparent;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",-system-ui,sans-serif;
+    font-size:13px;font-weight:600;letter-spacing:-0.2px;
+    color:#1C1C1E;
+    opacity:0;pointer-events:none;transform:scale(0.82) translateY(6px);
+    transition:transform 0.32s cubic-bezier(0.34,1.56,0.64,1),opacity 0.22s ease,box-shadow 0.15s ease;
+  }
+  #recenter-btn.visible{
+    opacity:1;pointer-events:auto;transform:scale(1) translateY(0);
+  }
+  #recenter-btn:active{
+    transform:scale(0.95);
+    background:rgba(242,242,247,0.96);
+  }
+  .recenter-glyph{
+    width:24px;height:24px;border-radius:50%;
+    background:rgba(28,28,30,0.07);
+    display:flex;align-items:center;justify-content:center;
+  }
 
   /* Loading */
   #loading{
@@ -143,7 +222,7 @@ export const IncidentLocationMap: React.FC<IncidentLocationMapProps> = ({
 
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
-  @keyframes pulse{0%{transform:scale(1);opacity:0.5}100%{transform:scale(3);opacity:0}}
+  @keyframes pulse{0%{transform:scale(1);opacity:0.4}100%{transform:scale(1.35);opacity:0}}
 </style>
 </head>
 <body>
@@ -172,6 +251,27 @@ export const IncidentLocationMap: React.FC<IncidentLocationMapProps> = ({
       <div class="sv" id="stat-eta">—</div>
     </div>
   </div>
+</div>
+
+<!-- Floating Navigation Actions (Compass & Apple Maps-styled Recenter Pill) -->
+<div id="nav-actions">
+  <button id="compass-btn" class="nav-action-btn" title="Reset North" onclick="resetNorth()">
+    <div id="compass-needle">
+      <svg viewBox="0 0 24 24" width="22" height="22">
+        <polygon points="12,2 8.5,12 12,10.2 15.5,12" fill="#FF3B30"/>
+        <polygon points="12,22 8.5,12 12,13.8 15.5,12" fill="#8E8E93"/>
+        <circle cx="12" cy="12" r="2" fill="#FFFFFF" stroke="#8E8E93" stroke-width="1"/>
+      </svg>
+    </div>
+  </button>
+  <button id="recenter-btn" title="Re-center" onclick="recenterCamera()">
+    <div class="recenter-glyph">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="#1C1C1E">
+        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+      </svg>
+    </div>
+    <span>Re-center</span>
+  </button>
 </div>
 
 <!-- Loading route spinner -->
@@ -264,8 +364,8 @@ var map=new maplibregl.Map({
   container:'map',
   style:styleSpec,
   center:(IS_NAV && HAS_ROUTE) ? [ORIGIN_LNG, ORIGIN_LAT] : [DEST_LNG, DEST_LAT],
-  zoom: IS_NAV ? 16 : (HAS_ROUTE ? 13 : 15),
-  pitch: 0,
+  zoom: IS_NAV ? 16.5 : (HAS_ROUTE ? 13 : 15),
+  pitch: IS_NAV ? 50 : 0,
   bearing:0,
   attributionControl:false,
   antialias:true,
@@ -297,6 +397,12 @@ var userPanTimer=null;
 function mkOriginMarker(){
   var isStation = ORIGIN_LBL.toLowerCase().indexOf('station') !== -1;
   var el=document.createElement('div');
+  el.style.width='40px';
+  el.style.height='40px';
+  el.style.display='flex';
+  el.style.alignItems='center';
+  el.style.justifyContent='center';
+  el.style.pointerEvents='none';
   if(isStation){
     el.innerHTML='<div style="width:40px;height:40px;border-radius:12px;background:#0F1C3F;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,0.5)">🚒</div>';
   }else{
@@ -308,28 +414,70 @@ function mkOriginMarker(){
         '</div>'+
       '</div>';
   }
-  new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([ORIGIN_LNG,ORIGIN_LAT]).addTo(map);
+  new maplibregl.Marker({
+    element: el,
+    anchor: 'center',
+    pitchAlignment: 'map',
+    rotationAlignment: 'map'
+  }).setLngLat([ORIGIN_LNG,ORIGIN_LAT]).addTo(map);
 }
 function mkIncident(){
   var el=document.createElement('div');
-  el.style.cssText='position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center';
+  el.style.width='56px';
+  el.style.height='56px';
+  el.style.display='flex';
+  el.style.alignItems='center';
+  el.style.justifyContent='center';
   el.innerHTML=
     '<div style="position:absolute;width:56px;height:56px;border-radius:50%;background:'+MCOLOR+';opacity:0.22;animation:pulse 2s ease-out infinite"></div>'+
     '<div style="position:absolute;width:38px;height:38px;border-radius:50%;background:'+MCOLOR+';opacity:0.14;animation:pulse 2s ease-out 0.55s infinite"></div>'+
     '<div style="position:relative;z-index:2;width:44px;height:44px;border-radius:14px;background:'+MCOLOR+';border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 18px rgba(0,0,0,0.5)">🔥</div>';
-  new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([DEST_LNG,DEST_LAT]).addTo(map);
+  new maplibregl.Marker({
+    element: el,
+    anchor: 'center',
+    pitchAlignment: 'map',
+    rotationAlignment: 'map'
+  }).setLngLat([DEST_LNG,DEST_LAT]).addTo(map);
 }
 function mkGPSArrow(initLng,initLat){
   gpsMarkerEl=document.createElement('div');
   // NOTE: Never put CSS transition:transform on the root marker element in MapLibre!
   // Doing so causes dragging/panning to lag, float, and bounce instead of sticking to the map.
-  gpsMarkerEl.style.cssText='position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;pointer-events:none';
+  gpsMarkerEl.style.width='90px';
+  gpsMarkerEl.style.height='90px';
+  gpsMarkerEl.style.display='flex';
+  gpsMarkerEl.style.alignItems='center';
+  gpsMarkerEl.style.justifyContent='center';
+  gpsMarkerEl.style.pointerEvents='none';
+  gpsMarkerEl.style.position='relative';
   gpsMarkerEl.innerHTML=
-    '<div style="position:absolute;width:46px;height:46px;border-radius:50%;background:#3B82F6;opacity:0.22;animation:pulse 2s ease-out infinite"></div>'+
-    '<div id="gps-arrow-icon" style="position:relative;z-index:2;width:30px;height:30px;border-radius:50%;background:#2563EB;border:3px solid #fff;box-shadow:0 3px 14px rgba(37,99,235,0.6);display:flex;align-items:center;justify-content:center;transition:transform 0.2s linear">'+
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M12 2L3 21l9-4 9 4L12 2z"/></svg>'+
+    /* 1. Pulsing ring */
+    '<div style="position:absolute;width:44px;height:44px;border-radius:50%;background:#3B82F6;opacity:0.25;animation:pulse 2s ease-out infinite"></div>'+
+    /* 2. Directional Facing Beam / Light Cone (radiates forward in device orientation) */
+    '<div id="gps-beam-wrapper" style="position:absolute;width:90px;height:90px;top:0;left:0;display:flex;align-items:center;justify-content:center;transform-origin:50% 50%;will-change:transform">'+
+      '<svg viewBox="0 0 90 90" width="90" height="90" style="overflow:visible">'+
+        '<defs>'+
+          '<radialGradient id="beamGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">'+
+            '<stop offset="0%" stop-color="#2563EB" stop-opacity="0.65"/>'+
+            '<stop offset="50%" stop-color="#3B82F6" stop-opacity="0.25"/>'+
+            '<stop offset="90%" stop-color="#60A5FA" stop-opacity="0.06"/>'+
+            '<stop offset="100%" stop-color="#93C5FD" stop-opacity="0"/>'+
+          '</radialGradient>'+
+        '</defs>'+
+        '<path d="M 45 45 L 24 9 A 42 42 0 0 1 66 9 Z" fill="url(#beamGrad)" />'+
+      '</svg>'+
+    '</div>'+
+    /* 3. Blue Puck Core */
+    '<div id="gps-arrow-icon" style="position:relative;z-index:2;width:24px;height:24px;border-radius:50%;background:#2563EB;border:3px solid #fff;box-shadow:0 3px 12px rgba(37,99,235,0.6);display:flex;align-items:center;justify-content:center;transform-origin:50% 50%;will-change:transform">'+
+      '<svg id="gps-svg-arrow" viewBox="0 0 24 24" width="13" height="13" fill="#fff" style="display:none"><path d="M12 3L4 19l8-3.5 8 3.5L12 3z"/></svg>'+
+      '<div id="gps-dot-center" style="width:6px;height:6px;border-radius:50%;background:#fff"></div>'+
     '</div>';
-  gpsMarker=new maplibregl.Marker({element:gpsMarkerEl,anchor:'center'})
+  gpsMarker=new maplibregl.Marker({
+    element: gpsMarkerEl,
+    anchor: 'center',
+    pitchAlignment: 'map',
+    rotationAlignment: 'map'
+  })
     .setLngLat([initLng,initLat])
     .addTo(map);
 }
@@ -406,11 +554,16 @@ function refreshConnectorsSource(){
 }
 
 /* ── Keep origin dotted connector line locked to live location ── */
-function updateOriginConnector(liveLng, liveLat, snapIdx, snapDist){
+function updateOriginConnector(liveLng, liveLat, snapIdx, snapDist, speedKmh){
   if(routeCoords.length === 0) return;
 
-  // Once vehicle has joined the road network or advanced along the route, never show origin connector
-  if(hasJoinedRoad || (snapIdx != null && snapIdx > 0) || (snapDist != null && snapDist <= 8)){
+  var startRoad = routeCoords[0];
+  var distToStart = getDist([liveLng, liveLat], startRoad);
+
+  // Once the vehicle has physically joined the road network AND is actively traveling down the route,
+  // retire the origin off-road connector permanently for this navigation session
+  var isActivelyDriving = (speedKmh != null && speedKmh >= 10) && (snapIdx != null && snapIdx >= 3) && (distToStart > 20);
+  if(hasJoinedRoad || isActivelyDriving){
     hasJoinedRoad = true;
     if(originConnectorCoords !== null){
       originConnectorCoords = null;
@@ -419,18 +572,12 @@ function updateOriginConnector(liveLng, liveLat, snapIdx, snapDist){
     return;
   }
 
-  var startRoad = routeCoords[0];
-  var startDist = getDist([liveLng, liveLat], startRoad);
-  if(startDist > 8){
-    var prevStart = routeCoords[1] || startRoad;
-    var arcOrigin = makeTangentArc(startRoad, prevStart, [liveLng, liveLat], false);
-    arcOrigin.reverse();
-    originConnectorCoords = arcOrigin;
-  } else {
-    // When vehicle drives onto the road (within 8m), remove the off-road dotted trail permanently
-    hasJoinedRoad = true;
-    originConnectorCoords = null;
-  }
+  // Otherwise, vehicle is off-road at departure origin (stationary, parking lot, station bay, driveway):
+  // Dynamically draw smooth tangent dotted line between the live GPS puck and route start point
+  var prevStart = routeCoords[1] || startRoad;
+  var arcOrigin = makeTangentArc(startRoad, prevStart, [liveLng, liveLat], false);
+  arcOrigin.reverse();
+  originConnectorCoords = arcOrigin;
   refreshConnectorsSource();
 }
 
@@ -448,22 +595,18 @@ function drawConnectors(curLng, curLat){
   var startDist = getDist(startPt, startRoad);
   var endDist = getDist(endRoad, destPt);
 
-  // 1. Origin to Road Start connector
-  // If the user is already on the road (<= 8m), hide origin dots
-  if(startDist > 8){
-    hasJoinedRoad = false;
+  // 1. Origin to Road Start connector: always connect if off-road (> 2m) and not actively driving
+  if(startDist > 2 && !hasJoinedRoad){
     var prevStart = routeCoords[1] || startRoad;
     var arcOrigin = makeTangentArc(startRoad, prevStart, startPt, false);
     arcOrigin.reverse();
     originConnectorCoords = arcOrigin;
   } else {
-    hasJoinedRoad = true;
     originConnectorCoords = null;
   }
 
   // 2. Road End to Destination Pin connector
-  // If the incident pin is already on the road (<= 8m), hide destination dots
-  if(endDist > 8){
+  if(endDist > 3){
     offRoadDistEnd = endDist;
     var prevEnd = routeCoords[routeCoords.length - 2] || endRoad;
     var arcDest = makeTangentArc(endRoad, prevEnd, destPt, true);
@@ -478,7 +621,7 @@ function drawConnectors(curLng, curLat){
       data: { type: 'FeatureCollection', features: [] }
     });
 
-    // 1. Outer casing: mathematically synchronized period to produce a crisp 1px white border
+    // 1. Outer casing: crisp white border
     map.addLayer({
       id: 'rc-casing',
       type: 'line',
@@ -486,22 +629,22 @@ function drawConnectors(curLng, curLat){
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
         'line-color': '#FFFFFF',
-        'line-width': 6.5,
-        'line-dasharray': [0.01, 1.52],
+        'line-width': 7.5,
+        'line-dasharray': [1, 1.4],
         'line-opacity': 0.95
       }
     });
 
-    // 2. Core slate dots: identical period ensures perfect concentric circles without drifting
+    // 2. Core dots: refined graphite/slate dashed connector
     map.addLayer({
       id: 'rc-dots',
       type: 'line',
       source: 'route-connectors',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': '#475569',
+        'line-color': '#3A3A3C',
         'line-width': 4.5,
-        'line-dasharray': [0.01, 2.2],
+        'line-dasharray': [1, 1.4],
         'line-opacity': 1.0
       }
     });
@@ -521,8 +664,8 @@ function drawConnectors(curLng, curLat){
       paint: {
         'circle-radius': 5,
         'circle-color': '#FFFFFF',
-        'circle-stroke-color': '#475569',
-        'circle-stroke-width': 2
+        'circle-stroke-color': '#3A3A3C',
+        'circle-stroke-width': 2.5
       }
     });
   }
@@ -548,8 +691,8 @@ function drawDirectFallbackRoute(){
     layout: { 'line-join': 'round', 'line-cap': 'round' },
     paint: {
       'line-color': '#FFFFFF',
-      'line-width': 6.5,
-      'line-dasharray': [0.01, 1.52],
+      'line-width': 7.5,
+      'line-dasharray': [1, 1.4],
       'line-opacity': 0.95
     }
   });
@@ -560,13 +703,29 @@ function drawDirectFallbackRoute(){
     source: 'route-direct',
     layout: { 'line-join': 'round', 'line-cap': 'round' },
     paint: {
-      'line-color': '#475569',
+      'line-color': '#3A3A3C',
       'line-width': 4.5,
-      'line-dasharray': [0.01, 2.2],
+      'line-dasharray': [1, 1.4],
       'line-opacity': 1.0
     }
   });
+  var dFallback = getDist([ORIGIN_LNG, ORIGIN_LAT], [DEST_LNG, DEST_LAT]);
+  try{
+    if(window.ReactNativeWebView){
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'routeMeta',
+        distance: Math.round(dFallback),
+        duration: Math.round(dFallback / 8.3)
+      }));
+    }
+  }catch(_){}
   fitRoute(directCoords);
+  setTimeout(function(){
+    if(!IS_NAV && map){
+      try{ map.resize(); }catch(_){}
+      fitRoute(directCoords);
+    }
+  }, 350);
 }
 
 /* ── Route drawing ── */
@@ -595,11 +754,50 @@ function drawRoute(geom){
   }
 }
 function fitRoute(coords){
+  if(!map) return;
+  try{ map.resize(); }catch(_){}
   var b=new maplibregl.LngLatBounds();
-  coords.forEach(function(c){b.extend(c);});
-  b.extend([ORIGIN_LNG,ORIGIN_LAT]);
-  b.extend([DEST_LNG,DEST_LAT]);
-  map.fitBounds(b,{padding:{top:80,bottom:120,left:50,right:50},duration:1200});
+  if(coords && coords.length > 0){
+    coords.forEach(function(c){ b.extend(c); });
+  }
+  b.extend([ORIGIN_LNG, ORIGIN_LAT]);
+  b.extend([DEST_LNG, DEST_LAT]);
+  if(originConnectorCoords && originConnectorCoords.length > 0){
+    originConnectorCoords.forEach(function(c){ b.extend(c); });
+  }
+  if(destConnectorCoords && destConnectorCoords.length > 0){
+    destConnectorCoords.forEach(function(c){ b.extend(c); });
+  }
+
+  var h = window.innerHeight || document.documentElement.clientHeight || 400;
+  var w = window.innerWidth || document.documentElement.clientWidth || 360;
+
+  var pad;
+  if(h <= 260){
+    // Mini preview card in Incident Details screen (200px tall)
+    pad = {
+      top: 24,
+      bottom: 24,
+      left: 28,
+      right: 28
+    };
+  } else {
+    // Fullscreen Route Overview modal:
+    // Top floating island card takes ~100px from top
+    // Bottom floating route selector & Start Navigation card takes ~240px from bottom
+    pad = {
+      top: 110,
+      bottom: 255,
+      left: Math.max(32, Math.round(w * 0.08)),
+      right: Math.max(32, Math.round(w * 0.08))
+    };
+  }
+
+  map.fitBounds(b, {
+    padding: pad,
+    maxZoom: 16,
+    duration: 1000
+  });
 }
 
 /* ── Precompute cumulative distances ── */
@@ -712,6 +910,131 @@ async function fetchRoute(){
 }
 
 /* ─────────────────────────────────────────────────
+   Facing, Compass & Re-center Navigation Logic
+   Industry Standard: EMA filtering + shortest angular path + rAF
+   ───────────────────────────────────────────────── */
+var lastHeading=0;
+var lastSpeed=0;
+var targetHeading=0;
+var currentHeading=0;
+var headingRafId=null;
+var isHeadingAnimating=false;
+var hasHeadingInit=false;
+
+function smoothHeadingStep(){
+  // Compute shortest angular difference (-180 to +180) to prevent full 360-degree spins
+  var diff=((targetHeading - currentHeading + 540) % 360) - 180;
+  if(Math.abs(diff) < 0.25){
+    currentHeading=targetHeading;
+    applyHeadingTransform(currentHeading);
+    isHeadingAnimating=false;
+    headingRafId=null;
+    return;
+  }
+  // Industry-standard EMA smoothing factor (0.18): eliminates raw sensor jitter while remaining instant
+  currentHeading=(currentHeading + diff * 0.18 + 360) % 360;
+  applyHeadingTransform(currentHeading);
+  headingRafId=requestAnimationFrame(smoothHeadingStep);
+}
+
+function applyHeadingTransform(deg){
+  var beamWrapper=document.getElementById('gps-beam-wrapper');
+  var arrowIcon=document.getElementById('gps-arrow-icon');
+  var rounded=Math.round(deg * 10) / 10;
+  var rot='rotate(' + rounded + 'deg)';
+  if(beamWrapper) beamWrapper.style.transform=rot;
+  if(arrowIcon) arrowIcon.style.transform=rot;
+}
+
+window.onHeadingUpdate=function(h){
+  if(h == null || !isFinite(h) || h < 0) return;
+  lastHeading=h;
+  if(lastSpeed >= 2.5) return; // Driving at speed: GPS course heading takes precedence
+
+  targetHeading=h;
+  if(!hasHeadingInit){
+    currentHeading=h;
+    hasHeadingInit=true;
+    applyHeadingTransform(currentHeading);
+    return;
+  }
+  if(!isHeadingAnimating){
+    isHeadingAnimating=true;
+    headingRafId=requestAnimationFrame(smoothHeadingStep);
+  }
+};
+
+function updateFacingOrientation(heading,safeSpeed){
+  if(heading!=null && heading!==-1 && isFinite(heading)){
+    lastHeading=heading;
+    targetHeading=heading;
+    if(!hasHeadingInit){
+      currentHeading=heading;
+      hasHeadingInit=true;
+      applyHeadingTransform(currentHeading);
+    }else if(!isHeadingAnimating){
+      isHeadingAnimating=true;
+      headingRafId=requestAnimationFrame(smoothHeadingStep);
+    }
+  }
+  if(safeSpeed!=null && isFinite(safeSpeed)){
+    lastSpeed=safeSpeed;
+  }
+  var arrowSvg=document.getElementById('gps-svg-arrow');
+  var dotCenter=document.getElementById('gps-dot-center');
+  if(lastSpeed>=2.5){
+    if(arrowSvg)arrowSvg.style.display='block';
+    if(dotCenter)dotCenter.style.display='none';
+  }else{
+    if(arrowSvg)arrowSvg.style.display='none';
+    if(dotCenter)dotCenter.style.display='block';
+  }
+}
+
+var lastCompassBearing=null;
+function updateCompass(){
+  var b=Math.round(map.getBearing() * 10) / 10;
+  if(b === lastCompassBearing) return;
+  lastCompassBearing=b;
+  var needle=document.getElementById('compass-needle');
+  if(needle)needle.style.transform='rotate('+(-b)+'deg)';
+}
+
+function resetNorth(){
+  map.easeTo({bearing:0,duration:400});
+}
+
+function showRecenterBtn(show){
+  var btn=document.getElementById('recenter-btn');
+  if(!btn)return;
+  if(show){
+    btn.classList.add('visible');
+  }else{
+    btn.classList.remove('visible');
+  }
+}
+
+function recenterCamera(){
+  isUserPanning=false;
+  showRecenterBtn(false);
+  if(userPanTimer){
+    clearTimeout(userPanTimer);
+    userPanTimer=null;
+  }
+  var liveLng=(lastGps&&lastGps.lng!=null)?lastGps.lng:ORIGIN_LNG;
+  var liveLat=(lastGps&&lastGps.lat!=null)?lastGps.lat:ORIGIN_LAT;
+  var targetBearing=(lastSpeed>=2.5&&lastHeading!=null&&lastHeading!==0)?lastHeading:map.getBearing();
+  map.flyTo({
+    center:[liveLng,liveLat],
+    zoom:16.5,
+    pitch:50,
+    bearing:targetBearing,
+    duration:800,
+    essential:true
+  });
+}
+
+/* ─────────────────────────────────────────────────
    window.onGPSUpdate — called by React Native via
    injectJavaScript every time expo-location fires.
    This is the ONLY thing that moves the camera.
@@ -719,25 +1042,22 @@ async function fetchRoute(){
 window.onGPSUpdate=function(lat,lng,heading,speedKmh,accuracy){
   if(!IS_NAV)return;
 
-  if(!isFinite(accuracy)||accuracy>65)return;
+  if(!isFinite(accuracy)||accuracy>150)return;
 
   /* Always update live speed display immediately */
   var safeSpeed = (speedKmh && speedKmh >= 2.5) ? Math.round(speedKmh) : 0;
   var spdEl=document.getElementById('speed-val');
   if(spdEl)spdEl.textContent=String(safeSpeed);
 
-  /* Always update vehicle heading rotation immediately */
-  if(heading!=null && heading!==0){
-    var arrowIcon=document.getElementById('gps-arrow-icon');
-    if(arrowIcon)arrowIcon.style.transform='rotate('+heading+'deg)';
-  }
+  /* Update facing directional beam and motion chevron */
+  updateFacingOrientation(heading, safeSpeed);
 
   /* First update */
   if(!gpsReceived){
     gpsReceived=true;
   }
 
-  /* Move the blue GPS arrow without any floating or bouncing */
+  /* Move the blue GPS puck without any floating or bouncing */
   if(gpsMarker)gpsMarker.setLngLat([lng,lat]);
   lastGps={lng:lng,lat:lat};
 
@@ -745,14 +1065,15 @@ window.onGPSUpdate=function(lat,lng,heading,speedKmh,accuracy){
   if(routeCoords.length>0){
     var si=snapToRoute(lng,lat);
 
-    /* Dynamically update the origin dotted connector: permanently hides once on the road */
-    updateOriginConnector(lng,lat,si,lastSnapDist);
+    /* Dynamically update the origin dotted connector: stays locked to puck until actively driving on road */
+    updateOriginConnector(lng,lat,si,lastSnapDist,speedKmh);
 
-    /* Trim remaining route so the line shrinks as you drive */
+    /* Trim remaining route only after vehicle has joined the road */
     if(map.getSource('route-rem')){
+      var remCoords = (hasJoinedRoad && si > 0) ? routeCoords.slice(si) : routeCoords;
       map.getSource('route-rem').setData({
         type:'LineString',
-        coordinates:routeCoords.slice(si)
+        coordinates:remCoords
       });
     }
 
@@ -760,10 +1081,13 @@ window.onGPSUpdate=function(lat,lng,heading,speedKmh,accuracy){
     hudUpdate(si,speedKmh);
   }
 
-  /* Smoothly track camera if user is not currently panning */
+  /* Smoothly track camera in 3D angled perspective if user is not currently panning */
   if(!isUserPanning){
+    var targetBearing = (safeSpeed >= 2.5 && heading != null && heading !== 0) ? heading : map.getBearing();
     map.easeTo({
       center:[lng,lat],
+      pitch: 50,
+      bearing: targetBearing,
       duration:800,
       easing:function(t){return t;}
     });
@@ -774,16 +1098,30 @@ window.onGPSUpdate=function(lat,lng,heading,speedKmh,accuracy){
 map.on('load',async function(){
   mkIncident();
 
+  /* Keep compass synchronized with map rotation */
+  map.on('rotate', updateCompass);
+
   /* Listen for user pan gestures to pause/resume auto-camera tracking */
   map.on('dragstart',function(){
+    if(!IS_NAV) return;
     isUserPanning=true;
+    showRecenterBtn(true);
     if(userPanTimer)clearTimeout(userPanTimer);
   });
+  map.on('zoomstart',function(e){
+    if(!IS_NAV) return;
+    if(e && e.originalEvent){
+      isUserPanning=true;
+      showRecenterBtn(true);
+      if(userPanTimer)clearTimeout(userPanTimer);
+    }
+  });
   map.on('dragend',function(){
+    if(!IS_NAV) return;
     if(userPanTimer)clearTimeout(userPanTimer);
     userPanTimer=setTimeout(function(){
-      isUserPanning=false;
-    },4000);
+      if(isUserPanning) recenterCamera();
+    },8000);
   });
 
   if(HAS_ROUTE){
@@ -801,22 +1139,52 @@ map.on('load',async function(){
       totalDist=route.distance + offRoadDistEnd;
       totalDur=route.duration;
 
+      try {
+        if(window.ReactNativeWebView){
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'routeMeta',
+            distance: Math.round(totalDist),
+            duration: Math.round(totalDur)
+          }));
+        }
+      }catch(_){}
+
       if(IS_NAV){
-        /* Show HUD, GPS arrow at origin */
+        /* Show HUD and navigation action controls (Compass & Recenter) */
         document.getElementById('hud').style.display='flex';
-        mkGPSArrow(ORIGIN_LNG,ORIGIN_LAT);
-        /* Keep the initial camera fixed at the route origin. */
-        map.jumpTo({center:[ORIGIN_LNG,ORIGIN_LAT],zoom:16,pitch:0,bearing:0});
+        document.getElementById('nav-actions').style.display='flex';
+        updateCompass();
+
+        var initPuckLng = (lastGps && lastGps.lng) ? lastGps.lng : ORIGIN_LNG;
+        var initPuckLat = (lastGps && lastGps.lat) ? lastGps.lat : ORIGIN_LAT;
+        mkGPSArrow(initPuckLng, initPuckLat);
+        updateFacingOrientation(lastHeading, 0);
+
+        /* Keep the initial camera fixed at the route origin in 3D angled navigation perspective. */
+        map.jumpTo({center:[initPuckLng, initPuckLat],zoom:16.5,pitch:50,bearing:0});
         /* Populate HUD with full-route info while waiting */
         document.getElementById('stat-rem').textContent=fmtD(totalDist);
         document.getElementById('stat-eta').textContent=fmtT(totalDur);
       }else{
         fitRoute(routeCoords);
+        setTimeout(function(){
+          if(!IS_NAV && map){
+            try{ map.resize(); }catch(_){}
+            fitRoute(routeCoords);
+          }
+        }, 350);
       }
     }else{
       drawDirectFallbackRoute();
     }
   }
+
+  window.addEventListener('resize', function(){
+    if(!IS_NAV && routeCoords.length > 0){
+      try{ map.resize(); }catch(_){}
+      fitRoute(routeCoords);
+    }
+  });
 });
 </script>
 </body>
@@ -828,6 +1196,7 @@ map.on('load',async function(){
     try {
       const msg = JSON.parse(event.nativeEvent.data);
       if (msg.type === 'navComplete') onNavigationComplete?.();
+      if (msg.type === 'routeMeta') onRouteMeta?.({ distance: msg.distance, duration: msg.duration });
     } catch (_) {}
   };
 
@@ -849,7 +1218,9 @@ map.on('load',async function(){
       onMessage={handleMessage}
     />
   );
-};
+});
+
+IncidentLocationMap.displayName = 'IncidentLocationMap';
 
 const styles = StyleSheet.create({
   webview: { flex: 1, backgroundColor: 'transparent' },

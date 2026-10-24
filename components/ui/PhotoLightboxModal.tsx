@@ -255,7 +255,7 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
           </View>
 
           {/* Optional Bottom Caption Bar */}
-          {caption ? (
+          {caption && caption.trim().length > 0 && caption.toLowerCase() !== title?.toLowerCase() ? (
             <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
               <Text style={styles.captionText}>{caption}</Text>
             </View>

@@ -18,14 +18,6 @@ const STATUS_FILTERS = [
   { key: 'resolved', label: 'Resolved' },
 ];
 
-const STATUS_PRIORITY: Record<string, number> = {
-  'pending': 1,
-  'accepted': 2,
-  'dispatched': 3,
-  'resolved': 4,
-  'invalid': 5,
-};
-
 export default function IncidentsListScreen() {
   const { colors, spacing, typography, radius } = useTheme();
   const { unreadCount } = useNotifications();
@@ -71,14 +63,8 @@ export default function IncidentsListScreen() {
       return matchesStatus && matchesSearch;
     });
 
-    // Sort: prioritize by status priority, then fallback to descending date (latest first)
+    // Sort strictly by latest occurrence first (most recent created_at first)
     return result.sort((a, b) => {
-      const pA = STATUS_PRIORITY[a.status] ?? 99;
-      const pB = STATUS_PRIORITY[b.status] ?? 99;
-      
-      if (pA !== pB) {
-        return pA - pB; // lower number = higher priority
-      }
       const timeA = new Date((a.created_at || '').replace(' ', 'T')).getTime() || 0;
       const timeB = new Date((b.created_at || '').replace(' ', 'T')).getTime() || 0;
       if (timeA !== timeB) return timeB - timeA;
