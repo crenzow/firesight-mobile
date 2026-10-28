@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'r
 import { router, usePathname, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
@@ -15,7 +16,7 @@ import { announcementService } from '../../services/api';
 import { AreaStatus, CommunityReport, Announcement } from '../../services/api/models';
 
 export default function HomeScreen() {
-  const { colors, spacing, typography, radius } = useTheme();
+  const { colors, spacing, typography, radius, isDark } = useTheme();
   const { user } = useAuth();
   const { refresh: refreshNotifications } = useNotifications();
   const pathname = usePathname();
@@ -116,7 +117,10 @@ export default function HomeScreen() {
                 MY RECENT REPORTS
               </Text>
               <Pressable
-                onPress={() => router.push({ pathname: '/(resident)/reports', params: { from: pathname } } as any)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push({ pathname: '/(resident)/reports', params: { from: pathname } } as any);
+                }}
                 style={({ pressed }) => [
                   styles.seeAllRow,
                   {
@@ -147,7 +151,7 @@ export default function HomeScreen() {
                 styles.reportsCard,
                 {
                   backgroundColor: colors.surface,
-                  borderColor: colors.border,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
                 },
               ]}
             >
@@ -175,7 +179,12 @@ export default function HomeScreen() {
                         ]}
                       />
                     )}
-                    <ReportListItem report={report} paddingHorizontal={14} />
+                    <ReportListItem
+                      report={report}
+                      paddingHorizontal={14}
+                      isFirst={index === 0}
+                      isLast={index === recentReports.length - 1}
+                    />
                   </View>
                 ))
               )}
@@ -204,11 +213,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

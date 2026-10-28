@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, usePathname } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ShieldCheck, Settings as SettingsIcon, LogOut, Phone, Building2, IdCard, Edit3, Camera } from 'lucide-react-native';
@@ -95,35 +94,26 @@ export default function BFPProfileScreen() {
       <AppHeader variant="dark" />
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
         {/* ── Premium Identity Hero Card ── */}
-        <View style={[styles.heroShadow, { marginHorizontal: spacing.lg, marginTop: spacing.md }]}>
-          <View style={styles.heroCard}>
-            {/* Gradient background */}
-            <LinearGradient
-              colors={['#0F1C3F', '#1B2A5A', 'rgba(244,98,43,0.45)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-            />
+        <View style={[styles.heroCard, { marginHorizontal: spacing.lg, marginTop: spacing.md }]}>
+          {/* Edit button */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.heroEditBtn,
+              {
+                transform: [{ scale: pressed ? 0.90 : 1 }],
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              router.push({ pathname: '/(bfp)/profile/edit', params: { from: pathname } } as any);
+            }}
+          >
+            <Edit3 size={14} color="#FFFFFF" />
+          </Pressable>
 
-            {/* Edit button */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.heroEditBtn,
-                {
-                  transform: [{ scale: pressed ? 0.90 : 1 }],
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                router.push({ pathname: '/(bfp)/profile/edit', params: { from: pathname } } as any);
-              }}
-            >
-              <Edit3 size={14} color="#FFFFFF" />
-            </Pressable>
-
-            {/* Avatar + name */}
-            <View style={styles.heroTop}>
+          {/* Avatar + name */}
+          <View style={styles.heroTop}>
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -173,7 +163,6 @@ export default function BFPProfileScreen() {
               </View>
             </View>
           </View>
-        </View>
 
         <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginTop: spacing.xl, marginBottom: spacing.sm, marginHorizontal: spacing.lg }}>
           ASSIGNMENT
@@ -206,15 +195,15 @@ export default function BFPProfileScreen() {
         </Text>
         <View style={{ marginHorizontal: spacing.lg }}>
           <Card padding={0}>
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              <ProfileMenuRow
-                icon={<SettingsIcon size={18} color="#FFFFFF" />}
-                gradient={['#64748B', '#0F1C3F']}
-                label="App Settings"
-                subtitle="Theme, notifications, preferences"
-                onPress={() => router.push('/(bfp)/profile/settings?from=profile')}
-              />
-            </View>
+            <ProfileMenuRow
+              isFirst
+              isLast
+              icon={<SettingsIcon size={18} color="#FFFFFF" />}
+              gradient={['#64748B', '#0F1C3F']}
+              label="App Settings"
+              subtitle="Theme, notifications, preferences"
+              onPress={() => router.push('/(bfp)/profile/settings?from=profile')}
+            />
           </Card>
         </View>
 
@@ -296,17 +285,19 @@ const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: string; i
   value,
   isLast,
 }) => {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, typography, isDark } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isLast ? 0 : spacing.md }}>
-      <LinearGradient
-        colors={['#64748B', '#0F1C3F']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.infoIcon}
+      <View
+        style={[
+          styles.infoIcon,
+          {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#0F1C3F',
+          },
+        ]}
       >
         {icon}
-      </LinearGradient>
+      </View>
       <View style={{ marginLeft: spacing.sm }}>
         <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700' }}>{label}</Text>
         <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '600', marginTop: 1 }}>{value}</Text>
@@ -317,23 +308,12 @@ const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: string; i
 
 const styles = StyleSheet.create({
   // Hero card
-  heroShadow: {
-    borderRadius: 30,
-    backgroundColor: '#0F1C3F',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0F1C3F',
-        shadowOffset: { width: 0, height: 14 },
-        shadowOpacity: 0.28,
-        shadowRadius: 26,
-      },
-      android: { elevation: 8 },
-    }),
-  },
   heroCard: {
-    borderRadius: 30,
+    borderRadius: 24,
     padding: 22,
-    overflow: 'hidden',
+    backgroundColor: '#0F1C3F',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   heroEditBtn: {
     position: 'absolute',

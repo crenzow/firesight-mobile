@@ -12,12 +12,14 @@ interface SelectOption {
 
 interface SelectFieldProps {
   label?: string;
+  title?: string;
   required?: boolean;
   placeholder?: string;
   value: number | string | null;
   options: SelectOption[];
-  onSelect: (id: number | string) => void;
+  onSelect: (id: any) => void;
   error?: string;
+  allowClear?: boolean;
 }
 
 /**
@@ -27,18 +29,22 @@ interface SelectFieldProps {
  */
 export const SelectField: React.FC<SelectFieldProps> = ({
   label,
+  title,
   required,
   placeholder = 'Select an option',
   value,
   options,
   onSelect,
   error,
+  allowClear = false,
 }) => {
   const { colors, radius, spacing, typography } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   const selected = options.find((o) => o.id === value);
   const borderColor = error ? colors.danger : colors.border;
+  const modalTitle = title || label || placeholder;
+  const hasSelection = value !== null && value !== '' && value !== undefined;
 
   return (
     <View style={{ marginBottom: label ? spacing.lg : spacing.sm }}>
@@ -87,23 +93,40 @@ export const SelectField: React.FC<SelectFieldProps> = ({
           <SafeAreaView style={[styles.sheet, { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl }]} edges={['bottom']}>
             <View style={[styles.sheetHeader, { borderBottomColor: colors.border, padding: spacing.lg }]}>
               <Text style={{ color: colors.textPrimary, fontSize: typography.size.lg, fontWeight: '700' }}>
-                {label}
+                {modalTitle}
               </Text>
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setIsOpen(false);
-                }}
-                hitSlop={8}
-                style={({ pressed }) => [
-                  {
-                    transform: [{ scale: pressed ? 0.90 : 1 }],
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-              >
-                <X size={22} color={colors.textPrimary} />
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                {allowClear && hasSelection && (
+                  <Pressable
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                      onSelect(null);
+                      setIsOpen(false);
+                    }}
+                    hitSlop={8}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <Text style={{ color: colors.brandOrange, fontSize: typography.size.sm, fontWeight: '700' }}>
+                      Clear
+                    </Text>
+                  </Pressable>
+                )}
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    setIsOpen(false);
+                  }}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    {
+                      transform: [{ scale: pressed ? 0.90 : 1 }],
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <X size={22} color={colors.textPrimary} />
+                </Pressable>
+              </View>
             </View>
             <FlatList
               data={options}

@@ -350,17 +350,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
     marginBottom: 4,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
+    
   },
   searchInput: {
     flex: 1,

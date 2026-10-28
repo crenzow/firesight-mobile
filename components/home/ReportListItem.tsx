@@ -2,19 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Flame, ChevronRight, Clock } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { CommunityReport } from '../../services/api/models';
 import { StatusBadge } from './StatusBadge';
-import { formatRelativeDate, formatTime } from '../../utils/formatters';
+import { formatIncidentDateTime } from '../../utils/formatters';
 import { APP_CONFIG, getStorageImageUrl } from '../../constants/config';
 import { reverseGeocode, getCachedGeocode } from '../../utils/geocoding';
 
 interface ReportListItemProps {
   report: CommunityReport;
   paddingHorizontal?: number;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
-const ReportListItemComponent: React.FC<ReportListItemProps> = ({ report, paddingHorizontal }) => {
+const ReportListItemComponent: React.FC<ReportListItemProps> = ({
+  report,
+  paddingHorizontal,
+  isFirst,
+  isLast,
+}) => {
   const { colors, spacing, typography, radius, isDark } = useTheme();
   const [imageError, setImageError] = useState(false);
   const cached = getCachedGeocode(report.latitude, report.longitude);
@@ -47,15 +55,24 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({ report, paddin
 
   return (
     <Pressable
-      onPress={() => router.push(`/(resident)/reports/${report.report_id}`)}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        router.push(`/(resident)/reports/${report.report_id}`);
+      }}
       style={({ pressed }) => [
         styles.row,
         {
           paddingVertical: 13,
           paddingHorizontal: horizontalPadding,
+          borderTopLeftRadius: isFirst ? 19 : 0,
+          borderTopRightRadius: isFirst ? 19 : 0,
+          borderBottomLeftRadius: isLast ? 19 : 0,
+          borderBottomRightRadius: isLast ? 19 : 0,
           backgroundColor: pressed
-            ? (isDark ? '#221915' : '#FFF7F2')
+            ? (isDark ? '#221915' : '#F9FAFB')
             : 'transparent',
+          borderColor: pressed ? colors.brandOrange : 'transparent',
+          borderWidth: 1.5,
         },
       ]}
     >
@@ -121,7 +138,7 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({ report, paddin
             <View style={styles.bottomRow}>
               <Clock size={11} color={colors.textMuted} />
               <Text style={[styles.date, { color: colors.textMuted, fontSize: typography.size.xs, marginLeft: 4 }]}>
-                {formatRelativeDate(report.created_at)} · {formatTime(report.created_at)}
+                {formatIncidentDateTime(report.created_at)}
               </Text>
             </View>
           </View>

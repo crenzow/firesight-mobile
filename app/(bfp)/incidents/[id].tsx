@@ -15,7 +15,6 @@ import {
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   ShieldCheck,
   ShieldX,
@@ -72,7 +71,7 @@ const INCIDENT_TYPE_OPTIONS: { id: IncidentType; name: string }[] = [
   { id: 'others', name: 'Others' },
 ];
 
-/** Statuses where route-to-incident nav is relevant */
+/** Statuses where route-to-incident nav is relevant (unlocked once dispatched) */
 const ROUTE_STATUSES: BFPIncidentStatus[] = ['dispatched', 'resolved'];
 
 type RouteOrigin = 'station' | 'gps';
@@ -451,7 +450,12 @@ export default function IncidentDetailScreen() {
     Promise.all([incidentService.getDetail(reportId), incidentService.getStatusHistory(reportId)])
       .then(([detail, historyData]) => {
         setIncident(detail);
-        setHistory(Array.isArray(historyData) ? historyData : []);
+        const resolvedHistory: BFPIncidentStatusHistoryEntry[] = Array.isArray(historyData)
+          ? historyData
+          : Array.isArray((historyData as any)?.history)
+          ? (historyData as any).history
+          : [];
+        setHistory(resolvedHistory);
         setCauseOfFire(detail.cause_of_fire ?? '');
         setCasualties(String(detail.casualties ?? 0));
         setNotes(detail.notes ?? '');
@@ -557,11 +561,11 @@ export default function IncidentDetailScreen() {
     setIsActing(true);
     try {
       const updated = await incidentService.updateDetails(reportId, {
-        incident_type: incidentType || undefined,
+        incident_type: incidentType ?? null,
         cause_of_fire: causeOfFire ? causeOfFire.trim() : undefined,
         casualties: casualties !== '' ? Number(casualties) || 0 : 0,
         notes: notes ? notes.trim() : undefined,
-        alarm_level: alarmLevel,
+        alarm_level: alarmLevel ?? null,
       });
       setIncident(updated);
       setIsEditingDetails(false);
@@ -621,7 +625,7 @@ export default function IncidentDetailScreen() {
                   {INCIDENT_TYPE_OPTIONS.find((t) => t.id === incident.incident_type)?.name || 'Fire Incident'}
                 </Text>
                 <Text style={styles.briefingSubtitle} numberOfLines={1}>
-                  {incident.created_at ? `${formatFullDate(incident.created_at)} · ${formatTime(incident.created_at)}` : ''}
+                  {incident.created_at ? `${formatFullDate(incident.created_at)} at ${formatTime(incident.created_at)}` : ''}
                 </Text>
               </View>
               <IncidentStatusBadge status={incident.status} />
@@ -700,7 +704,7 @@ export default function IncidentDetailScreen() {
               />
               <InfoRow
                 label="Reported At"
-                value={incident.created_at ? `${formatFullDate(incident.created_at)} · ${formatTime(incident.created_at)}` : 'Unknown'}
+                value={incident.created_at ? `${formatFullDate(incident.created_at)} at ${formatTime(incident.created_at)}` : 'Unknown'}
                 isLast={!incident.contact_number}
               />
               {incident.contact_number ? (
@@ -810,13 +814,38 @@ export default function IncidentDetailScreen() {
 
           {/* ── VERIFY / FALSE REPORT ACTIONS ────────────────────── */}
           {incident.status === 'pending' ? (
-            <View style={[styles.actionsRow, { marginTop: 20 }]}>
-              <View style={{ flex: 1 }}>
-                <Button label="Verify Incident" onPress={handleVerify} loading={isActing} icon={<ShieldCheck size={16} color="#FFFFFF" />} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button label="Mark False" variant="danger" onPress={handleMarkInvalid} loading={isActing} icon={<ShieldX size={16} color="#FFFFFF" />} />
-              </View>
+            <View style={styles.pendingActionsRow}>
+              <Pressable
+                onPress={handleMarkInvalid}
+                disabled={isActing}
+                style={({ pressed }) => [
+                  styles.inPageActionBtnSecondary,
+                  {
+                    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+                    opacity: isActing ? 0.6 : (pressed ? 0.85 : 1),
+                    transform: [{ scale: pressed && !isActing ? 0.98 : 1 }],
+                  },
+                ]}
+              >
+                <ShieldX size={15} color="#DC2626" strokeWidth={2.4} style={{ marginRight: 6 }} />
+                <Text style={[styles.inPageActionBtnText, { color: '#DC2626' }]}>Mark False</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleVerify}
+                disabled={isActing}
+                style={({ pressed }) => [
+                  styles.inPageActionBtnPrimary,
+                  {
+                    backgroundColor: colors.brandOrange,
+                    opacity: isActing ? 0.6 : (pressed ? 0.9 : 1),
+                    transform: [{ scale: pressed && !isActing ? 0.98 : 1 }],
+                  },
+                ]}
+              >
+                <ShieldCheck size={15} color="#FFFFFF" strokeWidth={2.4} style={{ marginRight: 6 }} />
+                <Text style={styles.inPageActionBtnText}>Verify Incident</Text>
+              </Pressable>
             </View>
           ) : null}
 
@@ -1048,18 +1077,22 @@ export default function IncidentDetailScreen() {
               <Card padding={spacing.md}>
                 <FieldLabel text="INCIDENT TYPE" />
                 <SelectField
+                  title="Incident Type"
                   value={incidentType}
                   options={INCIDENT_TYPE_OPTIONS}
-                  onSelect={(value) => setIncidentType(value as IncidentType)}
+                  onSelect={(value) => setIncidentType(value as IncidentType | null)}
                   placeholder="Select incident type"
+                  allowClear
                 />
 
                 <FieldLabel text="ALARM LEVEL" />
                 <SelectField
+                  title="Alarm Level"
                   value={alarmLevel}
                   options={ALARM_LEVEL_OPTIONS}
-                  onSelect={(value) => setAlarmLevel(value as AlarmLevel)}
+                  onSelect={(value) => setAlarmLevel(value as AlarmLevel | null)}
                   placeholder="Select alarm level"
+                  allowClear
                 />
 
                 <FieldLabel text="CAUSE OF FIRE" />
@@ -1151,62 +1184,6 @@ export default function IncidentDetailScreen() {
             )}
           </View>
           ) : null}
-
-          {/* ── STATUS HISTORY TIMELINE ──────────────────────────── */}
-          {Array.isArray(history) && history.length > 0 ? (
-            <View>
-              <SectionPill title="STATUS HISTORY" />
-              <Card padding={0}>
-                {history.map((entry, index) => {
-                  const isLatest = index === history.length - 1;
-                  const isLastInList = index === history.length - 1;
-                  return (
-                    <View
-                      key={entry.history_id}
-                      style={[
-                        styles.historyRow,
-                        { paddingVertical: 14, paddingHorizontal: 16 },
-                      ]}
-                    >
-                      <View style={styles.timelineDotWrapper}>
-                        <View
-                          style={[
-                            styles.timelineDot,
-                            {
-                              backgroundColor: isLatest ? colors.brandOrange : '#C7C7CC',
-                            },
-                          ]}
-                        />
-                        {!isLastInList ? (
-                          <View style={[styles.timelineLine, { backgroundColor: 'rgba(0, 0, 0, 0.08)' }]} />
-                        ) : null}
-                      </View>
-                      <View style={{ flex: 1, marginLeft: 14 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <IncidentStatusBadge status={entry.status} size="sm" />
-                          <Text style={{ color: '#8E8E93', fontSize: 11, fontWeight: '500' }}>
-                            {formatTime(entry.created_at)}
-                          </Text>
-                        </View>
-                        {entry.notes ? (
-                          <View style={styles.historyNotesBox}>
-                            <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
-                              {entry.notes}
-                            </Text>
-                          </View>
-                        ) : null}
-                        <Text style={{ color: '#8E8E93', fontSize: 11, marginTop: 4 }}>
-                          {formatFullDate(entry.created_at)}
-                          {entry.changed_by_name ? ` · Officer ${entry.changed_by_name}` : ''}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </Card>
-            </View>
-          ) : null}
-
         </View>
       </ScrollView>
 
@@ -1382,12 +1359,8 @@ export default function IncidentDetailScreen() {
                         styles.fsOriginBtn,
                         active && {
                           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.16)' : '#FFFFFF',
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: isDark ? 0.2 : 0.08,
-                          shadowRadius: 4,
-                          elevation: 2,
-                        },
+                                                                      shadowOpacity: isDark ? 0.2 : 0.08,
+                                                                    },
                         {
                           opacity: disabled ? 0.35 : pressed && !active ? 0.75 : 1,
                           transform: [{ scale: pressed && !disabled ? 0.96 : 1 }],
@@ -1486,18 +1459,45 @@ export default function IncidentDetailScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
+  // Pending In-Page Actions (Apple-style borderless buttons)
+  pendingActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+  },
+  inPageActionBtnPrimary: {
+    flex: 1.25,
+    height: 42,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  inPageActionBtnSecondary: {
+    flex: 1,
+    height: 42,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  inPageActionBtnText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+
   // Executive Briefing Card
   briefingCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
-    shadowColor: '#0F1C3F',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 2,
+    borderColor: '#E5E7EB',
   },
   briefingHeaderRow: {
     flexDirection: 'row',
@@ -1571,11 +1571,8 @@ const styles = StyleSheet.create({
   },
   iosSegmentBtnActive: {
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
   },
   iosSegmentText: {
     fontSize: 12.5,
@@ -1647,11 +1644,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 42,
     borderRadius: 12,
-    shadowColor: '#34C759',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 2,
   },
   callButtonText: {
     color: '#FFFFFF',
@@ -1674,11 +1666,6 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#34C759',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 2,
   },
 
   // Actions
@@ -1752,17 +1739,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
   },
   previewOriginText: {
     color: '#101827',
@@ -1777,17 +1759,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
   },
   expandAffordanceText: {
     color: '#101827',
@@ -1826,11 +1803,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 34,
     borderRadius: 17,
-    shadowColor: '#F4622B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.28,
-    shadowRadius: 4,
-    elevation: 3,
   },
   miniStartNavBtnText: {
     color: '#FFFFFF',
@@ -1922,11 +1894,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
     marginRight: 10,
   },
   fsIconBadge: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
@@ -1946,11 +1913,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 0, 0, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 4,
   },
   fsControls: {
     position: 'absolute',
@@ -1963,11 +1925,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.08)',
-    shadowColor: '#0F1C3F',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-    elevation: 10,
   },
   fsRouteMetricsRow: {
     flexDirection: 'row',
@@ -2019,11 +1976,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 50,
     borderRadius: 25,
-    shadowColor: '#F4622B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
   },
   fsStartNavBtnText: {
     color: '#FFFFFF',

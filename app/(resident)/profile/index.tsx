@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, usePathname } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,7 +31,7 @@ import { PhotoOptionsModal, PhotoPreviewModal } from '../../../components/profil
 import { PhotoCropModal } from '../../../components/profile/PhotoCropModal';
 
 export default function ProfileScreen() {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, typography, isDark } = useTheme();
   const { user, logout, refreshUser, updateUser } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [localImage, setLocalImage] = useState<string | null>(null);
@@ -111,15 +110,7 @@ export default function ProfileScreen() {
         <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
 
           {/* ── Premium Identity Hero Card ── */}
-          <View style={[styles.heroShadow, { marginHorizontal: spacing.lg, marginTop: spacing.sm }]}>
-            <View style={styles.heroCard}>
-              {/* Gradient background */}
-              <LinearGradient
-                colors={['#0F1C3F', '#1B2A5A', 'rgba(244,98,43,0.45)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
+          <View style={[styles.heroCard, { marginHorizontal: spacing.lg, marginTop: spacing.sm }]}>
 
               {/* Edit button */}
               <Pressable
@@ -183,7 +174,6 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
           </View>
 
           {/* ── Personal Information ── */}
@@ -240,31 +230,31 @@ export default function ProfileScreen() {
           </Text>
           <View style={{ marginHorizontal: spacing.lg }}>
             <Card padding={0}>
-              <View style={{ paddingHorizontal: spacing.lg }}>
-                <ProfileMenuRow
-                  icon={<FileText size={18} color="#FFFFFF" />}
-                  gradient={['#F97316', '#FFB877']}
-                  label="My Reports"
-                  subtitle="View report history"
-                  onPress={() => router.push({ pathname: '/(resident)/reports', params: { from: pathname } } as any)}
-                />
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <ProfileMenuRow
-                  icon={<Lock size={18} color="#FFFFFF" />}
-                  gradient={['#6D5BD0', '#3B4CCA']}
-                  label="Privacy & Security"
-                  subtitle="Manage your data"
-                  onPress={() => router.push({ pathname: '/(resident)/profile/security', params: { from: pathname } } as any)}
-                />
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <ProfileMenuRow
-                  icon={<SettingsIcon size={18} color="#FFFFFF" />}
-                  gradient={['#64748B', '#0F1C3F']}
-                  label="App Settings"
-                  subtitle="Theme, notifications, preferences"
-                  onPress={() => router.push({ pathname: '/(resident)/profile/settings', params: { from: pathname } } as any)}
-                />
-              </View>
+              <ProfileMenuRow
+                isFirst
+                icon={<FileText size={18} color="#FFFFFF" />}
+                gradient={['#F97316', '#FFB877']}
+                label="My Reports"
+                subtitle="View report history"
+                onPress={() => router.push({ pathname: '/(resident)/reports', params: { from: pathname } } as any)}
+              />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <ProfileMenuRow
+                icon={<Lock size={18} color="#FFFFFF" />}
+                gradient={['#6D5BD0', '#3B4CCA']}
+                label="Privacy & Security"
+                subtitle="Manage your data"
+                onPress={() => router.push({ pathname: '/(resident)/profile/security', params: { from: pathname } } as any)}
+              />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <ProfileMenuRow
+                isLast
+                icon={<SettingsIcon size={18} color="#FFFFFF" />}
+                gradient={['#64748B', '#0F1C3F']}
+                label="App Settings"
+                subtitle="Theme, notifications, preferences"
+                onPress={() => router.push({ pathname: '/(resident)/profile/settings', params: { from: pathname } } as any)}
+              />
             </Card>
           </View>
 
@@ -361,17 +351,19 @@ function InfoRow({
   children: string;
   isLast?: boolean;
 }) {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, typography, isDark } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: isLast ? 0 : spacing.md }}>
-      <LinearGradient
-        colors={['#64748B', '#0F1C3F']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.infoIcon}
+      <View
+        style={[
+          styles.infoIcon,
+          {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#0F1C3F',
+          },
+        ]}
       >
         {icon}
-      </LinearGradient>
+      </View>
       <View style={{ flex: 1, marginLeft: spacing.md }}>
         <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', letterSpacing: 0.3 }}>
           {label}
@@ -388,23 +380,12 @@ const APP_VERSION = '1.0.0 · Build 2026.07';
 
 const styles = StyleSheet.create({
   // Hero card
-  heroShadow: {
-    borderRadius: 30,
-    backgroundColor: '#0F1C3F',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0F1C3F',
-        shadowOffset: { width: 0, height: 14 },
-        shadowOpacity: 0.28,
-        shadowRadius: 26,
-      },
-      android: { elevation: 8 },
-    }),
-  },
   heroCard: {
-    borderRadius: 30,
+    borderRadius: 24,
     padding: 22,
-    overflow: 'hidden',
+    backgroundColor: '#0F1C3F',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   heroEditBtn: {
     position: 'absolute',

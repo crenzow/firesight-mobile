@@ -1,12 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import {
-  Clock,
-  ShieldCheck,
-  Truck,
-  CheckCircle2,
-  XCircle,
-} from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
 /**
@@ -27,33 +20,33 @@ export type BFPIncidentStatus = 'pending' | 'accepted' | 'dispatched' | 'resolve
 
 export const STATUS_ORDER: BFPIncidentStatus[] = ['pending', 'accepted', 'dispatched', 'resolved'];
 
-const STATUS_META: Record<
-  BFPIncidentStatus,
-  { label: string; icon: (color: string, size: number) => React.ReactNode }
-> = {
-  pending:    { label: 'Reported',   icon: (c, s) => <Clock        size={s} color={c} /> },
-  accepted:   { label: 'Accepted',   icon: (c, s) => <ShieldCheck  size={s} color={c} /> },
-  dispatched: { label: 'Dispatched', icon: (c, s) => <Truck        size={s} color={c} /> },
-  resolved:   { label: 'Resolved',   icon: (c, s) => <CheckCircle2 size={s} color={c} /> },
-  invalid:    { label: 'Invalid',    icon: (c, s) => <XCircle      size={s} color={c} /> },
+const STATUS_LABELS: Record<BFPIncidentStatus, string> = {
+  pending: 'Reported',
+  accepted: 'Accepted',
+  dispatched: 'Dispatched',
+  resolved: 'Resolved',
+  invalid: 'Invalid',
 };
 
-export const IncidentStatusBadge: React.FC<{ status: BFPIncidentStatus; size?: 'sm' | 'md' }> = ({
-  status,
-  size = 'md',
-}) => {
+export const IncidentStatusBadge: React.FC<{
+  status: BFPIncidentStatus;
+  size?: 'sm' | 'md';
+}> = ({ status, size = 'md' }) => {
   const { colors, radius, typography } = useTheme();
 
   const color =
-    status === 'resolved'   ? colors.success
-    : status === 'dispatched' ? colors.brandOrange
-    : status === 'accepted'   ? colors.info
-    : status === 'invalid'    ? colors.textMuted
-    : colors.warning;
+    status === 'resolved'
+      ? colors.success
+      : status === 'dispatched'
+      ? colors.brandOrange
+      : status === 'accepted'
+      ? colors.info
+      : status === 'invalid'
+      ? colors.textMuted
+      : colors.warning;
 
-  const meta = STATUS_META[status] || STATUS_META['pending'];
+  const label = STATUS_LABELS[status] || STATUS_LABELS.pending;
   const isSm = size === 'sm';
-  const iconSize = isSm ? 11 : 13;
   const fontSize = isSm ? typography.size.xs : typography.size.sm;
 
   return (
@@ -62,16 +55,14 @@ export const IncidentStatusBadge: React.FC<{ status: BFPIncidentStatus; size?: '
         styles.badge,
         {
           backgroundColor: `${color}18`,
-          borderColor: `${color}35`,
           borderRadius: radius.full,
-          paddingHorizontal: isSm ? 8 : 10,
-          paddingVertical: isSm ? 3 : 5,
+          paddingHorizontal: isSm ? 9 : 11,
+          paddingVertical: isSm ? 3.5 : 5,
         },
       ]}
     >
-      {meta.icon(color, iconSize)}
-      <Text style={{ color, fontSize, fontWeight: '700', marginLeft: 5 }}>
-        {meta.label}
+      <Text style={{ color, fontSize, fontWeight: '700' }}>
+        {label}
       </Text>
     </View>
   );
@@ -81,7 +72,7 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     alignSelf: 'flex-start',
-    borderWidth: 1,
   },
 });

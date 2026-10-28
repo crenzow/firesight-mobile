@@ -106,7 +106,7 @@ export default function AnnouncementsScreen() {
                 styles.editorialCard,
                 {
                   backgroundColor: colors.surface,
-                  borderColor: colors.border,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
                 },
               ]}
             >
@@ -177,11 +177,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',

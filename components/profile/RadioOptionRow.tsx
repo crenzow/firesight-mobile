@@ -30,8 +30,8 @@ export const RadioOptionRow: React.FC<RadioOptionRowProps> = ({ icon, title, sub
           padding: spacing.md,
           marginBottom: spacing.sm,
           backgroundColor: pressed
-            ? (isDark ? '#221915' : '#FFF7F2')
-            : (selected ? `${colors.brandOrange}0D` : colors.surface),
+            ? (isDark ? '#221915' : '#F9FAFB')
+            : (selected ? (isDark ? '#1C1613' : '#FFFFFF') : (isDark ? colors.surfaceElevated : '#FFFFFF')),
           borderWidth: pressed || selected ? 1.5 : 1,
           transform: [{ scale: pressed ? 0.98 : 1 }],
         },

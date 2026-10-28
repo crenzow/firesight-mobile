@@ -16,10 +16,10 @@ const ITEMS: { key: MapType; label: string; Icon: typeof Layers }[] = [
 ];
 
 export function MapTypeSelector({ mapType, onChange }: Props) {
-  const { colors, shadow } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }, shadow.card]}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : '#E5E7EB' }]}>
       {ITEMS.map((item, index) => {
         const isActive = mapType === item.key;
         return (

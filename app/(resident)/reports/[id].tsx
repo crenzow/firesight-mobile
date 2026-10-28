@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
+import * as Haptics from 'expo-haptics';
 import { StatusBadge } from '../../../components/home/StatusBadge';
 import { PhotoLightboxModal } from '../../../components/ui/PhotoLightboxModal';
 import { reportService } from '../../../services/api/reportService';
@@ -34,7 +35,7 @@ import {
   ReportStatus,
   ReportStatusHistoryEntry,
 } from '../../../services/api/models';
-import { formatFullDate, formatTime } from '../../../utils/formatters';
+import { formatFullDate, formatTime, formatIncidentDateTime } from '../../../utils/formatters';
 import { APP_CONFIG, getStorageImageUrl } from '../../../constants/config';
 import { reverseGeocode } from '../../../utils/geocoding';
 
@@ -160,16 +161,23 @@ export default function ReportDetailScreen() {
             {/* ── 1. Photo Card (Top of Report) ── */}
             {photoUri ? (
               <Pressable
-                onPress={() => setIsPreviewOpen(true)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setIsPreviewOpen(true);
+                }}
                 style={({ pressed }) => [
                   styles.photoCard,
                   {
                     backgroundColor: colors.surfaceElevated,
-                    borderColor: colors.border,
+                    borderColor: pressed
+                      ? colors.brandOrange
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : '#E5E7EB',
+                    borderWidth: pressed ? 1.5 : 1,
                     borderRadius: radius.xl,
-                    transform: [{ scale: pressed ? 0.99 : 1 }],
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
                   },
-                  shadow.card,
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="Tap to preview photo"
@@ -188,13 +196,12 @@ export default function ReportDetailScreen() {
                 styles.overviewCard,
                 {
                   backgroundColor: colors.surfaceElevated,
-                  borderColor: colors.border,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
                   borderRadius: radius.lg,
                   padding: spacing.lg,
                   marginTop: photoUri ? spacing.md : 0,
                 },
-                shadow.card,
-              ]}
+                              ]}
             >
               {/* Header: StatusBadge + Reference No */}
               <View style={styles.topMetaRow}>
@@ -204,7 +211,7 @@ export default function ReportDetailScreen() {
                     styles.refPill,
                     {
                       backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
-                      borderColor: colors.border,
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
                     },
                   ]}
                 >
@@ -235,7 +242,7 @@ export default function ReportDetailScreen() {
                   <Calendar size={15} color={colors.textMuted} />
                 </View>
                 <Text style={[styles.dateText, { color: colors.textSecondary, marginLeft: 10 }]}>
-                  Reported on {formatFullDate(report.created_at)} · {formatTime(report.created_at)}
+                  Reported on {formatFullDate(report.created_at)} at {formatTime(report.created_at)}
                 </Text>
               </View>
 
@@ -246,7 +253,7 @@ export default function ReportDetailScreen() {
                     styles.descBox,
                     {
                       backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC',
-                      borderColor: colors.border,
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
                       borderRadius: radius.md,
                       padding: spacing.md,
                       marginTop: spacing.md,
@@ -273,12 +280,11 @@ export default function ReportDetailScreen() {
                 styles.timelineCard,
                 {
                   backgroundColor: colors.surfaceElevated,
-                  borderColor: colors.border,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
                   borderRadius: radius.lg,
                   padding: spacing.lg,
                 },
-                shadow.card,
-              ]}
+                              ]}
             >
               {report.status === 'invalid' ? (
                 <View style={styles.invalidBox}>
@@ -318,6 +324,7 @@ export default function ReportDetailScreen() {
                   const isLast = index === TIMELINE_STEPS.length - 1;
                   const StepIcon = step.Icon;
                   const entry = history.find((h) => h.status === step.key);
+                  const timestamp = entry?.created_at ?? (step.key === 'pending' ? report.created_at : null);
 
                   return (
                     <View key={step.key} style={styles.timelineRow}>
@@ -330,28 +337,32 @@ export default function ReportDetailScreen() {
                               ? [
                                   styles.activeDot,
                                   {
-                                    borderColor: step.color,
-                                    backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-                                    shadowColor: step.color,
+                                    borderColor: step.key === 'resolved' ? '#34C759' : '#F4622B',
+                                    backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                                    shadowColor: step.key === 'resolved' ? '#34C759' : '#F4622B',
                                   },
                                 ]
                               : isComplete
-                              ? [styles.completeDot, { backgroundColor: step.color }]
+                              ? [styles.completeDot, { backgroundColor: '#34C759' }]
                               : [
                                   styles.futureDot,
                                   {
-                                    borderColor: isDark ? '#334155' : '#CBD5E1',
-                                    backgroundColor: isDark ? '#0F172A' : '#F8FAFC',
+                                    borderColor: isDark ? 'rgba(255,255,255,0.12)' : '#E5E5EA',
+                                    backgroundColor: isDark ? '#1C1C1E' : '#F8F9FA',
                                   },
                                 ],
                           ]}
                         >
                           {isActive ? (
-                            <StepIcon size={22} color={step.color} strokeWidth={2.5} />
+                            step.key === 'resolved' ? (
+                              <CheckCircle2 size={22} color="#34C759" strokeWidth={2.4} />
+                            ) : (
+                              <StepIcon size={20} color="#F4622B" strokeWidth={2.4} />
+                            )
                           ) : isComplete ? (
-                            <Check size={18} color="#FFFFFF" strokeWidth={3} />
+                            <Check size={16} color="#FFFFFF" strokeWidth={3} />
                           ) : (
-                            <StepIcon size={15} color="#94A3B8" strokeWidth={2} />
+                            <StepIcon size={14} color="#8E8E93" strokeWidth={2} />
                           )}
                         </View>
 
@@ -360,11 +371,11 @@ export default function ReportDetailScreen() {
                             style={[
                               styles.connectorLine,
                               {
-                                backgroundColor: isComplete
-                                  ? step.color
+                                backgroundColor: isComplete || (isActive && step.key === 'resolved')
+                                  ? '#34C759'
                                   : isDark
-                                  ? '#334155'
-                                  : '#CBD5E1',
+                                  ? 'rgba(255, 255, 255, 0.1)'
+                                  : 'rgba(0, 0, 0, 0.08)',
                               },
                             ]}
                           />
@@ -390,19 +401,19 @@ export default function ReportDetailScreen() {
                                 style={[
                                   styles.activeBadge,
                                   {
-                                    backgroundColor: step.key === 'resolved' ? 'rgba(5, 150, 105, 0.12)' : `${step.color}18`,
-                                    borderColor: step.key === 'resolved' ? 'rgba(5, 150, 105, 0.35)' : `${step.color}40`,
+                                    backgroundColor: step.key === 'resolved' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(244, 98, 43, 0.1)',
+                                    borderColor: step.key === 'resolved' ? 'rgba(52, 199, 89, 0.3)' : 'rgba(244, 98, 43, 0.3)',
                                   },
                                 ]}
                               >
                                 {step.key === 'resolved' ? (
-                                  <Check size={11} color="#059669" strokeWidth={3} />
+                                  <Check size={11} color="#34C759" strokeWidth={3} />
                                 ) : (
                                   <View
-                                    style={[styles.pulsingDot, { backgroundColor: step.color }]}
+                                    style={[styles.pulsingDot, { backgroundColor: '#F4622B' }]}
                                   />
                                 )}
-                                <Text style={[styles.activeBadgeText, { color: step.key === 'resolved' ? '#059669' : step.color }]}>
+                                <Text style={[styles.activeBadgeText, { color: step.key === 'resolved' ? '#34C759' : '#F4622B' }]}>
                                   {step.key === 'resolved' ? 'Resolved' : 'Current Status'}
                                 </Text>
                               </View>
@@ -416,10 +427,9 @@ export default function ReportDetailScreen() {
                                 : step.defaultDescription}
                             </Text>
 
-                            {entry ? (
+                            {timestamp ? (
                               <Text style={[styles.activeTimestamp, { color: colors.textMuted }]}>
-                                Updated {formatFullDate(entry.created_at)} at{' '}
-                                {formatTime(entry.created_at)}
+                                Updated {formatIncidentDateTime(timestamp)}
                               </Text>
                             ) : null}
                           </View>
@@ -428,22 +438,19 @@ export default function ReportDetailScreen() {
                           <View style={styles.compactContentBox}>
                             <View style={styles.compactHeaderRow}>
                               <Text
-                                style={[styles.compactStepTitle, { color: colors.textPrimary }]}
-                              >
+                                style={[styles.compactStepTitle, { color: colors.textPrimary }]}>
                                 {step.label}
                               </Text>
-                              {entry && (
+                              {timestamp ? (
                                 <Text
-                                  style={[styles.compactTimestamp, { color: colors.textMuted }]}
-                                >
-                                  {formatTime(entry.created_at)}
+                                  style={[styles.compactTimestamp, { color: colors.textMuted }]}>
+                                  {formatIncidentDateTime(timestamp)}
                                 </Text>
-                              )}
+                              ) : null}
                             </View>
 
                             <Text
-                              style={[styles.compactStepDesc, { color: colors.textSecondary }]}
-                            >
+                              style={[styles.compactStepDesc, { color: colors.textSecondary }]}>
                               {entry?.notes?.trim()
                                 ? entry.notes.trim()
                                 : step.defaultDescription}
@@ -632,10 +639,6 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 2.5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 5,
-    elevation: 4,
   },
   completeDot: {
     width: 32,

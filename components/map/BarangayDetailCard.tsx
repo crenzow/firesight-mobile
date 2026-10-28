@@ -183,11 +183,6 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 8,
   },
   topRow: {
     flexDirection: 'row',

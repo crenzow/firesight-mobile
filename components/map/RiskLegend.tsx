@@ -24,8 +24,7 @@ export const RiskLegend: React.FC<{ style?: any; onClose?: () => void }> = ({ st
           borderWidth: 1,
           borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
         },
-        shadow.card,
-        style,
+                style,
       ]}
     >
       <View style={styles.headerRow}>

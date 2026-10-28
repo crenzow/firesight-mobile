@@ -52,10 +52,10 @@ export const QuickActionsRow: React.FC = () => {
     }, [])
   );
 
-  // Premium solid pressed states: no alpha blending bugs on Android
+  // Premium solid pressed states: clean Apple hairline border & neutral tap highlight
   const normalBg = colors.surface;
-  const pressedBg = isDark ? '#221915' : '#FFF7F2';
-  const normalBorder = colors.border;
+  const pressedBg = isDark ? '#221915' : '#F9FAFB';
+  const normalBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB';
   const pressedBorder = colors.brandOrange;
 
   return (
@@ -215,11 +215,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
   },
   tileRow: {
     flexDirection: 'row',

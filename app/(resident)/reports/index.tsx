@@ -11,7 +11,7 @@ import { ReportListItem } from '../../../components/home/ReportListItem';
 
 export default function MyReportsScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
-  const { colors, spacing, typography, radius } = useTheme();
+  const { colors, spacing, typography, radius, isDark } = useTheme();
 
   const [reports, setReports] = useState<CommunityReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,15 +94,7 @@ export default function MyReportsScreen() {
             }
           >
             {/* Seamless Feed blending into background */}
-            <View
-              style={[
-                styles.edgeToEdgeContainer,
-                {
-                  borderTopColor: colors.border,
-                  borderBottomColor: colors.border,
-                },
-              ]}
-            >
+            <View style={styles.edgeToEdgeContainer}>
               {reports.map((report, index) => (
                 <View key={report.report_id}>
                   {index > 0 && (
@@ -116,7 +108,12 @@ export default function MyReportsScreen() {
                       ]}
                     />
                   )}
-                  <ReportListItem report={report} paddingHorizontal={spacing.lg} />
+                  <ReportListItem
+                    report={report}
+                    paddingHorizontal={spacing.lg}
+                    isFirst={index === 0}
+                    isLast={index === reports.length - 1}
+                  />
                 </View>
               ))}
             </View>
@@ -153,8 +150,6 @@ const styles = StyleSheet.create({
   },
   edgeToEdgeContainer: {
     width: '100%',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

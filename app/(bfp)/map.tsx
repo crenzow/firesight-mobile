@@ -203,7 +203,6 @@ export default function BFPMapScreen() {
               backgroundColor: isDark ? 'rgba(15, 28, 63, 0.94)' : 'rgba(255, 255, 255, 0.96)',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
             },
-            shadow.card,
           ]}
         >
           {/* Top Row: Title, Subtitle, Search & Notification Actions */}
@@ -495,7 +494,6 @@ export default function BFPMapScreen() {
                       backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.96)',
                       borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
                     },
-                    shadow.card,
                   ]}
                 >
                   <View style={styles.legendHeaderRow}>

@@ -265,17 +265,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     paddingHorizontal: 22,
     paddingTop: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 12,
-      },
-    }),
+    
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -342,11 +332,6 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     borderWidth: 3.5,
     marginLeft: -13,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   labelsRow: {
     flexDirection: 'row',

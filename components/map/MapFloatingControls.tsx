@@ -35,8 +35,7 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
           backgroundColor: isDark ? 'rgba(21, 26, 48, 0.92)' : 'rgba(255, 255, 255, 0.94)',
           borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
         },
-        shadow.card,
-      ]}
+              ]}
     >
       {/* Map Type / Layers Button */}
       <Pressable

@@ -13,6 +13,8 @@ interface ProfileMenuRowProps {
   destructive?: boolean;
   hideChevron?: boolean;
   gradient?: [string, string]; // e.g. ['#6D5BD0', '#3B4CCA']
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
 export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
@@ -23,8 +25,10 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
   destructive,
   hideChevron,
   gradient,
+  isFirst,
+  isLast,
 }) => {
-  const { colors, spacing, typography, isDark } = useTheme();
+  const { colors, spacing, typography, radius, isDark } = useTheme();
 
   return (
     <Pressable
@@ -35,16 +39,19 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
       style={({ pressed }) => [
         styles.row,
         {
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.sm,
-          marginHorizontal: -spacing.sm,
-          borderRadius: 12,
+          paddingVertical: 14,
+          paddingHorizontal: spacing.lg,
+          borderTopLeftRadius: isFirst ? radius.lg - 1 : 0,
+          borderTopRightRadius: isFirst ? radius.lg - 1 : 0,
+          borderBottomLeftRadius: isLast ? radius.lg - 1 : 0,
+          borderBottomRightRadius: isLast ? radius.lg - 1 : 0,
           backgroundColor: pressed
-            ? (isDark ? '#221915' : '#FFF7F2')
+            ? (isDark ? '#221915' : '#F9FAFB')
             : 'transparent',
-          borderColor: pressed ? colors.brandOrange : 'transparent',
+          borderColor: pressed
+            ? (destructive ? colors.danger : colors.brandOrange)
+            : 'transparent',
           borderWidth: 1.5,
-          transform: [{ scale: pressed ? 0.985 : 1 }],
         },
       ]}
     >
@@ -55,7 +62,7 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
               styles.iconWrap,
               {
                 backgroundColor: pressed
-                  ? colors.brandOrange
+                  ? (destructive ? colors.danger : colors.brandOrange)
                   : destructive
                   ? `${colors.danger}14`
                   : (gradient ? 'transparent' : colors.surfaceElevated),
@@ -75,7 +82,7 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
             <Text
               style={{
-                color: destructive ? colors.danger : colors.textPrimary,
+                color: destructive ? colors.danger : pressed ? colors.brandOrange : colors.textPrimary,
                 fontSize: typography.size.sm,
                 fontWeight: '600',
               }}

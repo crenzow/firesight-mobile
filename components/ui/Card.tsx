@@ -28,7 +28,7 @@ export const Card: React.FC<CardProps> = ({
   const borderRadius = radius.lg; // Fixed 16px corner radius across all cards
 
   const cardBg = isDark ? colors.surfaceElevated : '#FFFFFF';
-  const cardBorderColor = isDark ? colors.border : 'rgba(0,0,0,0.055)';
+  const cardBorderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB';
 
   const flattenedStyle = StyleSheet.flatten(style) || {};
   const {
@@ -65,12 +65,7 @@ export const Card: React.FC<CardProps> = ({
   };
 
   return (
-    <View
-      style={[
-        outerLayoutStyle,
-        isDark ? undefined : styles.shadowOuter,
-      ]}
-    >
+    <View style={outerLayoutStyle}>
       <View
         style={[
           {
@@ -90,19 +85,4 @@ export const Card: React.FC<CardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  shadowOuter: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#1A2340',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 3,
-        backgroundColor: '#FFFFFF',
-      },
-    }),
-  },
-});
+const styles = StyleSheet.create({});

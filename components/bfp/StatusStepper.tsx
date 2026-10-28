@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { BFPIncidentStatus, STATUS_ORDER } from './IncidentStatusBadge';
 import { BFPIncidentStatusHistoryEntry } from '../../services/api/bfpModels';
-import { formatFullDate, formatTime } from '../../utils/formatters';
+import { formatIncidentDateTime } from '../../utils/formatters';
 
 interface StageDefinition {
   key: BFPIncidentStatus;
@@ -58,8 +58,9 @@ interface StatusStepperProps {
   status: BFPIncidentStatus;
   history?: BFPIncidentStatusHistoryEntry[];
   createdAt?: string | null;
-  onAdvance: (nextStatus: BFPIncidentStatus) => void;
+  onAdvance?: (nextStatus: BFPIncidentStatus) => void;
   disabled?: boolean;
+  hideActionButtons?: boolean;
 }
 
 /**
@@ -72,6 +73,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
   createdAt,
   onAdvance,
   disabled = false,
+  hideActionButtons = false,
 }) => {
   const { colors, isDark } = useTheme();
   const safeHistory = Array.isArray(history) ? history : [];
@@ -140,7 +142,6 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
                         {
                           borderColor: stage.key === 'resolved' ? '#34C759' : '#F4622B',
                           backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-                          shadowColor: stage.key === 'resolved' ? '#34C759' : '#F4622B',
                         },
                       ]
                     : isDone
@@ -237,8 +238,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
 
                   {timestamp ? (
                     <Text style={styles.activeTimestamp}>
-                      Updated {formatFullDate(timestamp)} at {formatTime(timestamp)}
-                      {entry?.changed_by_name ? ` · Officer ${entry.changed_by_name}` : ''}
+                      Updated {formatIncidentDateTime(timestamp)}
                     </Text>
                   ) : null}
                 </View>
@@ -251,7 +251,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
                     </Text>
                     {timestamp ? (
                       <Text style={styles.compactTimestamp}>
-                        {formatTime(timestamp)}
+                        {formatIncidentDateTime(timestamp)}
                       </Text>
                     ) : null}
                   </View>
@@ -259,12 +259,6 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
                   <Text style={[styles.compactStepDesc, { color: colors.textSecondary }]}>
                     {entry?.notes?.trim() ? entry.notes.trim() : stage.defaultDescription}
                   </Text>
-
-                  {entry?.changed_by_name ? (
-                    <Text style={styles.officerTag}>
-                      Confirmed by Officer {entry.changed_by_name}
-                    </Text>
-                  ) : null}
                 </View>
               ) : isNext ? (
                 /* ── NEXT STAGE (WITH ADVANCE ACTION) ── */
@@ -279,7 +273,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
                     {stage.defaultDescription}
                   </Text>
 
-                  {stage.actionLabel ? (
+                  {!hideActionButtons && stage.actionLabel && onAdvance ? (
                     <Pressable
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -344,10 +338,6 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     borderWidth: 2.5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.16,
-    shadowRadius: 5,
-    elevation: 3,
   },
   completeDot: {
     width: 30,
@@ -454,11 +444,6 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 18,
   },
-  officerTag: {
-    fontSize: 11,
-    color: '#8E8E93',
-    marginTop: 2,
-  },
 
   // Next status
   nextContentBox: {
@@ -475,22 +460,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   actionButton: {
+    height: 42,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 11,
+    paddingHorizontal: 18,
+    borderRadius: 12,
     alignSelf: 'flex-start',
-    shadowColor: '#F4622B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    marginTop: 4,
   },
   actionButtonText: {
     color: '#FFFFFF',
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: '700',
     letterSpacing: -0.2,
   },

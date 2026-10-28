@@ -205,8 +205,7 @@ export default function MapScreen() {
               backgroundColor: isDark ? 'rgba(15, 28, 63, 0.92)' : 'rgba(255, 255, 255, 0.94)',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
             },
-            shadow.card,
-          ]}
+                      ]}
         >
           {/* Top Row: Title, Scope, and Notifications */}
           <View style={styles.headerTopRow}>

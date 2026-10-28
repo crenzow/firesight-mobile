@@ -45,45 +45,45 @@ export default function SecurityScreen() {
             ACCOUNT SECURITY
           </Text>
           <Card padding={0}>
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              <ProfileMenuRow
-                icon={<Lock size={18} color="#FFFFFF" />}
-                gradient={['#1A2340', '#000000']}
-                label="Change Password"
-                subtitle="Update your account password"
-                onPress={() => {
-                  // TODO: Implement change password flow
-                }}
-              />
-            </View>
+            <ProfileMenuRow
+              isFirst
+              isLast
+              icon={<Lock size={18} color="#FFFFFF" />}
+              gradient={['#1A2340', '#000000']}
+              label="Change Password"
+              subtitle="Update your account password"
+              onPress={() => {
+                // TODO: Implement change password flow
+              }}
+            />
           </Card>
 
           <Text style={[styles.sectionTitle, { color: colors.textMuted, fontSize: typography.size.xs, marginTop: spacing.xl, marginBottom: spacing.sm }]}>
             DATA & PRIVACY
           </Text>
           <Card padding={0}>
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              <ProfileMenuRow
-                icon={<FileText size={18} color="#FFFFFF" />}
-                gradient={['#64748B', '#0F1C3F']}
-                label="Privacy Policy"
-                subtitle="How your data is collected and used"
-                onPress={() => {
-                  // TODO: Show privacy policy modal or screen
-                }}
-              />
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <ProfileMenuRow
-                icon={<Shield size={18} color="#FFFFFF" />}
-                gradient={['#EF4444', '#991B1B']}
-                label="Delete Account"
-                subtitle="Permanently remove your data"
-                destructive
-                onPress={() => {
-                  // TODO: Implement account deletion request
-                }}
-              />
-            </View>
+            <ProfileMenuRow
+              isFirst
+              icon={<FileText size={18} color="#FFFFFF" />}
+              gradient={['#64748B', '#0F1C3F']}
+              label="Privacy Policy"
+              subtitle="How your data is collected and used"
+              onPress={() => {
+                // TODO: Show privacy policy modal or screen
+              }}
+            />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <ProfileMenuRow
+              isLast
+              icon={<Shield size={18} color="#FFFFFF" />}
+              gradient={['#EF4444', '#991B1B']}
+              label="Delete Account"
+              subtitle="Permanently remove your data"
+              destructive
+              onPress={() => {
+                // TODO: Implement account deletion request
+              }}
+            />
           </Card>
 
         </ScrollView>

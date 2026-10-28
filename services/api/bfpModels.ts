@@ -73,7 +73,7 @@ export interface CreateManualIncidentPayload {
 }
 
 export interface UpdateIncidentDetailsPayload {
-  incident_type?: IncidentType;
+  incident_type?: IncidentType | null;
   cause_of_fire?: string;
   casualties?: number;
   notes?: string;

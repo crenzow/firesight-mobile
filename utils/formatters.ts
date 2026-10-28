@@ -14,6 +14,35 @@ export function formatRelativeDate(isoString: string): string {
   return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 }
 
+export function formatIncidentDateTime(isoString?: string | null): string {
+  if (!isoString) return '';
+  const date = new Date(isoString.replace(' ', 'T'));
+  if (isNaN(date.getTime())) return '';
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const timeStr = formatTime(isoString);
+  if (isToday) {
+    return `Today at ${timeStr}`;
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) {
+    return `Yesterday at ${timeStr}`;
+  }
+
+  return `${date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })} at ${timeStr}`;
+}
+
 export function formatFullDate(isoString: string): string {
   const date = new Date(isoString.replace(' ', 'T'));
   return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });

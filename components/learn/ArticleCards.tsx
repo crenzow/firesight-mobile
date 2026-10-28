@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Platform, Image, StyleProp, ViewStyl
 import { router } from 'expo-router';
 import { ChevronRight, Flame, ShieldAlert, BookOpen, Sparkles, ArrowRight, Bookmark } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { FireEducationArticle } from '../../services/api/models';
 import { getArticleImageSource } from '../../constants/educationImages';
@@ -30,18 +31,22 @@ export const FeaturedArticleCard: React.FC<{
   article: FireEducationArticle;
   style?: StyleProp<ViewStyle>;
 }> = ({ article, style }) => {
-  const { colors, spacing, radius, typography } = useTheme();
+  const { colors, spacing, radius, typography, isDark } = useTheme();
   const { isBookmarked } = useBookmarks();
   const isSaved = isBookmarked(article.content_id);
   const imageSource = getArticleImageSource(article.image_path);
 
   return (
     <Pressable
-      onPress={() => router.push(`/(resident)/learn/${article.content_id}`)}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        router.push(`/(resident)/learn/${article.content_id}`);
+      }}
       style={({ pressed }) => [
         styles.featuredWrapper,
         {
-          borderColor: pressed ? colors.brandOrange : colors.border,
+          borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB'),
+          borderWidth: pressed ? 1.5 : 1,
           transform: [{ scale: pressed ? 0.98 : 1 }],
         },
         style,
@@ -131,12 +136,15 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
 
   return (
     <Pressable
-      onPress={() => router.push(`/(resident)/learn/${article.content_id}`)}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        router.push(`/(resident)/learn/${article.content_id}`);
+      }}
       style={({ pressed }) => [
         styles.rowCard,
         {
-          backgroundColor: pressed ? (isDark ? '#1F1713' : '#FFF7F2') : colors.surfaceElevated,
-          borderColor: pressed ? colors.brandOrange : colors.border,
+          backgroundColor: pressed ? (isDark ? '#1F1713' : '#F9FAFB') : colors.surfaceElevated,
+          borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB'),
           borderWidth: pressed ? 1.5 : 1,
           borderRadius: 20,
           transform: [{ scale: pressed ? 0.98 : 1 }],
@@ -191,7 +199,7 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
               styles.chevronCircle,
               {
                 backgroundColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'),
-                borderColor: pressed ? colors.brandOrange : colors.border,
+                borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB'),
               },
             ]}
           >
@@ -209,17 +217,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     overflow: 'hidden',
     backgroundColor: '#0A1330',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
+    
   },
   featuredCard: {
     padding: 20,
@@ -308,17 +306,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     marginBottom: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
+    
   },
   squircleWrap: {
     width: 46,

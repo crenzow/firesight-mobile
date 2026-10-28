@@ -127,11 +127,10 @@ export default function NotificationsScreen() {
                     paddingHorizontal: spacing.lg,
                     paddingVertical: 14,
                     backgroundColor: pressed
-                      ? (isDark ? '#221915' : '#FFF7F2')
+                      ? (isDark ? '#221915' : '#F9FAFB')
                       : 'transparent',
-                    borderLeftWidth: pressed ? 3 : 0,
-                    borderLeftColor: colors.brandOrange,
-                    transform: [{ scale: pressed ? 0.985 : 1 }],
+                    borderColor: pressed ? colors.brandOrange : 'transparent',
+                    borderWidth: 1.5,
                     opacity: item.is_read ? 0.72 : 1,
                   },
                 ]}

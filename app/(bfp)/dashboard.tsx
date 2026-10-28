@@ -17,7 +17,6 @@ import { Card } from '../../components/ui/Card';
 import { StatTile } from '../../components/bfp/StatTile';
 import { IncidentListItem } from '../../components/bfp/IncidentListItem';
 import { InteractiveCard } from '../../components/bfp/InteractiveCard';
-import { LinearGradient } from 'expo-linear-gradient';
 import { incidentService } from '../../services/api/incidentService';
 import { BFPIncident, DashboardAnalytics } from '../../services/api/bfpModels';
 import { useNotifications } from '../../context/NotificationContext';
@@ -25,7 +24,7 @@ import { useNotifications } from '../../context/NotificationContext';
 
 
 export default function DashboardScreen() {
-  const { colors, spacing, typography, radius, shadow, isDark } = useTheme();
+  const { colors, spacing, typography, radius, isDark } = useTheme();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
 
@@ -87,13 +86,13 @@ export default function DashboardScreen() {
         <View style={[styles.statsGrid, { marginTop: spacing.lg, gap: spacing.md }]}>
           <View style={{ flexDirection: 'row', gap: spacing.md }}>
             <StatTile
-              icon={<Flame size={18} color={colors.danger} />}
+              icon={<Flame size={18} color={colors.danger} strokeWidth={2} />}
               value={analytics.active_incidents}
               label="Active Incidents"
               accentColor={colors.danger}
             />
             <StatTile
-              icon={<ClipboardList size={18} color={colors.warning} />}
+              icon={<ClipboardList size={18} color={colors.warning} strokeWidth={2} />}
               value={analytics.pending_verification}
               label="Pending Verification"
               accentColor={colors.warning}
@@ -101,13 +100,13 @@ export default function DashboardScreen() {
           </View>
           <View style={{ flexDirection: 'row', gap: spacing.md }}>
             <StatTile
-              icon={<CheckCircle2 size={18} color={colors.success} />}
+              icon={<CheckCircle2 size={18} color={colors.success} strokeWidth={2} />}
               value={analytics.resolved_today}
               label="Resolved Today"
               accentColor={colors.success}
             />
             <StatTile
-              icon={<CalendarDays size={18} color={colors.info} />}
+              icon={<CalendarDays size={18} color={colors.info} strokeWidth={2} />}
               value={analytics.total_this_month}
               label="Resolved this Month"
               accentColor={colors.info}
@@ -129,20 +128,15 @@ export default function DashboardScreen() {
           ]}
         >
           {({ pressed }) => (
-            <LinearGradient
-              colors={
-                pressed
-                  ? ['#1E2C52', '#0A1229']
-                  : [isDark ? colors.surfaceElevated : colors.brandNavy, isDark ? colors.surface : colors.brandNavyDeep]
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+            <View
               style={{
                 borderRadius: radius.xl,
                 padding: spacing.lg,
-                borderWidth: 1.5,
-                borderColor: pressed ? colors.brandOrange : 'transparent',
-                ...shadow.large,
+                backgroundColor: pressed
+                  ? (isDark ? '#1C2438' : '#0B1530')
+                  : (isDark ? colors.surfaceElevated : colors.brandNavy),
+                borderWidth: 1,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.08)',
               }}
             >
               <View style={styles.mapCtaRow}>
@@ -159,7 +153,7 @@ export default function DashboardScreen() {
                 </View>
                 <ChevronRight size={20} color={pressed ? colors.brandOrange : 'rgba(255,255,255,0.5)'} />
               </View>
-            </LinearGradient>
+            </View>
           )}
         </Pressable>
 

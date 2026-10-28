@@ -43,10 +43,10 @@ const PersonnelNotification: React.FC<{
         <Card
           style={{
             backgroundColor: pressed
-              ? (isDark ? '#221915' : '#FFF7F2')
+              ? (isDark ? '#221915' : '#F9FAFB')
               : (isDark ? colors.surfaceElevated : '#FFFFFF'),
-            borderColor: pressed ? colors.brandOrange : (isDark ? colors.border : 'rgba(0,0,0,0.055)'),
-            borderWidth: 1.5,
+            borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB'),
+            borderWidth: 1,
             opacity: notification.is_read ? 0.72 : 1,
           }}
         >
