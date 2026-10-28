@@ -9,6 +9,7 @@ import {
   ChevronRight,
   XCircle,
 } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { BFPIncidentStatus, STATUS_ORDER } from './IncidentStatusBadge';
 import { BFPIncidentStatusHistoryEntry } from '../../services/api/bfpModels';
@@ -280,14 +281,19 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
 
                   {stage.actionLabel ? (
                     <Pressable
-                      onPress={() => !disabled && onAdvance(stage.key)}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                        if (!disabled) {
+                          onAdvance(stage.key);
+                        }
+                      }}
                       disabled={disabled}
                       style={({ pressed }) => [
                         styles.actionButton,
                         {
                           backgroundColor: pressed ? '#D9521E' : '#F4622B',
-                          transform: [{ scale: pressed ? 0.98 : 1 }],
-                          opacity: disabled ? 0.5 : 1,
+                          transform: [{ scale: pressed && !disabled ? 0.96 : 1 }],
+                          opacity: disabled ? 0.5 : (pressed ? 0.88 : 1),
                         },
                       ]}
                     >

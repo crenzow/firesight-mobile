@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { router, usePathname, useSegments } from 'expo-router';
 import { Bell } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
@@ -41,7 +42,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ variant = 'dark' }) => {
         </View>
 
         <Pressable
-          onPress={() => router.push({ pathname: notificationRoute, params: { from: currentTab } } as any)}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            router.push({ pathname: notificationRoute, params: { from: currentTab } } as any);
+          }}
           hitSlop={10}
           style={({ pressed }) => [
             styles.bellButton,
@@ -50,6 +54,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ variant = 'dark' }) => {
               borderColor: pressed ? colors.brandOrange : 'transparent',
               borderWidth: 1,
               transform: [{ scale: pressed ? 0.92 : 1 }],
+              opacity: pressed ? 0.88 : 1,
             },
           ]}
           accessibilityRole="button"

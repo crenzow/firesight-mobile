@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Camera, Lock, Phone, Save, ShieldCheck, UserCheck } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { useAuth } from '../../../context/AuthContext';
@@ -78,6 +79,48 @@ export default function BFPEditProfileScreen() {
     }
   };
 
+  const handleBack = useCallback(() => {
+    if (showCropModal) {
+      setShowCropModal(false);
+      setCropTargetUri(null);
+      return;
+    }
+    if (showPhotoOptions) {
+      setShowPhotoOptions(false);
+      return;
+    }
+    if (showConfirmModal) {
+      setShowConfirmModal(false);
+      return;
+    }
+    if (showSuccessModal) {
+      setShowSuccessModal(false);
+      if (from) {
+        router.replace(from as any);
+      } else {
+        router.back();
+      }
+      return;
+    }
+    if (from) {
+      router.replace(from as any);
+    } else {
+      router.back();
+    }
+  }, [showCropModal, showPhotoOptions, showConfirmModal, showSuccessModal, from]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [handleBack])
+  );
+
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
     if (from) {
@@ -91,14 +134,26 @@ export default function BFPEditProfileScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SecondaryHeader 
         title="Edit Profile" 
-        onBack={() => (from ? router.replace(from as any) : router.back())} 
+        onBack={handleBack} 
       />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView contentContainerStyle={{ padding: spacing.lg }} keyboardShouldPersistTaps="handled">
 
           {/* Profile Photo */}
           <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-            <Pressable onPress={() => setShowPhotoOptions(true)} style={styles.photoWrap}>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setShowPhotoOptions(true);
+              }}
+              style={({ pressed }) => [
+                styles.photoWrap,
+                {
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
+                  opacity: pressed ? 0.88 : 1,
+                },
+              ]}
+            >
               <View style={styles.photoClip}>
                 {profileImageUri ? (
                   <Image source={{ uri: profileImageUri }} style={styles.photoImage} />

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface RadioOptionRowProps {
@@ -13,41 +14,62 @@ interface RadioOptionRowProps {
 }
 
 export const RadioOptionRow: React.FC<RadioOptionRowProps> = ({ icon, title, subtitle, selected, onPress, gradient }) => {
-  const { colors, spacing, typography, radius } = useTheme();
+  const { colors, spacing, typography, radius, isDark } = useTheme();
 
   return (
     <Pressable
-      onPress={onPress}
-      style={[
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        onPress();
+      }}
+      style={({ pressed }) => [
         styles.row,
         {
-          borderColor: selected ? colors.brandOrange : colors.border,
+          borderColor: pressed || selected ? colors.brandOrange : colors.border,
           borderRadius: radius.md,
           padding: spacing.md,
           marginBottom: spacing.sm,
-          backgroundColor: selected ? `${colors.brandOrange}0D` : colors.surface,
+          backgroundColor: pressed
+            ? (isDark ? '#221915' : '#FFF7F2')
+            : (selected ? `${colors.brandOrange}0D` : colors.surface),
+          borderWidth: pressed || selected ? 1.5 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
       ]}
     >
-      <View style={styles.left}>
-        {gradient ? (
-          <View style={styles.iconWrap}>
-            <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
-            {icon}
+      {({ pressed }) => (
+        <>
+          <View style={styles.left}>
+            {gradient ? (
+              <View style={styles.iconWrap}>
+                <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+                {icon}
+              </View>
+            ) : (
+              icon
+            )}
+            <View style={{ marginLeft: spacing.sm }}>
+              <Text style={{ color: pressed ? colors.brandOrange : colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>{title}</Text>
+              {subtitle ? (
+                <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 1 }}>{subtitle}</Text>
+              ) : null}
+            </View>
           </View>
-        ) : (
-          icon
-        )}
-        <View style={{ marginLeft: spacing.sm }}>
-          <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '600' }}>{title}</Text>
-          {subtitle ? (
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 1 }}>{subtitle}</Text>
-          ) : null}
-        </View>
-      </View>
-      <View style={[styles.radioOuter, { borderColor: selected ? colors.brandOrange : colors.border }]}>
-        {selected ? <View style={[styles.radioInner, { backgroundColor: colors.brandOrange }]} /> : null}
-      </View>
+          <View style={[styles.radioOuter, { borderColor: pressed || selected ? colors.brandOrange : colors.border }]}>
+            {selected || pressed ? (
+              <View
+                style={[
+                  styles.radioInner,
+                  {
+                    backgroundColor: colors.brandOrange,
+                    opacity: pressed && !selected ? 0.4 : 1,
+                  },
+                ]}
+              />
+            ) : null}
+          </View>
+        </>
+      )}
     </Pressable>
   );
 };

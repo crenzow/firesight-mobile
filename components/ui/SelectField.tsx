@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, FlatList } from 'react-native';
 import { ChevronDown, Check, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface SelectOption {
@@ -49,10 +50,20 @@ export const SelectField: React.FC<SelectFieldProps> = ({
       ) : null}
 
       <Pressable
-        onPress={() => setIsOpen(true)}
-        style={[
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          setIsOpen(true);
+        }}
+        style={({ pressed }) => [
           styles.field,
-          { borderColor, borderRadius: radius.md, backgroundColor: colors.surface, paddingHorizontal: spacing.md },
+          {
+            borderColor,
+            borderRadius: radius.md,
+            backgroundColor: colors.surface,
+            paddingHorizontal: spacing.md,
+            transform: [{ scale: pressed ? 0.985 : 1 }],
+            opacity: pressed ? 0.85 : 1,
+          },
         ]}
       >
         <Text
@@ -78,7 +89,19 @@ export const SelectField: React.FC<SelectFieldProps> = ({
               <Text style={{ color: colors.textPrimary, fontSize: typography.size.lg, fontWeight: '700' }}>
                 {label}
               </Text>
-              <Pressable onPress={() => setIsOpen(false)} hitSlop={8}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setIsOpen(false);
+                }}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  {
+                    transform: [{ scale: pressed ? 0.90 : 1 }],
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
                 <X size={22} color={colors.textPrimary} />
               </Pressable>
             </View>
@@ -89,10 +112,20 @@ export const SelectField: React.FC<SelectFieldProps> = ({
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
                     onSelect(item.id);
                     setIsOpen(false);
                   }}
-                  style={[styles.optionRow, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}
+                  style={({ pressed }) => [
+                    styles.optionRow,
+                    {
+                      paddingHorizontal: spacing.lg,
+                      paddingVertical: spacing.md,
+                      backgroundColor: pressed
+                        ? (item.id === value ? `${colors.brandOrange}15` : colors.surfaceElevated)
+                        : 'transparent',
+                    },
+                  ]}
                 >
                   <Text style={{ color: colors.textPrimary, fontSize: typography.size.base }}>{item.name}</Text>
                   {item.id === value ? <Check size={18} color={colors.brandOrange} /> : null}

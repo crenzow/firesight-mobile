@@ -1,55 +1,72 @@
 import React from 'react';
-import { View, Text, Platform, StyleSheet } from 'react-native';
+import { View, Text, Platform, StyleSheet, Pressable } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
-import { InteractiveCard } from './InteractiveCard';
 
 interface StatTileProps {
   icon: React.ReactNode;
   value: string | number;
   label: string;
   accentColor?: string;
+  onPress?: () => void;
 }
 
-export const StatTile: React.FC<StatTileProps> = ({ icon, value, label, accentColor }) => {
+export const StatTile: React.FC<StatTileProps> = ({ icon, value, label, accentColor, onPress }) => {
   const { colors, radius, isDark } = useTheme();
   const tint = accentColor ?? colors.brandOrange;
   const cardBg = isDark ? colors.surfaceElevated : '#FFFFFF';
 
   return (
-    <InteractiveCard style={[styles.shadowOuter, { flex: 1, borderRadius: radius.lg, backgroundColor: cardBg }]}>
-      <View
-        style={[
-          styles.inner,
-          {
-            borderRadius: radius.lg,
-            backgroundColor: cardBg,
-            borderColor: isDark ? colors.border : 'rgba(0,0,0,0.055)',
-          },
-        ]}
-      >
-        {/* Number and icon on the same row — number dominates, icon is the quiet accent */}
-        <View style={styles.topRow}>
-          <Text
-            style={[styles.value, { color: colors.textPrimary }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-          >
-            {value}
-          </Text>
-          <View style={[styles.iconWrap, { backgroundColor: `${tint}15` }]}>
-            {icon}
-          </View>
-        </View>
-
-        {/* Label — small, muted, below */}
-        <Text
-          style={[styles.label, { color: isDark ? 'rgba(255,255,255,0.45)' : colors.textSecondary }]}
-          numberOfLines={2}
+    <Pressable
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        onPress?.();
+      }}
+      style={({ pressed }) => [
+        styles.shadowOuter,
+        {
+          flex: 1,
+          borderRadius: radius.lg,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
+        },
+      ]}
+    >
+      {({ pressed }) => (
+        <View
+          style={[
+            styles.inner,
+            {
+              borderRadius: radius.lg,
+              backgroundColor: pressed ? (isDark ? '#221915' : '#FFF7F2') : cardBg,
+              borderColor: pressed ? tint : (isDark ? colors.border : 'rgba(0,0,0,0.055)'),
+              borderWidth: pressed ? 1.5 : 1,
+            },
+          ]}
         >
-          {label}
-        </Text>
-      </View>
-    </InteractiveCard>
+          {/* Number and icon on the same row — number dominates, icon is the quiet accent */}
+          <View style={styles.topRow}>
+            <Text
+              style={[styles.value, { color: pressed ? tint : colors.textPrimary }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {value}
+            </Text>
+            <View style={[styles.iconWrap, { backgroundColor: pressed ? `${tint}25` : `${tint}15` }]}>
+              {icon}
+            </View>
+          </View>
+
+          {/* Label — small, muted, below */}
+          <Text
+            style={[styles.label, { color: isDark ? 'rgba(255,255,255,0.45)' : colors.textSecondary }]}
+            numberOfLines={2}
+          >
+            {label}
+          </Text>
+        </View>
+      )}
+    </Pressable>
   );
 };
 

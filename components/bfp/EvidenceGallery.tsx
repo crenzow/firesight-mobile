@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Dimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { Plus, Image as ImageIcon } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { APP_CONFIG, getStorageImageUrl } from '../../constants/config';
@@ -34,7 +35,7 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({
   canAdd = true,
   showTitle = false,
 }) => {
-  const { colors, spacing, radius, typography } = useTheme();
+  const { colors, spacing, radius, typography, isDark } = useTheme();
   const [isUploading, setIsUploading] = useState(false);
   const [isSourceDialogVisible, setIsSourceDialogVisible] = useState(false);
   const [expandedPhoto, setExpandedPhoto] = useState<EvidencePhoto | null>(null);
@@ -112,25 +113,65 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
           {photos.map((photo) => (
-            <Pressable key={photo.key} style={{ width: 140 }} onPress={() => setExpandedPhoto(photo)}>
-              <View style={[styles.photo, { borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surfaceElevated }]}>
-                <Image source={{ uri: photo.uri }} style={styles.photo} resizeMode="cover" />
-              </View>
-              {photo.caption ? (
-                <Text numberOfLines={1} style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
-                  {photo.caption}
-                </Text>
-              ) : null}
+            <Pressable
+              key={photo.key}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setExpandedPhoto(photo);
+              }}
+              style={({ pressed }) => [
+                {
+                  width: 140,
+                  transform: [{ scale: pressed ? 0.96 : 1 }],
+                  opacity: pressed ? 0.88 : 1,
+                },
+              ]}
+            >
+              {({ pressed }) => (
+                <>
+                  <View
+                    style={[
+                      styles.photo,
+                      {
+                        borderRadius: radius.md,
+                        overflow: 'hidden',
+                        backgroundColor: colors.surfaceElevated,
+                        borderWidth: pressed ? 2 : 0,
+                        borderColor: pressed ? colors.brandOrange : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Image source={{ uri: photo.uri }} style={styles.photo} resizeMode="cover" />
+                  </View>
+                  {photo.caption ? (
+                    <Text numberOfLines={1} style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
+                      {photo.caption}
+                    </Text>
+                  ) : null}
+                </>
+              )}
             </Pressable>
           ))}
 
           {canAdd && (
             <Pressable
-              onPress={handleAddPress}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                handleAddPress();
+              }}
               disabled={isUploading}
-              style={[
+              style={({ pressed }) => [
                 styles.addTile,
-                { borderRadius: radius.md, borderColor: colors.border, backgroundColor: colors.surfaceElevated },
+                {
+                  borderRadius: radius.md,
+                  borderColor: pressed ? colors.brandOrange : colors.border,
+                  backgroundColor: pressed
+                    ? (isDark ? '#221915' : '#FFF7F2')
+                    : colors.surfaceElevated,
+                  borderWidth: pressed ? 1.5 : 1,
+                  transform: [{ scale: pressed && !isUploading ? 0.96 : 1 }],
+                  opacity: pressed ? 0.85 : 1,
+                },
               ]}
             >
               {isUploading ? (

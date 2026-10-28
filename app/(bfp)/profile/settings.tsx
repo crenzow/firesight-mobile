@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Switch, BackHandler } from 'react-native';
 import { Smartphone, Sun, Moon, MoonStar } from 'lucide-react-native';
 import { useTheme, ThemePreference } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { Card } from '../../../components/ui/Card';
 import { RadioOptionRow } from '../../../components/profile/RadioOptionRow';
 
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 
 const THEME_OPTIONS: { key: ThemePreference; title: string; subtitle: string; icon: React.ComponentType<{ size: number; color: string }>; gradient: [string, string] }[] = [
   { key: 'system', title: 'System Default', subtitle: 'Follows your device appearance', icon: Smartphone, gradient: ['#64748B', '#0F1C3F'] },
@@ -21,13 +21,29 @@ export default function BFPSettingsScreen() {
   const [realTimeAlerts, setRealTimeAlerts] = useState(true);
   const [alertSounds, setAlertSounds] = useState(true);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (from) {
-      router.navigate(`/(bfp)/${from}` as any);
+      if (from.startsWith('/')) {
+        router.replace(from as any);
+      } else {
+        router.replace(`/(bfp)/${from}` as any);
+      }
     } else {
       router.back();
     }
-  };
+  }, [from]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [handleBack])
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

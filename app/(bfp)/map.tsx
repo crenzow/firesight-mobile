@@ -236,6 +236,7 @@ export default function BFPMapScreen() {
                       ? 'rgba(255,255,255,0.08)'
                       : '#F1F5F9',
                     borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    transform: [{ scale: pressed ? 0.92 : 1 }],
                   },
                 ]}
                 accessibilityRole="button"
@@ -247,12 +248,13 @@ export default function BFPMapScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() =>
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   router.push({
                     pathname: '/(bfp)/notifications',
                     params: { from: pathname },
-                  } as any)
-                }
+                  } as any);
+                }}
                 hitSlop={8}
                 style={({ pressed }) => [
                   styles.headerIconButton,
@@ -263,6 +265,7 @@ export default function BFPMapScreen() {
                       ? 'rgba(255,255,255,0.08)'
                       : '#F1F5F9',
                     borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    transform: [{ scale: pressed ? 0.92 : 1 }],
                   },
                 ]}
                 accessibilityRole="button"
@@ -310,7 +313,7 @@ export default function BFPMapScreen() {
                   Haptics.selectionAsync().catch(() => {});
                   setSelectedRisk('all');
                 }}
-                style={[
+                style={({ pressed }) => [
                   styles.pill,
                   selectedRisk === 'all'
                     ? { backgroundColor: colors.brandOrange, borderColor: colors.brandOrange }
@@ -318,6 +321,10 @@ export default function BFPMapScreen() {
                         backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
                         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
                       },
+                  {
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                    opacity: pressed ? 0.85 : 1,
+                  },
                 ]}
               >
                 <Text
@@ -336,7 +343,7 @@ export default function BFPMapScreen() {
                   Haptics.selectionAsync().catch(() => {});
                   setSelectedRisk(selectedRisk === 'high' ? 'all' : 'high');
                 }}
-                style={[
+                style={({ pressed }) => [
                   styles.pill,
                   selectedRisk === 'high'
                     ? { backgroundColor: colors.riskHigh, borderColor: colors.riskHigh }
@@ -344,6 +351,10 @@ export default function BFPMapScreen() {
                         backgroundColor: isDark ? `${colors.riskHigh}1F` : `${colors.riskHigh}14`,
                         borderColor: isDark ? `${colors.riskHigh}4D` : `${colors.riskHigh}33`,
                       },
+                  {
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                    opacity: pressed ? 0.85 : 1,
+                  },
                 ]}
               >
                 <Text
@@ -362,7 +373,7 @@ export default function BFPMapScreen() {
                   Haptics.selectionAsync().catch(() => {});
                   setSelectedRisk(selectedRisk === 'moderate' ? 'all' : 'moderate');
                 }}
-                style={[
+                style={({ pressed }) => [
                   styles.pill,
                   selectedRisk === 'moderate'
                     ? { backgroundColor: colors.riskModerate, borderColor: colors.riskModerate }
@@ -370,6 +381,10 @@ export default function BFPMapScreen() {
                         backgroundColor: isDark ? `${colors.riskModerate}1F` : `${colors.riskModerate}14`,
                         borderColor: isDark ? `${colors.riskModerate}4D` : `${colors.riskModerate}33`,
                       },
+                  {
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                    opacity: pressed ? 0.85 : 1,
+                  },
                 ]}
               >
                 <Text
@@ -388,7 +403,7 @@ export default function BFPMapScreen() {
                   Haptics.selectionAsync().catch(() => {});
                   setSelectedRisk(selectedRisk === 'mild' ? 'all' : 'mild');
                 }}
-                style={[
+                style={({ pressed }) => [
                   styles.pill,
                   selectedRisk === 'mild'
                     ? { backgroundColor: colors.riskMild, borderColor: colors.riskMild }
@@ -396,6 +411,10 @@ export default function BFPMapScreen() {
                         backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : 'rgba(234, 179, 8, 0.08)',
                         borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : 'rgba(234, 179, 8, 0.2)',
                       },
+                  {
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                    opacity: pressed ? 0.85 : 1,
+                  },
                 ]}
               >
                 <Text

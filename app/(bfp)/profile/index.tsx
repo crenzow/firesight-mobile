@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, usePathname } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ShieldCheck, Settings as SettingsIcon, LogOut, Phone, Building2, IdCard, Edit3, Camera } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { AppHeader } from '../../../components/navigation/AppHeader';
@@ -106,15 +107,37 @@ export default function BFPProfileScreen() {
 
             {/* Edit button */}
             <Pressable
-              style={styles.heroEditBtn}
-              onPress={() => router.push({ pathname: '/(bfp)/profile/edit', params: { from: pathname } } as any)}
+              style={({ pressed }) => [
+                styles.heroEditBtn,
+                {
+                  transform: [{ scale: pressed ? 0.90 : 1 }],
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                router.push({ pathname: '/(bfp)/profile/edit', params: { from: pathname } } as any);
+              }}
             >
               <Edit3 size={14} color="#FFFFFF" />
             </Pressable>
 
             {/* Avatar + name */}
             <View style={styles.heroTop}>
-              <Pressable onPress={() => setShowPhotoOptions(true)} disabled={isUploadingPhoto} style={styles.avatarWrap}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setShowPhotoOptions(true);
+                }}
+                disabled={isUploadingPhoto}
+                style={({ pressed }) => [
+                  styles.avatarWrap,
+                  {
+                    transform: [{ scale: pressed && !isUploadingPhoto ? 0.95 : 1 }],
+                    opacity: pressed ? 0.88 : 1,
+                  },
+                ]}
+              >
                 <View style={styles.avatarClip}>
                   {isUploadingPhoto ? (
                     <View style={[styles.avatarInner, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>

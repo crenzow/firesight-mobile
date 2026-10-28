@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Image as ImageIcon, Trash2, X, RotateCcw } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { Button } from '../ui/Button';
 
@@ -116,9 +117,19 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
               </Text>
             </View>
             <Pressable
-              onPress={onClose}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onClose();
+              }}
               hitSlop={10}
-              style={[styles.closeBtn, { backgroundColor: colors.surfaceElevated }]}
+              style={({ pressed }) => [
+                styles.closeBtn,
+                {
+                  backgroundColor: colors.surfaceElevated,
+                  transform: [{ scale: pressed ? 0.90 : 1 }],
+                  opacity: pressed ? 0.75 : 1,
+                },
+              ]}
             >
               <X size={18} color={colors.textPrimary} />
             </Pressable>
@@ -128,7 +139,10 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
           <View style={{ padding: spacing.lg, gap: spacing.sm }}>
             {/* Take Photo */}
             <Pressable
-              onPress={handleTakePhoto}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                handleTakePhoto();
+              }}
               style={({ pressed }) => [
                 styles.optionRow,
                 {
@@ -136,6 +150,8 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
                   borderColor: colors.border,
                   borderRadius: radius.lg,
                   padding: spacing.md,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  opacity: pressed ? 0.88 : 1,
                 },
               ]}
             >
@@ -154,7 +170,10 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
 
             {/* Choose from Gallery */}
             <Pressable
-              onPress={handleChooseGallery}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                handleChooseGallery();
+              }}
               style={({ pressed }) => [
                 styles.optionRow,
                 {
@@ -162,6 +181,8 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
                   borderColor: colors.border,
                   borderRadius: radius.lg,
                   padding: spacing.md,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  opacity: pressed ? 0.88 : 1,
                 },
               ]}
             >
@@ -181,7 +202,10 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
             {/* Remove Photo */}
             {hasExistingPhoto && onRemovePhoto ? (
               <Pressable
-                onPress={handleRemove}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  handleRemove();
+                }}
                 style={({ pressed }) => [
                   styles.optionRow,
                   {
@@ -189,6 +213,8 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
                     borderColor: colors.border,
                     borderRadius: radius.lg,
                     padding: spacing.md,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                    opacity: pressed ? 0.88 : 1,
                   },
                 ]}
               >

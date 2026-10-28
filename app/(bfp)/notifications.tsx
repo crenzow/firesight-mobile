@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Platform, BackHandler } from 'react-native';
 import { Bell, AlertTriangle, RefreshCw, Info } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card';
 import { Notification } from '../../services/api/models';
 import { formatRelativeDate, formatFullDate, formatTime } from '../../utils/formatters';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useNotifications } from '../../context/NotificationContext';
 
 const ICONS: Record<string, any> = {
@@ -20,34 +21,72 @@ const PersonnelNotification: React.FC<{
   notification: Notification;
   onPress: () => void;
 }> = ({ notification, onPress }) => {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, typography, isDark } = useTheme();
   const Icon = ICONS[notification.notification_type] ?? Info;
   const isAlert = notification.notification_type === 'incident_alert';
   const iconColor = isAlert ? colors.danger : colors.brandOrange;
 
   return (
-    <Pressable onPress={onPress} style={{ marginBottom: spacing.sm }}>
-      <Card style={{ opacity: notification.is_read ? 0.7 : 1 }}>
-        <View style={styles.row}>
-          <View style={[styles.iconCircle, { backgroundColor: `${iconColor}1F` }]}>
-            <Icon size={16} color={iconColor} />
-          </View>
-          <View style={{ flex: 1, marginLeft: spacing.sm }}>
-            <View style={styles.titleRow}>
-              <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700', flex: 1 }}>
-                {notification.title}
-              </Text>
-              {!notification.is_read ? <View style={[styles.dot, { backgroundColor: colors.brandOrange }]} /> : null}
+    <Pressable
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        onPress();
+      }}
+      style={({ pressed }) => [
+        {
+          marginBottom: spacing.sm,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
+        },
+      ]}
+    >
+      {({ pressed }) => (
+        <Card
+          style={{
+            backgroundColor: pressed
+              ? (isDark ? '#221915' : '#FFF7F2')
+              : (isDark ? colors.surfaceElevated : '#FFFFFF'),
+            borderColor: pressed ? colors.brandOrange : (isDark ? colors.border : 'rgba(0,0,0,0.055)'),
+            borderWidth: 1.5,
+            opacity: notification.is_read ? 0.72 : 1,
+          }}
+        >
+          <View style={styles.row}>
+            <View
+              style={[
+                styles.iconCircle,
+                {
+                  backgroundColor: pressed
+                    ? iconColor
+                    : `${iconColor}1F`,
+                },
+              ]}
+            >
+              <Icon size={16} color={pressed ? '#FFFFFF' : iconColor} />
             </View>
-            <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 2 }}>
-              {notification.message}
-            </Text>
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
-              {formatRelativeDate(notification.created_at)} · {formatFullDate(notification.created_at)}, {formatTime(notification.created_at)}
-            </Text>
+            <View style={{ flex: 1, marginLeft: spacing.sm }}>
+              <View style={styles.titleRow}>
+                <Text
+                  style={{
+                    color: pressed ? colors.brandOrange : colors.textPrimary,
+                    fontSize: typography.size.sm,
+                    fontWeight: '700',
+                    flex: 1,
+                  }}
+                >
+                  {notification.title}
+                </Text>
+                {!notification.is_read ? <View style={[styles.dot, { backgroundColor: colors.brandOrange }]} /> : null}
+              </View>
+              <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 2 }}>
+                {notification.message}
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
+                {formatRelativeDate(notification.created_at)} · {formatFullDate(notification.created_at)}, {formatTime(notification.created_at)}
+              </Text>
+            </View>
           </View>
-        </View>
-      </Card>
+        </Card>
+      )}
     </Pressable>
   );
 };
@@ -68,21 +107,35 @@ export default function BFPNotificationsScreen() {
     }
   }, [refresh, markAllRead]);
 
-  useFocusEffect(useCallback(() => {
-    load();
-  }, [load]));
+  const handleBack = useCallback(() => {
+    if (from) {
+      if (from.startsWith('/')) {
+        router.replace(from as any);
+      } else {
+        router.replace(`/(bfp)/${from}` as any);
+      }
+    } else {
+      router.back();
+    }
+  }, [from]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [load, handleBack])
+  );
 
   const handlePress = async (notification: Notification) => {
     if (notification.is_read) return;
     await markRead(notification.notification_id);
-  };
-
-  const handleBack = () => {
-    if (from) {
-      router.navigate(`/(bfp)/${from}` as any);
-    } else {
-      router.back();
-    }
   };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;

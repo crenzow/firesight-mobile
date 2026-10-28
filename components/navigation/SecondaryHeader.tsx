@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface SecondaryHeaderProps {
@@ -21,6 +22,7 @@ export const SecondaryHeader: React.FC<SecondaryHeaderProps> = ({
   const { colors, spacing } = useTheme();
 
   const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (onBack) {
       onBack();
     } else {
@@ -47,7 +49,8 @@ export const SecondaryHeader: React.FC<SecondaryHeaderProps> = ({
               {
                 backgroundColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.12)',
                 borderColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.2)',
-                transform: [{ scale: pressed ? 0.94 : 1 }],
+                transform: [{ scale: pressed ? 0.92 : 1 }],
+                opacity: pressed ? 0.88 : 1,
               },
             ]}
             accessibilityRole="button"

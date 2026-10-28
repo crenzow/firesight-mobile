@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import {
   Flame,
   ClipboardList,
@@ -115,65 +116,80 @@ export default function DashboardScreen() {
         </View>
 
         {/* GIS map monitor CTA */}
-        <InteractiveCard onPress={() => router.push('/(bfp)/map')} style={{ marginTop: spacing.xl }}>
-          <LinearGradient
-            colors={[isDark ? colors.surfaceElevated : colors.brandNavy, isDark ? colors.surface : colors.brandNavyDeep]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ borderRadius: radius.xl, padding: spacing.lg, ...shadow.large }}
-          >
-            <View style={styles.mapCtaRow}>
-              <View style={[styles.mapIconCircle, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-                <MapPinned size={22} color="#FFFFFF" />
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            router.push('/(bfp)/map');
+          }}
+          style={({ pressed }) => [
+            {
+              marginTop: spacing.xl,
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            },
+          ]}
+        >
+          {({ pressed }) => (
+            <LinearGradient
+              colors={
+                pressed
+                  ? ['#1E2C52', '#0A1229']
+                  : [isDark ? colors.surfaceElevated : colors.brandNavy, isDark ? colors.surface : colors.brandNavyDeep]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                borderRadius: radius.xl,
+                padding: spacing.lg,
+                borderWidth: 1.5,
+                borderColor: pressed ? colors.brandOrange : 'transparent',
+                ...shadow.large,
+              }}
+            >
+              <View style={styles.mapCtaRow}>
+                <View style={[styles.mapIconCircle, { backgroundColor: pressed ? colors.brandOrange : 'rgba(255,255,255,0.15)' }]}>
+                  <MapPinned size={22} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1, marginLeft: spacing.md }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: typography.size.md, fontWeight: '800' }}>
+                    Risk & Incident Map
+                  </Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: typography.size.xs, marginTop: 2, fontWeight: '500' }}>
+                    Monitor fire-prone zones and incident records
+                  </Text>
+                </View>
+                <ChevronRight size={20} color={pressed ? colors.brandOrange : 'rgba(255,255,255,0.5)'} />
               </View>
-              <View style={{ flex: 1, marginLeft: spacing.md }}>
-                <Text style={{ color: '#FFFFFF', fontSize: typography.size.md, fontWeight: '800' }}>
-                  Risk & Incident Map
-                </Text>
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: typography.size.xs, marginTop: 2, fontWeight: '500' }}>
-                  Monitor fire-prone zones and incident records
-                </Text>
-              </View>
-              <ChevronRight size={20} color="rgba(255,255,255,0.5)" />
-            </View>
-          </LinearGradient>
-        </InteractiveCard>
-
-        {/* Temporarily disabled manual record creation card. */}
-        {/*
-        <InteractiveCard onPress={() => router.push('/(bfp)/incidents/create?from=dashboard')} style={{ marginTop: spacing.md }}>
-          <LinearGradient
-            colors={[colors.brandOrange, colors.brandOrangeDeep]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ borderRadius: radius.xl, padding: spacing.lg, ...shadow.large }}
-          >
-            <View style={styles.mapCtaRow}>
-              <View style={[styles.mapIconCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                <ClipboardPlus size={22} color="#FFFFFF" />
-              </View>
-              <View style={{ flex: 1, marginLeft: spacing.md }}>
-                <Text style={{ color: '#FFFFFF', fontSize: typography.size.md, fontWeight: '800' }}>
-                  Create Manual Record
-                </Text>
-                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: typography.size.xs, marginTop: 2, fontWeight: '600' }}>
-                  For incidents not reported through the app
-                </Text>
-              </View>
-              <ChevronRight size={20} color="rgba(255,255,255,0.6)" />
-            </View>
-          </LinearGradient>
-        </InteractiveCard>
-        */}
+            </LinearGradient>
+          )}
+        </Pressable>
 
         {/* Real-time incident list */}
         <View style={[styles.sectionHeader, { marginTop: spacing.xl, marginBottom: spacing.sm }]}>
           <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700' }}>
             Recent Incidents
           </Text>
-          <Pressable onPress={() => router.push('/(bfp)/incidents')} style={styles.seeAllRow}>
-            <Text style={{ color: colors.brandOrange, fontSize: typography.size.sm, fontWeight: '600' }}>See all</Text>
-            <ChevronRight size={16} color={colors.brandOrange} />
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              router.push('/(bfp)/incidents');
+            }}
+            style={({ pressed }) => [
+              styles.seeAllRow,
+              {
+                backgroundColor: pressed ? colors.brandOrange : 'transparent',
+                paddingHorizontal: pressed ? 8 : 4,
+                paddingVertical: 2,
+                borderRadius: 12,
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              },
+            ]}
+          >
+            {({ pressed }) => (
+              <>
+                <Text style={{ color: pressed ? '#FFFFFF' : colors.brandOrange, fontSize: 13, fontWeight: '700' }}>See all</Text>
+                <ChevronRight size={13} color={pressed ? '#FFFFFF' : colors.brandOrange} strokeWidth={2.5} />
+              </>
+            )}
           </Pressable>
         </View>
 

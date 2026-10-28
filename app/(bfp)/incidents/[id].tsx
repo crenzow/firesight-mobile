@@ -10,10 +10,11 @@ import {
   ActivityIndicator,
   Modal,
   Platform,
+  BackHandler,
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ShieldCheck,
@@ -124,7 +125,10 @@ const OriginSelector: React.FC<{
             style={({ pressed }) => [
               styles.iosSegmentBtn,
               active && styles.iosSegmentBtnActive,
-              { opacity: disabled ? 0.35 : pressed && !active ? 0.7 : 1 },
+              {
+                opacity: disabled ? 0.35 : pressed && !active ? 0.75 : 1,
+                transform: [{ scale: pressed && !disabled ? 0.96 : 1 }],
+              },
             ]}
           >
             <IconComp
@@ -390,6 +394,38 @@ export default function IncidentDetailScreen() {
     setIsNavigating(false);
   };
 
+  const handleBack = useCallback(() => {
+    if (isMapTypeModalOpen) {
+      setIsMapTypeModalOpen(false);
+      return;
+    }
+    if (dialog) {
+      setDialog(null);
+      return;
+    }
+    if (isNavigating) {
+      stopNavigation();
+      return;
+    }
+    if (isMapFullscreen) {
+      closeFullscreen();
+      return;
+    }
+    router.replace(backRoute as any);
+  }, [isMapTypeModalOpen, dialog, isNavigating, isMapFullscreen, backRoute]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [handleBack])
+  );
+
   // Fast initial GPS acquisition: last known location immediately (0ms), then fresh
   useEffect(() => {
     (async () => {
@@ -552,7 +588,7 @@ export default function IncidentDetailScreen() {
   if (isLoading || !incident) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <SecondaryHeader title="Incident" onBack={() => router.replace(backRoute as any)} />
+        <SecondaryHeader title="Incident" onBack={handleBack} />
         <View style={styles.center}>
           {isLoading ? (
             <ActivityIndicator color={colors.brandOrange} />
@@ -570,7 +606,7 @@ export default function IncidentDetailScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SecondaryHeader
         title={`Report #${incident.report_id}`}
-        onBack={() => router.replace(backRoute as any)}
+        onBack={handleBack}
       />
 
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
@@ -823,37 +859,52 @@ export default function IncidentDetailScreen() {
                     accessibilityHint="Opens interactive fullscreen route map"
                     style={({ pressed }) => [
                       styles.mapPreviewTouchTarget,
-                      { opacity: pressed ? 0.94 : 1 },
+                      {
+                        opacity: pressed ? 0.92 : 1,
+                        transform: [{ scale: pressed ? 0.985 : 1 }],
+                      },
                     ]}
                   >
-                    <View style={{ height: 210 }} pointerEvents="none">
-                      <IncidentLocationMap
-                        latitude={incident.latitude}
-                        longitude={incident.longitude}
-                        originLat={originCoords?.lat}
-                        originLng={originCoords?.lng}
-                        originLabel={routeOrigin === 'station' ? 'Fire Station' : 'My Location'}
-                        mapType={mapType}
-                      />
-                    </View>
+                    {({ pressed }) => (
+                      <>
+                        <View style={{ height: 210 }} pointerEvents="none">
+                          <IncidentLocationMap
+                            latitude={incident.latitude}
+                            longitude={incident.longitude}
+                            originLat={originCoords?.lat}
+                            originLng={originCoords?.lng}
+                            originLabel={routeOrigin === 'station' ? 'Fire Station' : 'My Location'}
+                            mapType={mapType}
+                          />
+                        </View>
 
-                    {/* Floating origin indicator pill (top-left) */}
-                    <View style={styles.previewOriginBadge}>
-                      {routeOrigin === 'station' ? (
-                        <Building2 size={11} color="#1C1C1E" strokeWidth={2.2} />
-                      ) : (
-                        <Crosshair size={11} color="#1C1C1E" strokeWidth={2.2} />
-                      )}
-                      <Text style={styles.previewOriginText}>
-                        {routeOrigin === 'station' ? 'Station Route' : 'GPS Route'}
-                      </Text>
-                    </View>
+                        {/* Floating origin indicator pill (top-left) */}
+                        <View style={styles.previewOriginBadge}>
+                          {routeOrigin === 'station' ? (
+                            <Building2 size={11} color="#1C1C1E" strokeWidth={2.2} />
+                          ) : (
+                            <Crosshair size={11} color="#1C1C1E" strokeWidth={2.2} />
+                          )}
+                          <Text style={styles.previewOriginText}>
+                            {routeOrigin === 'station' ? 'Station Route' : 'GPS Route'}
+                          </Text>
+                        </View>
 
-                    {/* Expand affordance badge (top-right) */}
-                    <View style={styles.expandAffordanceBadge}>
-                      <Maximize2 size={11} color="#1C1C1E" strokeWidth={2.4} />
-                      <Text style={styles.expandAffordanceText}>Expand</Text>
-                    </View>
+                        {/* Expand affordance badge (top-right) */}
+                        <View
+                          style={[
+                            styles.expandAffordanceBadge,
+                            {
+                              backgroundColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.94)',
+                              borderColor: pressed ? colors.brandOrange : 'rgba(0, 0, 0, 0.12)',
+                            },
+                          ]}
+                        >
+                          <Maximize2 size={11} color={pressed ? '#FFFFFF' : '#1C1C1E'} strokeWidth={2.4} />
+                          <Text style={[styles.expandAffordanceText, { color: pressed ? '#FFFFFF' : '#1C1C1E' }]}>Expand</Text>
+                        </View>
+                      </>
+                    )}
                   </Pressable>
 
                   {/* Map footer with layer toggle and start nav CTA */}
@@ -880,6 +931,7 @@ export default function IncidentDetailScreen() {
                           backgroundColor: colors.background,
                           borderRadius: radius.full,
                           opacity: pressed ? 0.75 : 1,
+                          transform: [{ scale: pressed ? 0.94 : 1 }],
                         },
                       ]}
                     >
@@ -1159,7 +1211,20 @@ export default function IncidentDetailScreen() {
       </ScrollView>
 
       {/* ── FULLSCREEN MAP MODAL ─────────────────────────────────── */}
-      <Modal visible={isMapFullscreen} animationType="slide" statusBarTranslucent>
+      <Modal
+        visible={isMapFullscreen}
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => {
+          if (isMapTypeModalOpen) {
+            setIsMapTypeModalOpen(false);
+          } else if (isNavigating) {
+            stopNavigation();
+          } else {
+            closeFullscreen();
+          }
+        }}
+      >
         <View style={{ flex: 1, backgroundColor: colors.background }}>
 
           {/* Full-bleed map */}
@@ -1214,6 +1279,7 @@ export default function IncidentDetailScreen() {
             <View style={styles.fsHeaderRightCol}>
               <Pressable
                 onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   if (isNavigating) {
                     stopNavigation();
                   } else {
@@ -1229,6 +1295,7 @@ export default function IncidentDetailScreen() {
                     backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : '#FFFFFF',
                     borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
                     opacity: pressed ? 0.75 : 1,
+                    transform: [{ scale: pressed ? 0.90 : 1 }],
                   },
                 ]}
               >
@@ -1250,6 +1317,7 @@ export default function IncidentDetailScreen() {
                       backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : '#FFFFFF',
                       borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
                       opacity: pressed ? 0.75 : 1,
+                      transform: [{ scale: pressed ? 0.90 : 1 }],
                     },
                   ]}
                 >
@@ -1310,7 +1378,7 @@ export default function IncidentDetailScreen() {
                           setRouteOrigin(o.key);
                         }
                       }}
-                      style={[
+                      style={({ pressed }) => [
                         styles.fsOriginBtn,
                         active && {
                           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.16)' : '#FFFFFF',
@@ -1320,7 +1388,10 @@ export default function IncidentDetailScreen() {
                           shadowRadius: 4,
                           elevation: 2,
                         },
-                        { opacity: disabled ? 0.35 : 1 },
+                        {
+                          opacity: disabled ? 0.35 : pressed && !active ? 0.75 : 1,
+                          transform: [{ scale: pressed && !disabled ? 0.96 : 1 }],
+                        },
                       ]}
                     >
                       <IconComp

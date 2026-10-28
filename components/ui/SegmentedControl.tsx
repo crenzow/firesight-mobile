@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 export interface Segment {
@@ -35,12 +36,19 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({ segments, va
         return (
           <Pressable
             key={segment.key}
-            onPress={() => onChange(segment.key)}
-            style={[
+            onPress={() => {
+              if (!isActive) {
+                Haptics.selectionAsync().catch(() => {});
+                onChange(segment.key);
+              }
+            }}
+            style={({ pressed }) => [
               styles.segment,
               {
                 borderRadius: radius.full,
                 backgroundColor: isActive ? colors.surface : 'transparent',
+                transform: [{ scale: pressed ? 0.95 : 1 }],
+                opacity: pressed && !isActive ? 0.75 : 1,
               },
               isActive && styles.activeShadow,
             ]}

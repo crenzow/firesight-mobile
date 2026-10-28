@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, Image } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Alert, Image, BackHandler } from 'react-native';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { CalendarClock, Camera, MapPin, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
@@ -58,13 +59,33 @@ export default function CreateManualIncidentScreen() {
     }
   };
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
+    if (showDatePicker) {
+      setShowDatePicker(false);
+      return;
+    }
     if (from) {
-      router.navigate(`/(bfp)/${from}` as any);
+      if (from.startsWith('/')) {
+        router.replace(from as any);
+      } else {
+        router.replace(`/(bfp)/${from}` as any);
+      }
     } else {
       router.back();
     }
-  };
+  }, [showDatePicker, from]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [handleBack])
+  );
 
   const handleSubmit = async () => {
     if (!barangayId) {
@@ -132,7 +153,19 @@ export default function CreateManualIncidentScreen() {
                   ? `${location.latitude.toFixed(5)}°N, ${location.longitude.toFixed(5)}°E`
                   : 'Location unavailable'}
             </Text>
-            <Pressable onPress={requestLocation} hitSlop={8}>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                requestLocation();
+              }}
+              hitSlop={8}
+              style={({ pressed }) => [
+                {
+                  transform: [{ scale: pressed ? 0.88 : 1 }],
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
               <RefreshCw size={16} color={colors.textMuted} />
             </Pressable>
           </View>
@@ -171,10 +204,21 @@ export default function CreateManualIncidentScreen() {
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           <Pressable
             onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               setPickerMode('date');
               setShowDatePicker(true);
             }}
-            style={[styles.dateButton, { flex: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surface }]}
+            style={({ pressed }) => [
+              styles.dateButton,
+              {
+                flex: 1,
+                borderColor: colors.border,
+                borderRadius: radius.sm,
+                backgroundColor: colors.surface,
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
           >
             <CalendarClock size={16} color={colors.textMuted} />
             <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, marginLeft: 8 }}>
@@ -184,10 +228,21 @@ export default function CreateManualIncidentScreen() {
 
           <Pressable
             onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               setPickerMode('time');
               setShowDatePicker(true);
             }}
-            style={[styles.dateButton, { flex: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surface }]}
+            style={({ pressed }) => [
+              styles.dateButton,
+              {
+                flex: 1,
+                borderColor: colors.border,
+                borderRadius: radius.sm,
+                backgroundColor: colors.surface,
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
           >
             <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, marginLeft: 8 }}>
               {dataTime.toLocaleTimeString('en-PH', { timeStyle: 'short' })}
@@ -253,8 +308,20 @@ export default function CreateManualIncidentScreen() {
           <Image source={{ uri: photoUri }} style={[styles.photoPreview, { borderRadius: radius.md }]} />
         ) : (
           <Pressable
-            onPress={handleAddPhoto}
-            style={[styles.photoButton, { borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              handleAddPhoto();
+            }}
+            style={({ pressed }) => [
+              styles.photoButton,
+              {
+                borderColor: colors.border,
+                borderRadius: radius.md,
+                backgroundColor: colors.surface,
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
           >
             <Camera size={20} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>Attach Photo</Text>
