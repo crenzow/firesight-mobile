@@ -108,6 +108,14 @@ export const BFPTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) =>
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
+  const currentRoute = state.routes[state.index];
+  const isVisibleTab = (VISIBLE_TAB_ORDER as readonly string[]).includes(currentRoute?.name);
+
+  // Industry Standard: Hide bottom tab bar on deep detail screens, forms, and utility sub-screens
+  if (!isVisibleTab) {
+    return null;
+  }
+
   const visibleRoutes = VISIBLE_TAB_ORDER.map((name) => state.routes.find((r) => r.name === name)).filter(
     (r): r is (typeof state.routes)[number] => !!r
   );

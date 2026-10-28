@@ -32,11 +32,11 @@ export default function BFPLayout() {
       <Tabs.Screen name="profile/index" options={{ title: 'Profile' }} />
 
       {/* Reachable via navigation, hidden from the custom tab bar */}
-      <Tabs.Screen name="incidents/[id]" options={{ href: null }} />
-      <Tabs.Screen name="incidents/create" options={{ href: null }} />
-      <Tabs.Screen name="profile/edit" options={{ href: null }} />
-      <Tabs.Screen name="profile/settings" options={{ href: null }} />
-      <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="incidents/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="incidents/create" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="profile/edit" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="profile/settings" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="notifications" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     </Tabs>
   );
 }

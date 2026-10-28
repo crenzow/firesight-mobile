@@ -28,14 +28,14 @@ export default function ResidentLayout() {
       <Tabs.Screen name="profile/index" options={{ title: 'Profile' }} />
 
       {/* Screens reachable via navigation but intentionally not shown as tabs */}
-      <Tabs.Screen name="learn/[id]" options={{ href: null }} />
-      <Tabs.Screen name="profile/edit" options={{ href: null }} />
-      <Tabs.Screen name="profile/settings" options={{ href: null }} />
-      <Tabs.Screen name="notifications" options={{ href: null }} />
-      <Tabs.Screen name="announcements" options={{ href: null }} />
-      <Tabs.Screen name="emergency-contacts" options={{ href: null }} />
-      <Tabs.Screen name="reports/index" options={{ href: null }} />
-      <Tabs.Screen name="reports/[id]" options={{ href: null }} />
+      <Tabs.Screen name="learn/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="profile/edit" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="profile/settings" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="notifications" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="announcements" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="emergency-contacts" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="reports/index" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="reports/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     </Tabs>
   );
 }
