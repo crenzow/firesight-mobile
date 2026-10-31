@@ -6,6 +6,7 @@ import { ArrowLeft, Smartphone, Sun, Moon, MoonStar } from 'lucide-react-native'
 import { useTheme, ThemePreference } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { RadioOptionRow } from '../../../components/profile/RadioOptionRow';
+import { Card } from '../../../components/ui/Card';
 import { APP_CONFIG } from '../../../constants/config';
 
 const THEME_OPTIONS: { key: ThemePreference; title: string; subtitle: string; icon: React.ComponentType<{ size: number; color: string }>; gradient: [string, string] }[] = [
@@ -23,10 +24,10 @@ export default function SettingsScreen() {
   const [alertSounds, setAlertSounds] = useState(true);
 
   const handleBack = useCallback(() => {
-    if (from) {
-      router.replace(from as any);
+    if (from && (from.includes('home') || from === '/(resident)/home')) {
+      router.replace('/(resident)/home');
     } else {
-      router.back();
+      router.replace('/(resident)/profile');
     }
   }, [from]);
 
@@ -73,7 +74,7 @@ export default function SettingsScreen() {
         >
           NOTIFICATIONS & PRIVACY
         </Text>
-        <View style={[styles.toggleCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 12 }]}>
+        <Card padding={0}>
           <ToggleRow
             title="Push Notifications"
             subtitle="Receive alerts and updates"
@@ -87,7 +88,7 @@ export default function SettingsScreen() {
             value={alertSounds}
             onValueChange={setAlertSounds}
           />
-        </View>
+        </Card>
 
         <View style={[styles.footerCard, { marginTop: spacing.xl }]}>
           <Text style={{ color: colors.brandOrange, fontSize: typography.size.md, fontWeight: '800' }}>

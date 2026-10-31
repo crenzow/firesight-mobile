@@ -13,10 +13,10 @@ export default function SecurityScreen() {
   const { colors, spacing, typography } = useTheme();
 
   const handleBack = useCallback(() => {
-    if (from) {
-      router.replace(from as any);
+    if (from && (from.includes('home') || from === '/(resident)/home')) {
+      router.replace('/(resident)/home');
     } else {
-      router.back();
+      router.replace('/(resident)/profile');
     }
   }, [from]);
 

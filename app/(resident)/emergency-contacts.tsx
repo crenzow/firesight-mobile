@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   Phone,
   Flame,
@@ -131,20 +131,29 @@ const FALLBACK_CONTACTS: EmergencyContact[] = [
 ];
 
 export default function EmergencyContactsScreen() {
-  const { colors, spacing, typography, isDark } = useTheme();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const { colors, spacing, typography, shadow, isDark } = useTheme();
   const [contacts, setContacts] = useState<EmergencyContact[]>(FALLBACK_CONTACTS);
   const [selectedFilter, setSelectedFilter] = useState<ContactCategory>('all');
+
+  const handleBack = useCallback(() => {
+    if (from && (from.includes('notification') || from === '/(resident)/notifications')) {
+      router.replace('/(resident)/notifications');
+    } else {
+      router.replace('/(resident)/home');
+    }
+  }, [from]);
 
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        router.back();
+        handleBack();
         return true;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [])
+    }, [handleBack])
   );
 
   useEffect(() => {
@@ -215,11 +224,12 @@ export default function EmergencyContactsScreen() {
         style={({ pressed }) => [
           styles.contactCard,
           {
-            backgroundColor: pressed ? (isDark ? '#1F1713' : '#F9FAFB') : colors.surfaceElevated,
-            borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB'),
-            borderWidth: pressed ? 1.5 : 1,
-            transform: [{ scale: pressed ? 0.98 : 1 }],
+            backgroundColor: pressed ? (isDark ? '#1F1713' : '#F9FAFB') : (isDark ? colors.surfaceElevated : '#FFFFFF'),
+            borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent'),
+            borderWidth: 1.5,
+            transform: [{ scale: pressed ? 0.985 : 1 }],
           },
+          !isDark && shadow.card,
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Call ${item.name} at ${item.phone_number}`}
@@ -270,7 +280,7 @@ export default function EmergencyContactsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <SecondaryHeader title="Emergency Hotlines" />
+      <SecondaryHeader title="Emergency Hotlines" onBack={handleBack} />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView
           contentContainerStyle={styles.scrollBody}
@@ -284,8 +294,9 @@ export default function EmergencyContactsScreen() {
                 styles.primaryEmergencyCard,
                 {
                   backgroundColor: pressed ? colors.brandOrangeDeep : colors.brandOrange,
-                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  transform: [{ scale: pressed ? 0.985 : 1 }],
                 },
+                !isDark && shadow.card,
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Call primary emergency hotline ${primary.name}`}
@@ -388,6 +399,25 @@ export default function EmergencyContactsScreen() {
             </View>
           )}
 
+          {localLianContacts.length === 0 && nationalHotlines.length === 0 && (
+            <View
+              style={[
+                styles.emptyCard,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                },
+                !isDark && shadow.card,
+              ]}
+            >
+              <Phone size={36} color={colors.textMuted} />
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Hotlines Found</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                No emergency contacts matched this category filter.
+              </Text>
+            </View>
+          )}
+
 
         </ScrollView>
       </SafeAreaView>
@@ -403,10 +433,10 @@ const styles = StyleSheet.create({
 
   /* Primary Emergency Speed Dial Card */
   primaryEmergencyCard: {
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 20,
     marginBottom: 20,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   primaryTopRow: {
@@ -500,7 +530,7 @@ const styles = StyleSheet.create({
 
   /* Contact Card */
   contactCard: {
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 14,
     marginBottom: 10,
   },
@@ -511,7 +541,7 @@ const styles = StyleSheet.create({
   squircleWrap: {
     width: 46,
     height: 46,
-    borderRadius: 15,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -548,5 +578,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  emptyCard: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 12,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18,
   },
 });

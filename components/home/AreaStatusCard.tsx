@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Flame, MapPin } from 'lucide-react-native';
+import { useTheme } from '../../theme/ThemeContext';
 import { RiskLevel } from '../../services/api/models';
 import { APP_CONFIG } from '../../constants/config';
 
@@ -38,13 +39,22 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
   registeredLocation,
   scopeLabel,
 }) => {
+  const { isDark, shadow } = useTheme();
   const risk = RISK_CONFIG[normalizeRiskLevel(riskLevel)];
   const locality = `${municipality ?? APP_CONFIG.DEFAULT_MUNICIPALITY}, ${province ?? APP_CONFIG.DEFAULT_PROVINCE}`;
   const eyebrowText = scopeLabel ?? (isExternal ? 'PILOT COVERAGE' : 'AREA STATUS');
 
   return (
-    <View style={styles.shadow}>
-      <View style={styles.card}>
+    <View style={[styles.shadow, !isDark && shadow.card]}>
+      <View
+        style={[
+          styles.card,
+          {
+            borderWidth: isDark ? 1 : 0,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+          },
+        ]}
+      >
         <LinearGradient
           colors={['#0F1C3F', '#1B2A5A', 'rgba(244,98,43,0.4)']}
           start={{ x: 0, y: 0 }}
@@ -104,7 +114,7 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
 
 const styles = StyleSheet.create({
   shadow: {
-    borderRadius: 24,
+    borderRadius: 18,
     backgroundColor: '#0F1C3F',
     ...Platform.select({
       ios: {
@@ -117,7 +127,7 @@ const styles = StyleSheet.create({
     }),
   },
   card: {
-    borderRadius: 24,
+    borderRadius: 18,
     paddingHorizontal: 22,
     paddingTop: 18,
     paddingBottom: 16,

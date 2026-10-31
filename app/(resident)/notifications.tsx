@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, BackHandler, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { Bell, AlertTriangle, RefreshCw, Info, Clock } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
@@ -36,9 +37,15 @@ export default function NotificationsScreen() {
 
   const handleBack = useCallback(() => {
     if (from) {
-      router.replace(from as any);
+      if (from.startsWith('/(resident)/')) {
+        router.replace(from as any);
+      } else if (from.startsWith('/')) {
+        router.replace(`/(resident)${from}` as any);
+      } else {
+        router.replace(`/(resident)/${from}` as any);
+      }
     } else {
-      router.back();
+      router.replace('/(resident)/home');
     }
   }, [from]);
 
@@ -118,9 +125,13 @@ export default function NotificationsScreen() {
             const Icon = ICONS[item.notification_type] ?? Info;
             const isAlert = item.notification_type === 'incident_alert';
             const iconColor = isAlert ? colors.danger : colors.brandOrange;
+
             return (
               <Pressable
-                onPress={() => handlePress(item)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  handlePress(item);
+                }}
                 style={({ pressed }) => [
                   styles.row,
                   {
@@ -151,7 +162,7 @@ export default function NotificationsScreen() {
                     </View>
 
                     {/* Content */}
-                    <View style={{ flex: 1, marginLeft: spacing.md }}>
+                    <View style={styles.contentCol}>
                       <View style={styles.titleRow}>
                         <Text
                           style={[
@@ -202,7 +213,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    width: '100%',
+  },
+  contentCol: {
+    flex: 1,
+    marginLeft: 12,
   },
   iconCircle: {
     width: 38,

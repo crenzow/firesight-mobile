@@ -32,10 +32,12 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
       style={[
         styles.container,
         {
-          backgroundColor: isDark ? 'rgba(21, 26, 48, 0.92)' : 'rgba(255, 255, 255, 0.94)',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : '#FFFFFF',
+          borderWidth: isDark ? 1 : 0,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
         },
-              ]}
+        !isDark && shadow.card,
+      ]}
     >
       {/* Map Type / Layers Button */}
       <Pressable
@@ -47,14 +49,22 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
         style={({ pressed }) => [
           styles.button,
           {
-            opacity: pressed ? 0.75 : 1,
-            transform: [{ scale: pressed ? 0.88 : 1 }],
+            backgroundColor: pressed
+              ? (isDark ? '#221915' : 'rgba(244, 98, 43, 0.12)')
+              : 'transparent',
+            transform: [{ scale: pressed ? 0.90 : 1 }],
           },
         ]}
         accessibilityRole="button"
         accessibilityLabel="Map type selector"
       >
-        <Layers size={19} color={colors.textPrimary} strokeWidth={2} />
+        {({ pressed }) => (
+          <Layers
+            size={19}
+            color={pressed ? colors.brandOrange : colors.textPrimary}
+            strokeWidth={2}
+          />
+        )}
       </Pressable>
 
       {/* Recenter / Locate Me Button */}
@@ -71,23 +81,28 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
             style={({ pressed }) => [
               styles.button,
               {
-                opacity: pressed ? 0.75 : 1,
-                transform: [{ scale: pressed ? 0.88 : 1 }],
+                backgroundColor: pressed
+                  ? (isDark ? '#221915' : 'rgba(244, 98, 43, 0.12)')
+                  : isLocationActive
+                  ? `${colors.brandOrange}18`
+                  : 'transparent',
+                transform: [{ scale: pressed ? 0.90 : 1 }],
               },
-              isLocationActive && { backgroundColor: `${colors.brandOrange}18` },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Locate my position"
           >
-            {isLocating ? (
-              <ActivityIndicator size="small" color={colors.brandOrange} />
-            ) : (
-              <LocateFixed
-                size={19}
-                color={isLocationActive ? colors.brandOrange : colors.textPrimary}
-                strokeWidth={isLocationActive ? 2.4 : 2}
-              />
-            )}
+            {({ pressed }) =>
+              isLocating ? (
+                <ActivityIndicator size="small" color={colors.brandOrange} />
+              ) : (
+                <LocateFixed
+                  size={19}
+                  color={isLocationActive || pressed ? colors.brandOrange : colors.textPrimary}
+                  strokeWidth={isLocationActive || pressed ? 2.4 : 2}
+                />
+              )
+            }
           </Pressable>
         </>
       )}
@@ -105,21 +120,28 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
             style={({ pressed }) => [
               styles.button,
               {
-                opacity: pressed ? 0.75 : 1,
-                transform: [{ scale: pressed ? 0.88 : 1 }],
+                backgroundColor: pressed
+                  ? (isDark ? '#221915' : 'rgba(244, 98, 43, 0.12)')
+                  : isFilterActive
+                  ? `${colors.brandOrange}18`
+                  : 'transparent',
+                transform: [{ scale: pressed ? 0.90 : 1 }],
               },
-              isFilterActive && { backgroundColor: `${colors.brandOrange}18` },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Filter risk levels"
           >
-            <Filter
-              size={18}
-              color={isFilterActive ? colors.brandOrange : colors.textPrimary}
-              strokeWidth={2}
-            />
-            {isFilterActive && (
-              <View style={[styles.activeDot, { backgroundColor: colors.brandOrange, borderColor: colors.surface }]} />
+            {({ pressed }) => (
+              <>
+                <Filter
+                  size={18}
+                  color={isFilterActive || pressed ? colors.brandOrange : colors.textPrimary}
+                  strokeWidth={2}
+                />
+                {isFilterActive && (
+                  <View style={[styles.activeDot, { backgroundColor: colors.brandOrange, borderColor: colors.surface }]} />
+                )}
+              </>
             )}
           </Pressable>
         </>
@@ -138,19 +160,24 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
             style={({ pressed }) => [
               styles.button,
               {
-                opacity: pressed ? 0.75 : 1,
-                transform: [{ scale: pressed ? 0.88 : 1 }],
+                backgroundColor: pressed
+                  ? (isDark ? '#221915' : 'rgba(244, 98, 43, 0.12)')
+                  : isLegendVisible
+                  ? `${colors.brandOrange}18`
+                  : 'transparent',
+                transform: [{ scale: pressed ? 0.90 : 1 }],
               },
-              isLegendVisible && { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Toggle risk legend"
           >
-            <Info
-              size={19}
-              color={colors.textPrimary}
-              strokeWidth={2}
-            />
+            {({ pressed }) => (
+              <Info
+                size={19}
+                color={pressed || isLegendVisible ? colors.brandOrange : colors.textPrimary}
+                strokeWidth={2}
+              />
+            )}
           </Pressable>
         </>
       )}
@@ -160,8 +187,7 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 18,
     overflow: 'hidden',
     alignItems: 'center',
     width: 44,

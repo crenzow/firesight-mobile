@@ -103,9 +103,15 @@ export default function BFPEditProfileScreen() {
       return;
     }
     if (from) {
-      router.replace(from as any);
+      if (from.startsWith('/(bfp)/')) {
+        router.replace(from as any);
+      } else if (from.startsWith('/')) {
+        router.replace(`/(bfp)${from}` as any);
+      } else {
+        router.replace(`/(bfp)/${from}` as any);
+      }
     } else {
-      router.back();
+      router.replace('/(bfp)/profile');
     }
   }, [showCropModal, showPhotoOptions, showConfirmModal, showSuccessModal, from]);
 
@@ -123,11 +129,7 @@ export default function BFPEditProfileScreen() {
 
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
-    if (from) {
-      router.replace(from as any);
-    } else {
-      router.back();
-    }
+    handleBack();
   };
 
   return (

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Camera } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -78,20 +78,52 @@ export default function EditProfileScreen() {
     }
   };
 
+  const handleBack = useCallback(() => {
+    if (showCropModal) {
+      setShowCropModal(false);
+      return;
+    }
+    if (showPhotoOptions) {
+      setShowPhotoOptions(false);
+      return;
+    }
+    if (showConfirmModal) {
+      setShowConfirmModal(false);
+      return;
+    }
+    if (showSuccessModal) {
+      setShowSuccessModal(false);
+      return;
+    }
+    if (from && (from.includes('home') || from === '/(resident)/home')) {
+      router.replace('/(resident)/home');
+    } else {
+      router.replace('/(resident)/profile');
+    }
+  }, [showCropModal, showPhotoOptions, showConfirmModal, showSuccessModal, from]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [handleBack])
+  );
+
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
-    if (from) {
-      router.replace(from as any);
-    } else {
-      router.back();
-    }
+    handleBack();
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SecondaryHeader 
         title="Edit Profile" 
-        onBack={() => from ? router.replace(from as any) : router.back()} 
+        onBack={handleBack} 
       />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView contentContainerStyle={{ padding: spacing.lg }} keyboardShouldPersistTaps="handled">

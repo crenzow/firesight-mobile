@@ -10,9 +10,11 @@ import {
   ActivityIndicator,
   Platform,
   useWindowDimensions,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { Search, X, BookOpen, Bookmark } from "lucide-react-native";
 import { useTheme } from "../../../theme/ThemeContext";
 import { AppHeader } from "../../../components/navigation/AppHeader";
@@ -24,18 +26,20 @@ import {
   FeaturedArticleCard,
   ArticleListItem,
 } from "../../../components/learn/ArticleCards";
+import { Skeleton } from "../../../components/ui/Skeleton";
 import { educationService } from "../../../services/api";
 import { FireEducationArticle } from "../../../services/api/models";
 import { useBookmarks } from "../../../hooks/useBookmarks";
 
 export default function LearnScreen() {
-  const { colors, spacing, typography, isDark } = useTheme();
+  const { colors, spacing, typography, shadow, isDark } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = windowWidth - spacing.lg * 2;
   const [articles, setArticles] = useState<FireEducationArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [category, setCategory] = useState<LearnCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeFeaturedIndex, setActiveFeaturedIndex] = useState(0);
 
@@ -68,8 +72,21 @@ export default function LearnScreen() {
         load(true);
       }, 15000);
 
-      return () => clearInterval(timer);
-    }, [load])
+      const onBackPress = () => {
+        if (searchQuery.trim().length > 0) {
+          setSearchQuery("");
+          return true;
+        }
+        return false;
+      };
+
+      const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+      return () => {
+        clearInterval(timer);
+        subscription.remove();
+      };
+    }, [load, searchQuery])
   );
 
   const isSearching = searchQuery.trim().length > 0;
@@ -142,37 +159,70 @@ export default function LearnScreen() {
             </Text>
           </View>
 
-          {/* Search Bar */}
+          {/* Elevated Editorial Search Card */}
           <View
             style={[
-              styles.searchBar,
+              styles.searchCard,
               {
-                backgroundColor: colors.surfaceElevated,
-                borderColor: colors.border,
+                backgroundColor: isDark ? colors.surfaceElevated : "#FFFFFF",
+                borderColor: isSearchFocused
+                  ? colors.brandOrange
+                  : isDark
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "transparent",
               },
+              !isDark && shadow.card,
             ]}
           >
-            <Search size={18} color={colors.textMuted} />
+            <Search
+              size={18}
+              color={isSearchFocused ? colors.brandOrange : colors.textMuted}
+              strokeWidth={2.2}
+            />
             <TextInput
-              style={[styles.searchInput, { color: colors.textPrimary }]}
+              style={[
+                styles.searchInput,
+                {
+                  color: colors.textPrimary,
+                  fontSize: typography.size.sm,
+                  marginLeft: spacing.sm,
+                },
+              ]}
               placeholder="Search safety guides..."
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
               returnKeyType="search"
               clearButtonMode="never"
             />
-            {searchQuery.length > 0 && (
+            {searchQuery.length > 0 ? (
               <Pressable
-                onPress={() => setSearchQuery("")}
-                style={[
-                  styles.clearButton,
-                  { backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)" },
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setSearchQuery("");
+                }}
+                hitSlop={10}
+                style={({ pressed }) => [
+                  styles.clearBtn,
+                  { opacity: pressed ? 0.6 : 1 },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search text"
               >
-                <X size={12} color={colors.textSecondary} />
+                <View
+                  style={[
+                    styles.clearCircle,
+                    {
+                      backgroundColor: isDark ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.15)",
+                    },
+                  ]}
+                >
+                  <X size={11} color="#FFFFFF" strokeWidth={2.5} />
+                </View>
               </Pressable>
-            )}
+            ) : null}
           </View>
 
           {/* Featured Hero Card or Carousel (Shown only when not searching and not on Saved tab) */}
@@ -284,21 +334,49 @@ export default function LearnScreen() {
 
           {/* Articles List */}
           {isLoading ? (
-            <View style={{ paddingVertical: 48, alignItems: "center", justifyContent: "center" }}>
-              <ActivityIndicator size="large" color={colors.brandOrange} />
-              <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 12, fontWeight: "500" }}>
-                Loading safety guides…
-              </Text>
+            <View>
+              {[1, 2, 3].map((n) => (
+                <View
+                  key={n}
+                  style={[
+                    styles.skeletonCard,
+                    {
+                      backgroundColor: colors.surfaceElevated,
+                      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "#E5E7EB",
+                    },
+                    !isDark && shadow.card,
+                  ]}
+                >
+                  <Skeleton width={48} height={48} borderRadius={14} />
+                  <View style={styles.skeletonContent}>
+                    <Skeleton width={64} height={10} borderRadius={4} style={{ marginBottom: 8 }} />
+                    <Skeleton width="88%" height={14} borderRadius={4} style={{ marginBottom: 6 }} />
+                    <Skeleton width="55%" height={12} borderRadius={4} />
+                  </View>
+                  <Skeleton width={30} height={30} borderRadius={15} />
+                </View>
+              ))}
             </View>
           ) : filtered.length > 0 ? (
             filtered.map((article) => (
               <ArticleListItem key={article.content_id} article={article} />
             ))
           ) : (
-            <View style={[styles.emptyState, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.emptyState,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : "#FFFFFF",
+                  borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "transparent",
+                },
+                !isDark && shadow.card,
+              ]}
+            >
               {isSavedTab ? (
                 <>
-                  <Bookmark size={36} color={colors.brandOrange} />
+                  <View style={[styles.emptyIconCircle, { backgroundColor: `${colors.brandOrange}15` }]}>
+                    <Bookmark size={28} color={colors.brandOrange} />
+                  </View>
                   <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
                     No saved guides yet
                   </Text>
@@ -308,13 +386,15 @@ export default function LearnScreen() {
                 </>
               ) : (
                 <>
-                  <BookOpen size={36} color={colors.textMuted} />
+                  <View style={[styles.emptyIconCircle, { backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)" }]}>
+                    <BookOpen size={28} color={colors.textMuted} />
+                  </View>
                   <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
                     No guides found
                   </Text>
                   <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                     {isSearching
-                      ? `No guides matched "${searchQuery}". Try searching for keywords like "cooking", "wiring", or "procedure".`
+                      ? `No guides matched "${searchQuery}".`
                       : "No guides available in this category yet."}
                   </Text>
                 </>
@@ -341,24 +421,25 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 4,
   },
-  searchBar: {
+  searchCard: {
     flexDirection: "row",
     alignItems: "center",
+    height: 48,
+    borderRadius: 18,
+    borderWidth: 1.5,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 10,
-    marginBottom: 4,
-    
+    marginBottom: 6,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    height: "100%",
+    paddingVertical: 0,
     fontWeight: "500",
-    padding: 0,
   },
-  clearButton: {
+  clearBtn: {
+    padding: 4,
+  },
+  clearCircle: {
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -391,9 +472,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 32,
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 18,
+    borderWidth: 1.5,
     marginTop: 12,
+  },
+  emptyIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  skeletonCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    marginBottom: 10,
+    borderRadius: 18,
+    borderWidth: 1.5,
+  },
+  skeletonContent: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 8,
   },
   emptyTitle: {
     fontSize: 16,

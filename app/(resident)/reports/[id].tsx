@@ -26,6 +26,8 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
+import { Card } from '../../../components/ui/Card';
+import { Skeleton } from '../../../components/ui/Skeleton';
 import * as Haptics from 'expo-haptics';
 import { StatusBadge } from '../../../components/home/StatusBadge';
 import { PhotoLightboxModal } from '../../../components/ui/PhotoLightboxModal';
@@ -80,12 +82,25 @@ const TIMELINE_STEPS: StepDefinition[] = [
 
 export default function ReportDetailScreen() {
   const { colors, spacing, typography, radius, shadow, isDark } = useTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from, listFrom } = useLocalSearchParams<{ id: string; from?: string; listFrom?: string }>();
   const [report, setReport] = useState<CommunityReport | null>(null);
   const [history, setHistory] = useState<ReportStatusHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [locationName, setLocationName] = useState('Loading location…');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const handleBack = useCallback(() => {
+    if (from === '/(resident)/reports' || from === 'reports' || from === 'reports/index' || (from && from.includes('reports'))) {
+      router.replace({
+        pathname: '/(resident)/reports',
+        params: listFrom ? { from: listFrom } : undefined,
+      } as any);
+    } else if (from && from.includes('profile')) {
+      router.replace('/(resident)/profile');
+    } else {
+      router.replace('/(resident)/home');
+    }
+  }, [from, listFrom]);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,13 +109,13 @@ export default function ReportDetailScreen() {
           setIsPreviewOpen(false);
           return true;
         }
-        router.back();
+        handleBack();
         return true;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [isPreviewOpen])
+    }, [isPreviewOpen, handleBack])
   );
 
   useEffect(() => {
@@ -145,12 +160,49 @@ export default function ReportDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <SecondaryHeader title="Report Details" />
+      <SecondaryHeader title="Report Details" onBack={handleBack} />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
-        {isLoading || !report ? (
+        {isLoading ? (
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Photo Skeleton */}
+            <Skeleton width="100%" height={210} borderRadius={18} />
+
+            {/* Overview Skeleton Card */}
+            <View style={{ marginTop: spacing.md }}>
+              <Card>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Skeleton width={80} height={24} borderRadius={6} />
+                  <Skeleton width={100} height={20} borderRadius={6} />
+                </View>
+                <Skeleton width="90%" height={16} borderRadius={4} style={{ marginBottom: 12 }} />
+                <Skeleton width="60%" height={14} borderRadius={4} style={{ marginBottom: 12 }} />
+                <Skeleton width="75%" height={14} borderRadius={4} />
+              </Card>
+            </View>
+
+            {/* Timeline Skeleton Card */}
+            <View style={{ marginTop: spacing.md }}>
+              <Card>
+                <Skeleton width={120} height={18} borderRadius={6} style={{ marginBottom: 16 }} />
+                {[0, 1, 2].map((step) => (
+                  <View key={step} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 }}>
+                    <Skeleton width={32} height={32} borderRadius={16} />
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <Skeleton width="60%" height={14} borderRadius={4} />
+                      <Skeleton width="40%" height={12} borderRadius={4} />
+                    </View>
+                  </View>
+                ))}
+              </Card>
+            </View>
+          </ScrollView>
+        ) : !report ? (
           <View style={styles.centerState}>
             <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>
-              {isLoading ? 'Loading report details…' : 'Report not found.'}
+              Report not found.
             </Text>
           </View>
         ) : (
@@ -169,14 +221,8 @@ export default function ReportDetailScreen() {
                   styles.photoCard,
                   {
                     backgroundColor: colors.surfaceElevated,
-                    borderColor: pressed
-                      ? colors.brandOrange
-                      : isDark
-                      ? 'rgba(255, 255, 255, 0.08)'
-                      : '#E5E7EB',
-                    borderWidth: pressed ? 1.5 : 1,
-                    borderRadius: radius.xl,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                    transform: [{ scale: pressed ? 0.99 : 1 }],
                   },
                 ]}
                 accessibilityRole="button"
@@ -191,20 +237,10 @@ export default function ReportDetailScreen() {
             ) : null}
 
             {/* ── 2. Report Overview Card ── */}
-            <View
-              style={[
-                styles.overviewCard,
-                {
-                  backgroundColor: colors.surfaceElevated,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
-                  borderRadius: radius.lg,
-                  padding: spacing.lg,
-                  marginTop: photoUri ? spacing.md : 0,
-                },
-                              ]}
-            >
-              {/* Header: StatusBadge + Reference No */}
-              <View style={styles.topMetaRow}>
+            <View style={{ marginTop: photoUri ? spacing.md : 0 }}>
+              <Card>
+                {/* Header: StatusBadge + Reference No */}
+                <View style={styles.topMetaRow}>
                 <StatusBadge status={report.status} />
                 <View
                   style={[
@@ -268,6 +304,7 @@ export default function ReportDetailScreen() {
                   </Text>
                 </View>
               )}
+              </Card>
             </View>
 
             {/* ── 3. Status Timeline ── */}
@@ -275,17 +312,7 @@ export default function ReportDetailScreen() {
               Status Timeline
             </Text>
 
-            <View
-              style={[
-                styles.timelineCard,
-                {
-                  backgroundColor: colors.surfaceElevated,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
-                  borderRadius: radius.lg,
-                  padding: spacing.lg,
-                },
-                              ]}
-            >
+            <Card padding={spacing.lg}>
               {report.status === 'invalid' ? (
                 <View style={styles.invalidBox}>
                   <View style={[styles.invalidIconCircle, { backgroundColor: '#FEE2E2' }]}>
@@ -472,7 +499,7 @@ export default function ReportDetailScreen() {
                   );
                 })
               )}
-            </View>
+            </Card>
           </ScrollView>
         )}
 
@@ -502,6 +529,7 @@ const styles = StyleSheet.create({
   photoCard: {
     width: '100%',
     height: 210,
+    borderRadius: 20,
     borderWidth: 1,
     overflow: 'hidden',
     position: 'relative',
@@ -526,9 +554,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-  },
-  overviewCard: {
-    borderWidth: 1,
   },
   topMetaRow: {
     flexDirection: 'row',
@@ -588,9 +613,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
     paddingHorizontal: 2,
-  },
-  timelineCard: {
-    borderWidth: 1,
   },
   invalidBox: {
     alignItems: 'center',

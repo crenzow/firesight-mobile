@@ -21,10 +21,14 @@ const PersonnelNotification: React.FC<{
   notification: Notification;
   onPress: () => void;
 }> = ({ notification, onPress }) => {
-  const { colors, spacing, typography, isDark } = useTheme();
+  const { colors, spacing, typography, shadow, isDark } = useTheme();
   const Icon = ICONS[notification.notification_type] ?? Info;
   const isAlert = notification.notification_type === 'incident_alert';
   const iconColor = isAlert ? colors.danger : colors.brandOrange;
+  const cardBg = isDark ? colors.surfaceElevated : '#FFFFFF';
+  const pressedBg = isDark ? '#221915' : '#F9FAFB';
+  const normalBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent';
+  const pressedBorder = isAlert ? colors.danger : colors.brandOrange;
 
   return (
     <Pressable
@@ -33,59 +37,53 @@ const PersonnelNotification: React.FC<{
         onPress();
       }}
       style={({ pressed }) => [
+        styles.notificationCard,
         {
-          marginBottom: spacing.sm,
+          backgroundColor: pressed ? pressedBg : cardBg,
+          borderColor: pressed ? pressedBorder : normalBorder,
+          borderWidth: 1.5,
+          opacity: notification.is_read ? 0.72 : 1,
           transform: [{ scale: pressed ? 0.985 : 1 }],
         },
+        !isDark && shadow.card,
       ]}
     >
       {({ pressed }) => (
-        <Card
-          style={{
-            backgroundColor: pressed
-              ? (isDark ? '#221915' : '#F9FAFB')
-              : (isDark ? colors.surfaceElevated : '#FFFFFF'),
-            borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB'),
-            borderWidth: 1,
-            opacity: notification.is_read ? 0.72 : 1,
-          }}
-        >
-          <View style={styles.row}>
-            <View
-              style={[
-                styles.iconCircle,
-                {
-                  backgroundColor: pressed
-                    ? iconColor
-                    : `${iconColor}1F`,
-                },
-              ]}
-            >
-              <Icon size={16} color={pressed ? '#FFFFFF' : iconColor} />
-            </View>
-            <View style={{ flex: 1, marginLeft: spacing.sm }}>
-              <View style={styles.titleRow}>
-                <Text
-                  style={{
-                    color: pressed ? colors.brandOrange : colors.textPrimary,
-                    fontSize: typography.size.sm,
-                    fontWeight: '700',
-                    flex: 1,
-                  }}
-                >
-                  {notification.title}
-                </Text>
-                {!notification.is_read ? <View style={[styles.dot, { backgroundColor: colors.brandOrange }]} /> : null}
-              </View>
-              <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 2 }}>
-                {notification.message}
-              </Text>
-              <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
-                {formatRelativeDate(notification.created_at)} · {formatFullDate(notification.created_at)}, {formatTime(notification.created_at)}
-              </Text>
-            </View>
+        <View style={styles.row}>
+          <View
+            style={[
+              styles.iconCircle,
+              {
+                backgroundColor: pressed
+                  ? iconColor
+                  : `${iconColor}1F`,
+              },
+            ]}
+          >
+            <Icon size={16} color={pressed ? '#FFFFFF' : iconColor} />
           </View>
-        </Card>
+          <View style={{ flex: 1, marginLeft: spacing.sm }}>
+            <View style={styles.titleRow}>
+              <Text
+                style={{
+                  color: pressed ? pressedBorder : colors.textPrimary,
+                  fontSize: typography.size.sm,
+                  fontWeight: '700',
+                  flex: 1,
+                }}
+              >
+                {notification.title}
+              </Text>
+              {!notification.is_read ? <View style={[styles.dot, { backgroundColor: colors.brandOrange }]} /> : null}
+            </View>
+            <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 2 }}>
+              {notification.message}
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 }}>
+              {formatRelativeDate(notification.created_at)} · {formatFullDate(notification.created_at)}, {formatTime(notification.created_at)}
+            </Text>
+          </View>
+        </View>
       )}
     </Pressable>
   );
@@ -109,13 +107,15 @@ export default function BFPNotificationsScreen() {
 
   const handleBack = useCallback(() => {
     if (from) {
-      if (from.startsWith('/')) {
+      if (from.startsWith('/(bfp)/')) {
         router.replace(from as any);
+      } else if (from.startsWith('/')) {
+        router.replace(`/(bfp)${from}` as any);
       } else {
         router.replace(`/(bfp)/${from}` as any);
       }
     } else {
-      router.back();
+      router.replace('/(bfp)/dashboard');
     }
   }, [from]);
 
@@ -177,6 +177,11 @@ export default function BFPNotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
+  notificationCard: {
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 10,
+  },
   row: { flexDirection: 'row' },
   iconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center' },

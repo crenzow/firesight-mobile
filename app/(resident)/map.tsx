@@ -202,10 +202,12 @@ export default function MapScreen() {
           style={[
             styles.floatingHeader,
             {
-              backgroundColor: isDark ? 'rgba(15, 28, 63, 0.92)' : 'rgba(255, 255, 255, 0.94)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+              backgroundColor: isDark ? 'rgba(15, 28, 63, 0.92)' : 'rgba(255, 255, 255, 0.96)',
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
             },
-                      ]}
+            !isDark && shadow.card,
+          ]}
         >
           {/* Top Row: Title, Scope, and Notifications */}
           <View style={styles.headerTopRow}>
@@ -234,7 +236,10 @@ export default function MapScreen() {
                       : isDark
                       ? 'rgba(255,255,255,0.08)'
                       : '#F1F5F9',
-                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    borderColor: pressed
+                      ? colors.brandOrange
+                      : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'),
+                    transform: [{ scale: pressed ? 0.92 : 1 }],
                   },
                 ]}
                 accessibilityRole="button"
@@ -246,12 +251,13 @@ export default function MapScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() =>
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   router.push({
                     pathname: '/(resident)/notifications',
                     params: { from: pathname },
-                  } as any)
-                }
+                  } as any);
+                }}
                 hitSlop={8}
                 style={({ pressed }) => [
                   styles.headerIconButton,
@@ -261,7 +267,10 @@ export default function MapScreen() {
                       : isDark
                       ? 'rgba(255,255,255,0.08)'
                       : '#F1F5F9',
-                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                    borderColor: pressed
+                      ? colors.brandOrange
+                      : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'),
+                    transform: [{ scale: pressed ? 0.92 : 1 }],
                   },
                 ]}
                 accessibilityRole="button"
@@ -292,8 +301,11 @@ export default function MapScreen() {
           >
             {/* All Pill */}
             <Pressable
-              onPress={() => handleChangeRiskFilter('all')}
-              style={[
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                handleChangeRiskFilter('all');
+              }}
+              style={({ pressed }) => [
                 styles.pill,
                 selectedRisk === 'all'
                   ? { backgroundColor: colors.brandOrange, borderColor: colors.brandOrange }
@@ -301,6 +313,7 @@ export default function MapScreen() {
                       backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
                       borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
                     },
+                { transform: [{ scale: pressed ? 0.95 : 1 }] },
               ]}
             >
               <Text
@@ -315,8 +328,11 @@ export default function MapScreen() {
 
             {/* High Risk Pill */}
             <Pressable
-              onPress={() => handleChangeRiskFilter(selectedRisk === 'high' ? 'all' : 'high')}
-              style={[
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                handleChangeRiskFilter(selectedRisk === 'high' ? 'all' : 'high');
+              }}
+              style={({ pressed }) => [
                 styles.pill,
                 selectedRisk === 'high'
                   ? { backgroundColor: colors.riskHigh, borderColor: colors.riskHigh }
@@ -324,6 +340,7 @@ export default function MapScreen() {
                       backgroundColor: isDark ? `${colors.riskHigh}1F` : `${colors.riskHigh}14`,
                       borderColor: isDark ? `${colors.riskHigh}4D` : `${colors.riskHigh}33`,
                     },
+                { transform: [{ scale: pressed ? 0.95 : 1 }] },
               ]}
             >
               <Text
@@ -338,8 +355,11 @@ export default function MapScreen() {
 
             {/* Moderate Risk Pill */}
             <Pressable
-              onPress={() => handleChangeRiskFilter(selectedRisk === 'moderate' ? 'all' : 'moderate')}
-              style={[
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                handleChangeRiskFilter(selectedRisk === 'moderate' ? 'all' : 'moderate');
+              }}
+              style={({ pressed }) => [
                 styles.pill,
                 selectedRisk === 'moderate'
                   ? { backgroundColor: colors.riskModerate, borderColor: colors.riskModerate }
@@ -347,6 +367,7 @@ export default function MapScreen() {
                       backgroundColor: isDark ? `${colors.riskModerate}1F` : `${colors.riskModerate}14`,
                       borderColor: isDark ? `${colors.riskModerate}4D` : `${colors.riskModerate}33`,
                     },
+                { transform: [{ scale: pressed ? 0.95 : 1 }] },
               ]}
             >
               <Text
@@ -361,8 +382,11 @@ export default function MapScreen() {
 
             {/* Mild Risk Pill */}
             <Pressable
-              onPress={() => handleChangeRiskFilter(selectedRisk === 'mild' ? 'all' : 'mild')}
-              style={[
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                handleChangeRiskFilter(selectedRisk === 'mild' ? 'all' : 'mild');
+              }}
+              style={({ pressed }) => [
                 styles.pill,
                 selectedRisk === 'mild'
                   ? { backgroundColor: colors.riskMild, borderColor: colors.riskMild }
@@ -370,6 +394,7 @@ export default function MapScreen() {
                       backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : 'rgba(234, 179, 8, 0.08)',
                       borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : 'rgba(234, 179, 8, 0.2)',
                     },
+                { transform: [{ scale: pressed ? 0.95 : 1 }] },
               ]}
             >
               <Text
@@ -472,8 +497,7 @@ const styles = StyleSheet.create({
   floatingHeader: {
     marginHorizontal: 16,
     marginTop: 6,
-    borderRadius: 22,
-    borderWidth: 1,
+    borderRadius: 18,
     paddingTop: 12,
     paddingBottom: 10,
     paddingHorizontal: 14,

@@ -19,16 +19,18 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { AppHeader } from '../../../components/navigation/AppHeader';
 import { SegmentedControl } from '../../../components/ui/SegmentedControl';
 import { IncidentListItem } from '../../../components/bfp/IncidentListItem';
+import { Skeleton } from '../../../components/ui/Skeleton';
 import { incidentService } from '../../../services/api/incidentService';
 import { BFPIncident } from '../../../services/api/bfpModels';
 import { useNotifications } from '../../../context/NotificationContext';
 
 export default function IncidentsListScreen() {
-  const { colors, spacing, typography, radius, isDark } = useTheme();
+  const { colors, spacing, typography, radius, shadow, isDark } = useTheme();
   const { unreadCount } = useNotifications();
   const [incidents, setIncidents] = useState<BFPIncident[]>([]);
   const [statusFilter, setStatusFilter] = useState('active');
   const [search, setSearch] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -170,18 +172,28 @@ export default function IncidentsListScreen() {
               style={[
                 styles.searchBar,
                 {
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F2F2F7',
-                  borderRadius: 12,
+                  backgroundColor: isSearchFocused
+                    ? (isDark ? 'rgba(255, 255, 255, 0.12)' : '#FFFFFF')
+                    : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#F2F2F7'),
+                  borderRadius: 14,
                   paddingHorizontal: 12,
-                  borderWidth: isDark ? 1 : 0,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  borderWidth: 1.5,
+                  borderColor: isSearchFocused
+                    ? colors.brandOrange
+                    : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent'),
                 },
               ]}
             >
-              <Search size={16} color={colors.textMuted} />
+              <Search
+                size={17}
+                color={isSearchFocused ? colors.brandOrange : colors.textMuted}
+                strokeWidth={isSearchFocused ? 2.2 : 2}
+              />
               <TextInput
                 value={search}
                 onChangeText={setSearch}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
                 placeholder="Search barangay, reporter, ID…"
                 placeholderTextColor={colors.textMuted}
                 style={{
@@ -189,7 +201,8 @@ export default function IncidentsListScreen() {
                   color: colors.textPrimary,
                   fontSize: typography.size.sm,
                   marginLeft: spacing.sm,
-                  paddingVertical: Platform.OS === 'ios' ? 10 : 8,
+                  height: '100%',
+                  paddingVertical: 0,
                 }}
               />
               {search.length > 0 ? (
@@ -239,25 +252,54 @@ export default function IncidentsListScreen() {
                   : 'INCIDENT LOG ARCHIVE'}
               </Text>
               <Text style={[styles.sectionHeaderCount, { color: colors.textMuted }]}>
-                {`${filtered.length} record${filtered.length === 1 ? '' : 's'}`}
+                {isLoading ? '...' : `${filtered.length} record${filtered.length === 1 ? '' : 's'}`}
               </Text>
             </View>
           </View>
         }
         ListEmptyComponent={
           isLoading ? (
-            <View style={styles.emptyState}>
-              <ActivityIndicator size="large" color={colors.brandOrange} />
-              <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, marginTop: spacing.md }}>
-                Loading incidents…
-              </Text>
+            <View style={{ paddingTop: spacing.xs }}>
+              {[0, 1, 2, 3].map((key) => (
+                <View
+                  key={key}
+                  style={[
+                    styles.skeletonCard,
+                    {
+                      backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                    },
+                    !isDark && shadow.card,
+                  ]}
+                >
+                  <Skeleton width={72} height={72} borderRadius={14} />
+                  <View style={styles.skeletonContentCol}>
+                    <View style={styles.skeletonTopRow}>
+                      <Skeleton width={68} height={18} borderRadius={6} />
+                      <Skeleton width={52} height={12} borderRadius={4} />
+                    </View>
+                    <Skeleton width="82%" height={16} borderRadius={4} style={{ marginBottom: 6 }} />
+                    <Skeleton width="55%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+                    <Skeleton width={110} height={18} borderRadius={6} />
+                  </View>
+                </View>
+              ))}
             </View>
           ) : (() => {
             const isActiveClear = statusFilter === 'active' && !search.trim();
             const iconColor = isDark ? 'rgba(255, 255, 255, 0.55)' : '#64748B';
 
             return (
-              <View style={styles.emptyState}>
+              <View
+                style={[
+                  styles.emptyState,
+                  {
+                    backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  },
+                  !isDark && shadow.card,
+                ]}
+              >
                 <View
                   style={[
                     styles.emptyIconContainer,
@@ -318,6 +360,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 44,
   },
   clearBtn: {
     padding: 4,
@@ -349,9 +392,11 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 56,
-    paddingBottom: 40,
+    paddingVertical: 36,
     paddingHorizontal: 24,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    marginTop: 8,
   },
   emptyIconContainer: {
     width: 60,
@@ -372,5 +417,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 17,
     maxWidth: 280,
+  },
+  skeletonCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    marginBottom: 10,
+  },
+  skeletonContentCol: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  skeletonTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
 });

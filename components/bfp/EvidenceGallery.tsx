@@ -136,8 +136,8 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({
                         borderRadius: radius.md,
                         overflow: 'hidden',
                         backgroundColor: colors.surfaceElevated,
-                        borderWidth: pressed ? 2 : 0,
-                        borderColor: pressed ? colors.brandOrange : 'transparent',
+                        borderWidth: 1,
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
                       },
                     ]}
                   >

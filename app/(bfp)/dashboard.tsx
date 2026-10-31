@@ -2,31 +2,23 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import {
-  Flame,
-  ClipboardList,
-  CheckCircle2,
-  CalendarDays,
-  MapPinned,
-  ChevronRight,
-} from 'lucide-react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Flame, ClipboardList, CheckCircle2, CalendarDays, MapPinned, ChevronRight, ShieldCheck } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { AppHeader } from '../../components/navigation/AppHeader';
-import { Card } from '../../components/ui/Card';
 import { StatTile } from '../../components/bfp/StatTile';
+import { DashboardHero } from '../../components/bfp/DashboardHero';
 import { IncidentListItem } from '../../components/bfp/IncidentListItem';
-import { InteractiveCard } from '../../components/bfp/InteractiveCard';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { incidentService } from '../../services/api/incidentService';
 import { BFPIncident, DashboardAnalytics } from '../../services/api/bfpModels';
-import { useNotifications } from '../../context/NotificationContext';
 
-
+const enter = (index: number) => FadeInDown.delay(index * 60).duration(380);
 
 export default function DashboardScreen() {
-  const { colors, spacing, typography, radius, isDark } = useTheme();
+  const { colors, spacing, shadow, isDark } = useTheme();
   const { user } = useAuth();
-  const { unreadCount } = useNotifications();
 
   const [analytics, setAnalytics] = useState<DashboardAnalytics>({
     active_incidents: 0,
@@ -35,6 +27,7 @@ export default function DashboardScreen() {
     total_this_month: 0,
   });
   const [recentIncidents, setRecentIncidents] = useState<BFPIncident[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -53,6 +46,7 @@ export default function DashboardScreen() {
       });
       setRecentIncidents(sorted.slice(0, 5));
     }
+    setIsLoading(false);
     setIsRefreshing(false);
   }, []);
 
@@ -62,12 +56,15 @@ export default function DashboardScreen() {
     }, [load])
   );
 
+  const goToIncidents = () => router.push('/(bfp)/incidents');
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader variant="dark" />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }}
+        contentContainerStyle={{ paddingBottom: spacing.xxxl }}
+        overScrollMode="never"
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -79,139 +76,164 @@ export default function DashboardScreen() {
           />
         }
       >
-        <Text style={{ color: colors.textPrimary, fontSize: typography.size.xxl, fontWeight: '900' }}>
-          Good {getTimeOfDayLabel()}, {user?.first_name ?? 'Officer'}
-        </Text>
-        {/* Analytics overview */}
-        <View style={[styles.statsGrid, { marginTop: spacing.lg, gap: spacing.md }]}>
-          <View style={{ flexDirection: 'row', gap: spacing.md }}>
-            <StatTile
-              icon={<Flame size={18} color={colors.danger} strokeWidth={2} />}
-              value={analytics.active_incidents}
-              label="Active Incidents"
-              accentColor={colors.danger}
-            />
-            <StatTile
-              icon={<ClipboardList size={18} color={colors.warning} strokeWidth={2} />}
-              value={analytics.pending_verification}
-              label="Pending Verification"
-              accentColor={colors.warning}
-            />
-          </View>
-          <View style={{ flexDirection: 'row', gap: spacing.md }}>
-            <StatTile
-              icon={<CheckCircle2 size={18} color={colors.success} strokeWidth={2} />}
-              value={analytics.resolved_today}
-              label="Resolved Today"
-              accentColor={colors.success}
-            />
-            <StatTile
-              icon={<CalendarDays size={18} color={colors.info} strokeWidth={2} />}
-              value={analytics.total_this_month}
-              label="Resolved this Month"
-              accentColor={colors.info}
-            />
-          </View>
-        </View>
+        <DashboardHero firstName={user?.first_name} />
 
-        {/* GIS map monitor CTA */}
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            router.push('/(bfp)/map');
-          }}
-          style={({ pressed }) => [
-            {
-              marginTop: spacing.xl,
-              transform: [{ scale: pressed ? 0.98 : 1 }],
-            },
-          ]}
-        >
-          {({ pressed }) => (
-            <View
-              style={{
-                borderRadius: radius.xl,
-                padding: spacing.lg,
-                backgroundColor: pressed
-                  ? (isDark ? '#1C2438' : '#0B1530')
-                  : (isDark ? colors.surfaceElevated : colors.brandNavy),
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.08)',
+        <View style={{ paddingHorizontal: spacing.lg, marginTop: -28 }}>
+          <View style={{ gap: spacing.sm }}>
+            <Animated.View entering={enter(0)} style={[styles.kpiRow, { gap: spacing.sm }]}>
+              <StatTile
+                icon={<Flame size={20} color={colors.danger} strokeWidth={2.2} />}
+                value={analytics.active_incidents}
+                label="Active incidents"
+                accentColor={colors.danger}
+                isLoading={isLoading}
+              />
+              <StatTile
+                icon={<ClipboardList size={20} color={colors.warning} strokeWidth={2.2} />}
+                value={analytics.pending_verification}
+                label="Pending verification"
+                accentColor={colors.warning}
+                isLoading={isLoading}
+              />
+            </Animated.View>
+            <Animated.View entering={enter(1)} style={[styles.kpiRow, { gap: spacing.sm }]}>
+              <StatTile
+                icon={<CheckCircle2 size={20} color={colors.success} strokeWidth={2.2} />}
+                value={analytics.resolved_today}
+                label="Resolved today"
+                accentColor={colors.success}
+                isLoading={isLoading}
+              />
+              <StatTile
+                icon={<CalendarDays size={20} color={colors.info} strokeWidth={2.2} />}
+                value={analytics.total_this_month}
+                label="Resolved this month"
+                accentColor={colors.info}
+                isLoading={isLoading}
+              />
+            </Animated.View>
+          </View>
+
+          {/* GIS map monitor CTA */}
+          <Animated.View entering={enter(2)} style={{ marginTop: spacing.xl }}>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                router.push('/(bfp)/map');
               }}
+              style={({ pressed }) => [
+                styles.mapCard,
+                {
+                  backgroundColor: pressed
+                    ? (isDark ? '#221915' : '#F9FAFB')
+                    : (isDark ? colors.surfaceElevated : '#FFFFFF'),
+                  borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255,255,255,0.06)' : 'transparent'),
+                  borderWidth: 1.5,
+                  transform: [{ scale: pressed ? 0.985 : 1 }],
+                },
+                !isDark && shadow.card,
+              ]}
             >
-              <View style={styles.mapCtaRow}>
-                <View style={[styles.mapIconCircle, { backgroundColor: pressed ? colors.brandOrange : 'rgba(255,255,255,0.15)' }]}>
-                  <MapPinned size={22} color="#FFFFFF" />
-                </View>
-                <View style={{ flex: 1, marginLeft: spacing.md }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: typography.size.md, fontWeight: '800' }}>
-                    Risk & Incident Map
-                  </Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: typography.size.xs, marginTop: 2, fontWeight: '500' }}>
-                    Monitor fire-prone zones and incident records
-                  </Text>
-                </View>
-                <ChevronRight size={20} color={pressed ? colors.brandOrange : 'rgba(255,255,255,0.5)'} />
-              </View>
+              {({ pressed }) => (
+                <>
+                  <View
+                    style={[
+                      styles.mapIcon,
+                      { backgroundColor: pressed ? colors.brandOrange : colors.brandNavy },
+                    ]}
+                  >
+                    <MapPinned size={22} color="#FFFFFF" />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.md }}>
+                    <Text style={[styles.cardTitle, { color: pressed ? colors.brandOrange : colors.textPrimary }]}>Risk & Incident Map</Text>
+                    <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
+                      Monitor fire-prone zones and incident records
+                    </Text>
+                  </View>
+                  <ChevronRight size={20} color={pressed ? colors.brandOrange : colors.textMuted} />
+                </>
+              )}
+            </Pressable>
+          </Animated.View>
+
+          {/* Real-time incident list */}
+          <Animated.View entering={enter(3)}>
+            <View style={[styles.sectionHeader, { marginTop: spacing.xl, marginBottom: spacing.md }]}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Incidents</Text>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  goToIncidents();
+                }}
+                style={({ pressed }) => [
+                  styles.seeAllRow,
+                  { opacity: pressed ? 0.6 : 1 },
+                ]}
+              >
+                <Text style={[styles.seeAllText, { color: colors.brandOrange }]}>See all</Text>
+                <ChevronRight size={14} color={colors.brandOrange} strokeWidth={2.5} />
+              </Pressable>
             </View>
-          )}
-        </Pressable>
 
-        {/* Real-time incident list */}
-        <View style={[styles.sectionHeader, { marginTop: spacing.xl, marginBottom: spacing.sm }]}>
-          <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700' }}>
-            Recent Incidents
-          </Text>
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              router.push('/(bfp)/incidents');
-            }}
-            style={({ pressed }) => [
-              styles.seeAllRow,
-              {
-                backgroundColor: pressed ? colors.brandOrange : 'transparent',
-                paddingHorizontal: pressed ? 8 : 4,
-                paddingVertical: 2,
-                borderRadius: 12,
-                transform: [{ scale: pressed ? 0.94 : 1 }],
-              },
-            ]}
-          >
-            {({ pressed }) => (
-              <>
-                <Text style={{ color: pressed ? '#FFFFFF' : colors.brandOrange, fontSize: 13, fontWeight: '700' }}>See all</Text>
-                <ChevronRight size={13} color={pressed ? '#FFFFFF' : colors.brandOrange} strokeWidth={2.5} />
-              </>
+            {isLoading ? (
+              [0, 1, 2].map((key) => (
+                <View key={key} style={styles.skeletonRow}>
+                  <Skeleton width={56} height={56} borderRadius={14} />
+                  <View style={{ flex: 1, marginLeft: spacing.md, gap: 8 }}>
+                    <Skeleton width="70%" height={14} />
+                    <Skeleton width="45%" height={12} />
+                  </View>
+                </View>
+              ))
+            ) : recentIncidents.length === 0 ? (
+              <View
+                style={[
+                  styles.emptyState,
+                  {
+                    backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  },
+                  !isDark && shadow.card,
+                ]}
+              >
+                <View style={[styles.emptyIcon, { backgroundColor: `${colors.success}1A` }]}>
+                  <ShieldCheck size={26} color={colors.success} />
+                </View>
+                <Text style={[styles.cardTitle, { color: colors.textPrimary, marginTop: spacing.md }]}>
+                  No incidents today
+                </Text>
+                <Text style={[styles.cardSubtitle, { color: colors.textSecondary, textAlign: 'center' }]}>
+                  New reports will appear here in real time.
+                </Text>
+              </View>
+            ) : (
+              recentIncidents.map((incident) => (
+                <IncidentListItem key={incident.report_id} incident={incident} from="dashboard" />
+              ))
             )}
-          </Pressable>
+          </Animated.View>
         </View>
-
-        {recentIncidents.length === 0 ? (
-          <Card>
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, textAlign: 'center' }}>
-              No incidents reported yet today.
-            </Text>
-          </Card>
-        ) : (
-          recentIncidents.map((incident) => <IncidentListItem key={incident.report_id} incident={incident} from="dashboard" />)
-        )}
       </ScrollView>
     </View>
   );
 }
 
-function getTimeOfDayLabel(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Morning';
-  if (hour < 18) return 'Afternoon';
-  return 'Evening';
-}
-
 const styles = StyleSheet.create({
-  statsGrid: {},
-  mapCtaRow: { flexDirection: 'row', alignItems: 'center' },
-  mapIconCircle: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  kpiRow: { flexDirection: 'row' },
+  mapCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 18,
+  },
+  mapIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontSize: 15, fontWeight: '600' },
+  cardSubtitle: { fontSize: 12.5, fontWeight: '500', marginTop: 2 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  seeAllRow: { flexDirection: 'row', alignItems: 'center' },
+  sectionTitle: { fontSize: 17, fontWeight: '600', letterSpacing: -0.3 },
+  seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 4, paddingHorizontal: 4 },
+  seeAllText: { fontSize: 13, fontWeight: '600' },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  emptyState: { alignItems: 'center', padding: 24, borderRadius: 18, borderWidth: 1.5 },
+  emptyIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
 });

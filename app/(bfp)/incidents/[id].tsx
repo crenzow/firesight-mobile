@@ -46,6 +46,7 @@ import {
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { Card } from '../../../components/ui/Card';
+import { Skeleton } from '../../../components/ui/Skeleton';
 import { Button } from '../../../components/ui/Button';
 import { SelectField } from '../../../components/ui/SelectField';
 import { IncidentStatusBadge } from '../../../components/bfp/IncidentStatusBadge';
@@ -589,16 +590,73 @@ export default function IncidentDetailScreen() {
     );
   };
 
-  if (isLoading || !incident) {
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <SecondaryHeader title="Incident Briefing" onBack={handleBack} />
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: spacing.lg,
+            paddingTop: 16,
+            paddingBottom: spacing.xxxl,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Executive Briefing Skeleton Card */}
+          <Card>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Skeleton width="60%" height={22} borderRadius={6} style={{ marginBottom: 6 }} />
+                <Skeleton width="40%" height={13} borderRadius={4} />
+              </View>
+              <Skeleton width={84} height={26} borderRadius={8} />
+            </View>
+            <Skeleton width="92%" height={14} borderRadius={4} style={{ marginBottom: 6 }} />
+            <Skeleton width="68%" height={14} borderRadius={4} style={{ marginBottom: 16 }} />
+
+            {/* Metadata 3-box Grid Skeleton */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              <Skeleton width="31%" height={46} borderRadius={10} />
+              <Skeleton width="31%" height={46} borderRadius={10} />
+              <Skeleton width="31%" height={46} borderRadius={10} />
+            </View>
+          </Card>
+
+          {/* Map Preview / Location Skeleton */}
+          <View style={{ marginTop: spacing.md }}>
+            <Skeleton width="100%" height={160} borderRadius={18} />
+          </View>
+
+          {/* Evidence / AI Scan Skeleton Card */}
+          <View style={{ marginTop: spacing.md }}>
+            <Card>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Skeleton width={120} height={16} borderRadius={6} />
+                <Skeleton width={60} height={14} borderRadius={4} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Skeleton width={70} height={70} borderRadius={12} />
+                <Skeleton width={70} height={70} borderRadius={12} />
+                <Skeleton width={70} height={70} borderRadius={12} />
+              </View>
+            </Card>
+          </View>
+
+          {/* Operations / Dispatch Action Skeleton */}
+          <View style={{ marginTop: spacing.md }}>
+            <Skeleton width="100%" height={52} borderRadius={14} />
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  if (!incident) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <SecondaryHeader title="Incident" onBack={handleBack} />
         <View style={styles.center}>
-          {isLoading ? (
-            <ActivityIndicator color={colors.brandOrange} />
-          ) : (
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>Incident not found.</Text>
-          )}
+          <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>Incident not found.</Text>
         </View>
       </View>
     );
@@ -617,14 +675,14 @@ export default function IncidentDetailScreen() {
 
         {/* ── EXECUTIVE BRIEFING HERO CARD ────────────────────────── */}
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: 16 }}>
-          <View style={styles.briefingCard}>
+          <Card>
             {/* Top row: Incident Headline / Type + Status Badge */}
             <View style={styles.briefingHeaderRow}>
               <View style={{ flex: 1, marginRight: 10 }}>
-                <Text style={styles.briefingTitle} numberOfLines={1}>
+                <Text style={[styles.briefingTitle, { color: colors.textPrimary }]} numberOfLines={1}>
                   {INCIDENT_TYPE_OPTIONS.find((t) => t.id === incident.incident_type)?.name || 'Fire Incident'}
                 </Text>
-                <Text style={styles.briefingSubtitle} numberOfLines={1}>
+                <Text style={[styles.briefingSubtitle, { color: colors.textMuted }]} numberOfLines={1}>
                   {incident.created_at ? `${formatFullDate(incident.created_at)} at ${formatTime(incident.created_at)}` : ''}
                 </Text>
               </View>
@@ -633,7 +691,7 @@ export default function IncidentDetailScreen() {
 
             {/* Description if present */}
             {incident.description ? (
-              <Text style={styles.briefingDescription}>
+              <Text style={[styles.briefingDescription, { color: colors.textSecondary }]}>
                 {incident.description}
               </Text>
             ) : null}
@@ -641,8 +699,8 @@ export default function IncidentDetailScreen() {
             {/* Location row */}
             {locationName ? (
               <View style={styles.briefingLocationRow}>
-                <MapPin size={13} color="#8E8E93" strokeWidth={2} />
-                <Text style={styles.briefingLocationText} numberOfLines={1}>
+                <MapPin size={13} color={colors.textMuted} strokeWidth={2} />
+                <Text style={[styles.briefingLocationText, { color: colors.textSecondary }]} numberOfLines={1}>
                   {locationName}
                 </Text>
               </View>
@@ -650,9 +708,9 @@ export default function IncidentDetailScreen() {
 
             {/* Subtle Apple Intelligence Vision Pill */}
             {incident.ai_fire_label ? (
-              <View style={styles.briefingAiRow}>
-                <Sparkles size={12} color="#8E8E93" strokeWidth={2} />
-                <Text style={styles.briefingAiText}>
+              <View style={[styles.briefingAiRow, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
+                <Sparkles size={12} color={colors.brandOrange} strokeWidth={2} />
+                <Text style={[styles.briefingAiText, { color: colors.textSecondary }]}>
                   {incident.ai_fire_label === 'fire'
                     ? 'AI Vision Verified: Fire pattern detected'
                     : incident.ai_fire_label === 'non_fire'
@@ -660,13 +718,13 @@ export default function IncidentDetailScreen() {
                       : 'AI Vision analysis unavailable'}
                 </Text>
                 {incident.ai_fire_confidence !== null && incident.ai_fire_confidence !== undefined ? (
-                  <Text style={styles.briefingAiConfidence}>
+                  <Text style={[styles.briefingAiConfidence, { color: colors.brandOrange }]}>
                     · {(incident.ai_fire_confidence * 100).toFixed(0)}% Match
                   </Text>
                 ) : null}
               </View>
             ) : null}
-          </View>
+          </Card>
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg }}>
@@ -1491,14 +1549,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
 
-  // Executive Briefing Card
-  briefingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
   briefingHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1507,20 +1557,17 @@ const styles = StyleSheet.create({
   briefingTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1C1C1E',
     letterSpacing: -0.4,
   },
   briefingSubtitle: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#8E8E93',
     marginTop: 2,
   },
   briefingDescription: {
     fontSize: 14.5,
     fontWeight: '500',
     lineHeight: 21,
-    color: '#3A3A3C',
     marginTop: 12,
   },
   briefingLocationRow: {
@@ -1532,7 +1579,6 @@ const styles = StyleSheet.create({
   briefingLocationText: {
     fontSize: 12.5,
     fontWeight: '500',
-    color: '#636366',
     flex: 1,
   },
   briefingAiRow: {
@@ -1670,32 +1716,6 @@ const styles = StyleSheet.create({
 
   // Actions
   actionsRow: { flexDirection: 'row', gap: 12 },
-
-  // Origin selector
-  originRow: { flexDirection: 'row' },
-  originCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 14,
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  originIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  originActiveDot: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
 
   // Station info pill
   stationInfoPill: {

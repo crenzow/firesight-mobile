@@ -31,7 +31,7 @@ export const FeaturedArticleCard: React.FC<{
   article: FireEducationArticle;
   style?: StyleProp<ViewStyle>;
 }> = ({ article, style }) => {
-  const { colors, spacing, radius, typography, isDark } = useTheme();
+  const { colors, spacing, radius, typography, shadow, isDark } = useTheme();
   const { isBookmarked } = useBookmarks();
   const isSaved = isBookmarked(article.content_id);
   const imageSource = getArticleImageSource(article.image_path);
@@ -45,10 +45,15 @@ export const FeaturedArticleCard: React.FC<{
       style={({ pressed }) => [
         styles.featuredWrapper,
         {
-          borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB'),
-          borderWidth: pressed ? 1.5 : 1,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
+          borderColor: pressed
+            ? colors.brandOrange
+            : isDark
+            ? 'rgba(255, 255, 255, 0.08)'
+            : 'transparent',
+          borderWidth: 1.5,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
         },
+        !isDark && shadow.card,
         style,
       ]}
       accessibilityRole="button"
@@ -60,14 +65,14 @@ export const FeaturedArticleCard: React.FC<{
             <>
               <Image
                 source={imageSource}
-                style={[StyleSheet.absoluteFillObject, { borderRadius: 22 }]}
+                style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]}
                 resizeMode="cover"
               />
               <LinearGradient
                 colors={['rgba(10, 19, 48, 0.45)', 'rgba(10, 19, 48, 0.78)', 'rgba(10, 19, 48, 0.96)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0, y: 1 }}
-                style={[StyleSheet.absoluteFillObject, { borderRadius: 22 }]}
+                style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]}
               />
             </>
           ) : (
@@ -75,7 +80,7 @@ export const FeaturedArticleCard: React.FC<{
               colors={['#0A1330', '#132147', '#25254A', '#452622']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[StyleSheet.absoluteFillObject, { borderRadius: 22 }]}
+              style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]}
             />
           )}
 
@@ -127,7 +132,7 @@ export const FeaturedArticleCard: React.FC<{
 };
 
 export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ article }) => {
-  const { colors, spacing, radius, typography, isDark } = useTheme();
+  const { colors, spacing, radius, typography, shadow, isDark } = useTheme();
   const { isBookmarked } = useBookmarks();
   const isSaved = isBookmarked(article.content_id);
   const Icon = CATEGORY_ICON[article.category] ?? BookOpen;
@@ -143,12 +148,19 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
       style={({ pressed }) => [
         styles.rowCard,
         {
-          backgroundColor: pressed ? (isDark ? '#1F1713' : '#F9FAFB') : colors.surfaceElevated,
-          borderColor: pressed ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB'),
-          borderWidth: pressed ? 1.5 : 1,
-          borderRadius: 20,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
+          backgroundColor: pressed
+            ? (isDark ? '#1F1713' : '#F9FAFB')
+            : (isDark ? colors.surfaceElevated : '#FFFFFF'),
+          borderColor: pressed
+            ? colors.brandOrange
+            : isDark
+            ? 'rgba(255, 255, 255, 0.08)'
+            : 'transparent',
+          borderWidth: 1.5,
+          borderRadius: 18,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
         },
+        !isDark && shadow.card,
       ]}
       accessibilityRole="button"
       accessibilityLabel={article.title}
@@ -168,7 +180,7 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
                 colors={gradient as [string, string]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={[StyleSheet.absoluteFillObject, { borderRadius: 15 }]}
+                style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]}
               />
               <Icon size={20} color="#FFFFFF" />
             </View>
@@ -213,15 +225,14 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
 
 const styles = StyleSheet.create({
   featuredWrapper: {
-    borderRadius: 24,
+    borderRadius: 18,
     borderWidth: 1.5,
     overflow: 'hidden',
     backgroundColor: '#0A1330',
-    
   },
   featuredCard: {
     padding: 20,
-    borderRadius: 22,
+    borderRadius: 18,
     overflow: 'hidden',
     backgroundColor: '#0A1330',
   },
@@ -306,20 +317,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     marginBottom: 10,
-    
+    borderRadius: 18,
+    borderWidth: 1.5,
   },
   squircleWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 15,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   thumbnailImg: {
-    width: 46,
-    height: 46,
-    borderRadius: 15,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: '#0F172A',
   },
   itemContent: {

@@ -2,7 +2,9 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Phone, BookOpen, Megaphone, ChevronRight } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
+import { Skeleton } from '../ui/Skeleton';
 import { announcementService } from '../../services/api';
 import { Announcement } from '../../services/api/models';
 import { formatRelativeDate } from '../../utils/formatters';
@@ -23,7 +25,7 @@ const TILES = [
 ] as const;
 
 export const QuickActionsRow: React.FC = () => {
-  const { colors, isDark } = useTheme();
+  const { colors, shadow, isDark } = useTheme();
   const [latest, setLatest] = useState<Announcement | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -52,10 +54,11 @@ export const QuickActionsRow: React.FC = () => {
     }, [])
   );
 
-  // Premium solid pressed states: clean Apple hairline border & neutral tap highlight
-  const normalBg = colors.surface;
+  // Universal card design standard matching BFP:
+  // Elevated surface, constant 1.5px border, squircle 18px radius, ambient shadow, and 0.985 tactile depression.
+  const normalBg = isDark ? colors.surfaceElevated : '#FFFFFF';
   const pressedBg = isDark ? '#221915' : '#F9FAFB';
-  const normalBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB';
+  const normalBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent';
   const pressedBorder = colors.brandOrange;
 
   return (
@@ -67,16 +70,20 @@ export const QuickActionsRow: React.FC = () => {
         {TILES.map(({ key, label, icon: Icon, route }) => (
           <Pressable
             key={key}
-            onPress={() => router.push(route as never)}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              router.push(route as never);
+            }}
             style={({ pressed }) => [
               styles.card,
               styles.tile,
               {
                 backgroundColor: pressed ? pressedBg : normalBg,
                 borderColor: pressed ? pressedBorder : normalBorder,
-                borderWidth: pressed ? 1.5 : 1,
-                transform: [{ scale: pressed ? 0.97 : 1 }],
+                borderWidth: 1.5,
+                transform: [{ scale: pressed ? 0.985 : 1 }],
               },
+              !isDark && shadow.card,
             ]}
             accessibilityRole="button"
             accessibilityLabel={label}
@@ -112,16 +119,20 @@ export const QuickActionsRow: React.FC = () => {
 
       {/* Bottom: wide Announcements card with the latest post */}
       <Pressable
-        onPress={() => router.push('/(resident)/announcements' as never)}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          router.push('/(resident)/announcements' as never);
+        }}
         style={({ pressed }) => [
           styles.card,
           styles.advisory,
           {
             backgroundColor: pressed ? pressedBg : normalBg,
             borderColor: pressed ? pressedBorder : normalBorder,
-            borderWidth: pressed ? 1.5 : 1,
+            borderWidth: 1.5,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
+          !isDark && shadow.card,
         ]}
         accessibilityRole="button"
         accessibilityLabel={latest ? `Announcements. Latest: ${latest.title}` : 'Announcements'}
@@ -186,14 +197,18 @@ export const QuickActionsRow: React.FC = () => {
                     {latest.content}
                   </Text>
                 </>
-              ) : (
+              ) : isLoaded ? (
                 <Text
                   style={[styles.advisoryBody, { color: colors.textSecondary, marginTop: 0 }]}
                 >
-                  {isLoaded
-                    ? 'No active advisories right now.'
-                    : 'Loading latest announcement…'}
+                  No active advisories right now.
                 </Text>
+              ) : (
+                <View style={{ gap: 6, marginTop: 2 }}>
+                  <Skeleton width={110} height={12} borderRadius={4} />
+                  <Skeleton width="90%" height={15} borderRadius={4} />
+                  <Skeleton width="60%" height={12} borderRadius={4} />
+                </View>
               )}
             </View>
           </>
@@ -213,7 +228,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   card: {
-    borderRadius: 20,
+    borderRadius: 18,
     overflow: 'hidden',
   },
   tileRow: {

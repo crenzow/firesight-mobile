@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, ActivityIndicator, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, usePathname } from 'expo-router';
+import { router, usePathname, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import {
   FileText,
   Lock,
@@ -31,7 +32,7 @@ import { PhotoOptionsModal, PhotoPreviewModal } from '../../../components/profil
 import { PhotoCropModal } from '../../../components/profile/PhotoCropModal';
 
 export default function ProfileScreen() {
-  const { colors, spacing, typography, isDark } = useTheme();
+  const { colors, spacing, typography, shadow, isDark } = useTheme();
   const { user, logout, refreshUser, updateUser } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [localImage, setLocalImage] = useState<string | null>(null);
@@ -97,6 +98,34 @@ export default function ProfileScreen() {
     router.replace('/(auth)/welcome');
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (showCropModal) {
+          setShowCropModal(false);
+          return true;
+        }
+        if (showPhotoPreview) {
+          setShowPhotoPreview(false);
+          return true;
+        }
+        if (showPhotoOptions) {
+          setShowPhotoOptions(false);
+          return true;
+        }
+        if (showLogoutModal) {
+          setShowLogoutModal(false);
+          return true;
+        }
+        router.replace('/(resident)/home');
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [showCropModal, showPhotoPreview, showPhotoOptions, showLogoutModal])
+  );
+
   if (!user) return null;
 
   const initials = getInitials(user.first_name, user.last_name);
@@ -110,20 +139,29 @@ export default function ProfileScreen() {
         <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
 
           {/* ── Premium Identity Hero Card ── */}
-          <View style={[styles.heroCard, { marginHorizontal: spacing.lg, marginTop: spacing.sm }]}>
+          <View
+            style={[
+              styles.heroCard,
+              { marginHorizontal: spacing.lg, marginTop: spacing.sm },
+              !isDark && shadow.card,
+            ]}
+          >
 
               {/* Edit button */}
               <Pressable
                 style={({ pressed }) => [
                   styles.heroEditBtn,
                   {
-                    backgroundColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.2)',
-                    borderColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.3)',
+                    backgroundColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.16)',
+                    borderColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.25)',
                     borderWidth: 1,
                     transform: [{ scale: pressed ? 0.90 : 1 }],
                   },
                 ]}
-                onPress={() => router.push({ pathname: '/(resident)/profile/edit', params: { from: pathname } } as any)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push({ pathname: '/(resident)/profile/edit', params: { from: '/(resident)/profile' } } as any);
+                }}
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel="Edit Profile"
@@ -134,35 +172,49 @@ export default function ProfileScreen() {
               {/* Avatar + name */}
               <View style={styles.heroTop}>
                 <Pressable
-                  onPress={() => setShowPhotoOptions(true)}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    setShowPhotoOptions(true);
+                  }}
                   disabled={isUploadingPhoto}
                   style={({ pressed }) => [
                     styles.avatarWrap,
                     {
-                      transform: [{ scale: pressed ? 0.95 : 1 }],
-                      opacity: pressed ? 0.88 : 1,
+                      transform: [{ scale: pressed && !isUploadingPhoto ? 0.95 : 1 }],
+                      opacity: pressed ? 0.92 : 1,
                     },
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel="Change profile photo"
                 >
-                  <View style={styles.avatarClip}>
-                    {isUploadingPhoto ? (
-                      <View style={[styles.avatarInner, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                  {({ pressed }) => (
+                    <>
+                      <View
+                        style={[
+                          styles.avatarClip,
+                          {
+                            borderColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.25)',
+                          },
+                        ]}
+                      >
+                        {isUploadingPhoto ? (
+                          <View style={[styles.avatarInner, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          </View>
+                        ) : profileImageUri ? (
+                          <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
+                        ) : (
+                          <View style={styles.avatarInner}>
+                            <Text style={styles.avatarText}>{initials}</Text>
+                          </View>
+                        )}
                       </View>
-                    ) : profileImageUri ? (
-                      <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
-                    ) : (
-                      <View style={styles.avatarInner}>
-                        <Text style={styles.avatarText}>{initials}</Text>
+                      {/* Camera badge sitting cleanly on bottom-right corner without clipping */}
+                      <View style={styles.cameraBadge}>
+                        <Camera size={13} color="#FFFFFF" />
                       </View>
-                    )}
-                  </View>
-                  {/* Camera badge sitting cleanly on bottom-right corner without clipping */}
-                  <View style={styles.cameraBadge}>
-                    <Camera size={13} color="#FFFFFF" />
-                  </View>
+                    </>
+                  )}
                 </Pressable>
 
                 <View style={styles.heroMeta}>
@@ -236,7 +288,7 @@ export default function ProfileScreen() {
                 gradient={['#F97316', '#FFB877']}
                 label="My Reports"
                 subtitle="View report history"
-                onPress={() => router.push({ pathname: '/(resident)/reports', params: { from: pathname } } as any)}
+                onPress={() => router.push({ pathname: '/(resident)/reports', params: { from: '/(resident)/profile' } } as any)}
               />
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               <ProfileMenuRow
@@ -244,7 +296,7 @@ export default function ProfileScreen() {
                 gradient={['#6D5BD0', '#3B4CCA']}
                 label="Privacy & Security"
                 subtitle="Manage your data"
-                onPress={() => router.push({ pathname: '/(resident)/profile/security', params: { from: pathname } } as any)}
+                onPress={() => router.push({ pathname: '/(resident)/profile/security', params: { from: '/(resident)/profile' } } as any)}
               />
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               <ProfileMenuRow
@@ -253,7 +305,7 @@ export default function ProfileScreen() {
                 gradient={['#64748B', '#0F1C3F']}
                 label="App Settings"
                 subtitle="Theme, notifications, preferences"
-                onPress={() => router.push({ pathname: '/(resident)/profile/settings', params: { from: pathname } } as any)}
+                onPress={() => router.push({ pathname: '/(resident)/profile/settings', params: { from: '/(resident)/profile' } } as any)}
               />
             </Card>
           </View>
@@ -381,11 +433,11 @@ const APP_VERSION = '1.0.0 · Build 2026.07';
 const styles = StyleSheet.create({
   // Hero card
   heroCard: {
-    borderRadius: 24,
+    borderRadius: 18,
     padding: 22,
     backgroundColor: '#0F1C3F',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   heroEditBtn: {
     position: 'absolute',

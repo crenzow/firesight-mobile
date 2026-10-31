@@ -17,6 +17,11 @@ interface ProfileMenuRowProps {
   isLast?: boolean;
 }
 
+/**
+ * Profile menu card/row matching BFP dashboard card updates:
+ * - Standalone cards (isFirst && isLast): elevated surface, 18px radius, shadow.card, and full 1.5px orange border on hold.
+ * - Grouped rows (resident multi-item lists): clean internal row press states with dividers.
+ */
 export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
   icon,
   label,
@@ -28,7 +33,7 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
   isFirst,
   isLast,
 }) => {
-  const { colors, spacing, typography, radius, isDark } = useTheme();
+  const { colors, spacing, typography, isDark } = useTheme();
 
   return (
     <Pressable
@@ -41,10 +46,10 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
         {
           paddingVertical: 14,
           paddingHorizontal: spacing.lg,
-          borderTopLeftRadius: isFirst ? radius.lg - 1 : 0,
-          borderTopRightRadius: isFirst ? radius.lg - 1 : 0,
-          borderBottomLeftRadius: isLast ? radius.lg - 1 : 0,
-          borderBottomRightRadius: isLast ? radius.lg - 1 : 0,
+          borderTopLeftRadius: isFirst ? 18 : 0,
+          borderTopRightRadius: isFirst ? 18 : 0,
+          borderBottomLeftRadius: isLast ? 18 : 0,
+          borderBottomRightRadius: isLast ? 18 : 0,
           backgroundColor: pressed
             ? (isDark ? '#221915' : '#F9FAFB')
             : 'transparent',
@@ -82,7 +87,11 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
             <Text
               style={{
-                color: destructive ? colors.danger : pressed ? colors.brandOrange : colors.textPrimary,
+                color: destructive
+                  ? colors.danger
+                  : pressed
+                  ? colors.brandOrange
+                  : colors.textPrimary,
                 fontSize: typography.size.sm,
                 fontWeight: '600',
               }}
@@ -108,9 +117,9 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   iconWrap: { 
-    width: 36, 
-    height: 36, 
-    borderRadius: 12, // Square-rounded for premium look
+    width: 38, 
+    height: 38, 
+    borderRadius: 12,
     alignItems: 'center', 
     justifyContent: 'center',
     overflow: 'hidden'

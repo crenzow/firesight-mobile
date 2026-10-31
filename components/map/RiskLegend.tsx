@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { X } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 const LEGEND_ITEMS = [
@@ -17,14 +18,15 @@ export const RiskLegend: React.FC<{ style?: any; onClose?: () => void }> = ({ st
       style={[
         styles.container,
         {
-          backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.96)',
-          borderRadius: 16,
+          backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : '#FFFFFF',
+          borderRadius: 18,
           paddingHorizontal: spacing.md,
           paddingVertical: spacing.sm + 2,
-          borderWidth: 1,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+          borderWidth: isDark ? 1 : 0,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
         },
-                style,
+        !isDark && shadow.card,
+        style,
       ]}
     >
       <View style={styles.headerRow}>
@@ -32,7 +34,17 @@ export const RiskLegend: React.FC<{ style?: any; onClose?: () => void }> = ({ st
           RISK LEVEL
         </Text>
         {onClose && (
-          <Pressable onPress={onClose} hitSlop={8} style={styles.closeBtn}>
+          <Pressable
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              onClose();
+            }}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.closeBtn,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+          >
             <X size={13} color={colors.textMuted} />
           </Pressable>
         )}

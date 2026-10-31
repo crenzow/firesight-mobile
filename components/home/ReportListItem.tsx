@@ -15,6 +15,8 @@ interface ReportListItemProps {
   paddingHorizontal?: number;
   isFirst?: boolean;
   isLast?: boolean;
+  from?: string;
+  listFrom?: string;
 }
 
 const ReportListItemComponent: React.FC<ReportListItemProps> = ({
@@ -22,6 +24,8 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
   paddingHorizontal,
   isFirst,
   isLast,
+  from,
+  listFrom,
 }) => {
   const { colors, spacing, typography, radius, isDark } = useTheme();
   const [imageError, setImageError] = useState(false);
@@ -57,17 +61,23 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
     <Pressable
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        router.push(`/(resident)/reports/${report.report_id}`);
+        router.push({
+          pathname: `/(resident)/reports/${report.report_id}`,
+          params: {
+            ...(from ? { from } : {}),
+            ...(listFrom ? { listFrom } : {}),
+          },
+        } as any);
       }}
       style={({ pressed }) => [
         styles.row,
         {
           paddingVertical: 13,
           paddingHorizontal: horizontalPadding,
-          borderTopLeftRadius: isFirst ? 19 : 0,
-          borderTopRightRadius: isFirst ? 19 : 0,
-          borderBottomLeftRadius: isLast ? 19 : 0,
-          borderBottomRightRadius: isLast ? 19 : 0,
+          borderTopLeftRadius: isFirst ? 18 : 0,
+          borderTopRightRadius: isFirst ? 18 : 0,
+          borderBottomLeftRadius: isLast ? 18 : 0,
+          borderBottomRightRadius: isLast ? 18 : 0,
           backgroundColor: pressed
             ? (isDark ? '#221915' : '#F9FAFB')
             : 'transparent',
@@ -87,8 +97,6 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
                 {
                   borderRadius: radius.md,
                   backgroundColor: colors.surfaceElevated,
-                  borderColor: pressed ? colors.brandOrange : 'transparent',
-                  borderWidth: pressed ? 1.5 : 0,
                 },
               ]}
               resizeMode="cover"
@@ -100,20 +108,17 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
                 styles.iconFallback,
                 {
                   borderRadius: radius.md,
-                  backgroundColor: pressed
-                    ? colors.brandOrange
-                    : isDark
-                    ? 'rgba(244, 98, 43, 0.12)'
-                    : 'rgba(244, 98, 43, 0.08)',
-                  borderColor: pressed
-                    ? colors.brandOrange
-                    : isDark
-                    ? 'rgba(244, 98, 43, 0.25)'
-                    : 'rgba(244, 98, 43, 0.15)',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#EEF2F8',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
+                  borderWidth: 1,
                 },
               ]}
             >
-              <Flame size={20} color={pressed ? '#FFFFFF' : colors.brandOrange} />
+              <Flame
+                size={20}
+                color={pressed ? colors.brandOrange : (isDark ? 'rgba(255,255,255,0.4)' : colors.brandNavy)}
+                strokeWidth={2}
+              />
             </View>
           )}
 

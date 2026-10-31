@@ -11,12 +11,14 @@ import { AppHeader } from '../../components/navigation/AppHeader';
 import { AreaStatusCard } from '../../components/home/AreaStatusCard';
 import { QuickActionsRow } from '../../components/home/QuickActionsRow';
 import { ReportListItem } from '../../components/home/ReportListItem';
+import { Card } from '../../components/ui/Card';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { reportService } from '../../services/api/reportService';
 import { announcementService } from '../../services/api';
 import { AreaStatus, CommunityReport, Announcement } from '../../services/api/models';
 
 export default function HomeScreen() {
-  const { colors, spacing, typography, radius, isDark } = useTheme();
+  const { colors, spacing, typography, radius, shadow, isDark } = useTheme();
   const { user } = useAuth();
   const { refresh: refreshNotifications } = useNotifications();
   const pathname = usePathname();
@@ -119,7 +121,7 @@ export default function HomeScreen() {
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  router.push({ pathname: '/(resident)/reports', params: { from: pathname } } as any);
+                  router.push({ pathname: '/(resident)/reports', params: { from: '/(resident)/home' } } as any);
                 }}
                 style={({ pressed }) => [
                   styles.seeAllRow,
@@ -145,19 +147,30 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
-            {/* Contained Inset Card matching Announcements */}
-            <View
-              style={[
-                styles.reportsCard,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
-                },
-              ]}
-            >
+            {/* Contained Elevated Card matching BFP Card System */}
+            <Card padding={0}>
               {isLoading ? (
-                <View style={styles.stateBox}>
-                  <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>Loading…</Text>
+                <View style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
+                  {[0, 1].map((n) => (
+                    <View
+                      key={n}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 10,
+                      }}
+                    >
+                      <Skeleton width={48} height={48} borderRadius={10} />
+                      <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <Skeleton width={70} height={18} borderRadius={6} />
+                          <Skeleton width={50} height={12} borderRadius={4} />
+                        </View>
+                        <Skeleton width="80%" height={15} borderRadius={4} style={{ marginBottom: 6 }} />
+                        <Skeleton width="50%" height={12} borderRadius={4} />
+                      </View>
+                    </View>
+                  ))}
                 </View>
               ) : recentReports.length === 0 ? (
                 <View style={styles.stateBox}>
@@ -184,11 +197,12 @@ export default function HomeScreen() {
                       paddingHorizontal={14}
                       isFirst={index === 0}
                       isLast={index === recentReports.length - 1}
+                      from="/(resident)/home"
                     />
                   </View>
                 ))
               )}
-            </View>
+            </Card>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -209,11 +223,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  reportsCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
   divider: {
     height: StyleSheet.hairlineWidth,
   },

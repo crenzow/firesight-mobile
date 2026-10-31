@@ -65,13 +65,15 @@ export default function CreateManualIncidentScreen() {
       return;
     }
     if (from) {
-      if (from.startsWith('/')) {
+      if (from.startsWith('/(bfp)/')) {
         router.replace(from as any);
+      } else if (from.startsWith('/')) {
+        router.replace(`/(bfp)${from}` as any);
       } else {
         router.replace(`/(bfp)/${from}` as any);
       }
     } else {
-      router.back();
+      router.replace('/(bfp)/incidents');
     }
   }, [showDatePicker, from]);
 

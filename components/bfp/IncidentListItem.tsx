@@ -16,7 +16,7 @@ interface IncidentListItemProps {
 }
 
 const IncidentListItemComponent: React.FC<IncidentListItemProps> = ({ incident, from = 'incidents' }) => {
-  const { colors, typography, isDark } = useTheme();
+  const { colors, typography, shadow, isDark } = useTheme();
   const cached = getCachedGeocode(incident.latitude, incident.longitude);
   const [locationName, setLocationName] = React.useState<string>(
     () => cached || incident.barangay_name || 'Loading location…'
@@ -42,7 +42,7 @@ const IncidentListItemComponent: React.FC<IncidentListItemProps> = ({ incident, 
 
   const cardBg = isDark ? colors.surfaceElevated : '#FFFFFF';
   const pressedBg = isDark ? '#221915' : '#F9FAFB';
-  const normalBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB';
+  const normalBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent';
   const pressedBorder = colors.brandOrange;
 
   const isFire = incident.ai_fire_label === 'fire';
@@ -62,9 +62,10 @@ const IncidentListItemComponent: React.FC<IncidentListItemProps> = ({ incident, 
         {
           backgroundColor: pressed ? pressedBg : cardBg,
           borderColor: pressed ? pressedBorder : normalBorder,
-          borderWidth: pressed ? 1.5 : 1,
+          borderWidth: 1.5,
           transform: [{ scale: pressed ? 0.985 : 1 }],
         },
+        !isDark && shadow.card,
       ]}
     >
       {({ pressed }) => (
@@ -180,10 +181,16 @@ const IncidentListItemComponent: React.FC<IncidentListItemProps> = ({ incident, 
                 style={[
                   styles.aiText,
                   {
-                    color: isFire
-                      ? (isDark ? '#F87171' : '#B91C1C')
+                    color: isDark
+                      ? isFire
+                        ? '#F87171'
+                        : isNonFire
+                        ? '#4ADE80'
+                        : colors.textMuted
+                      : isFire
+                      ? '#DC2626'
                       : isNonFire
-                      ? (isDark ? '#4ADE80' : '#15803D')
+                      ? '#16A34A'
                       : colors.textMuted,
                   },
                 ]}
@@ -208,14 +215,9 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 13,
+    padding: 14,
     borderRadius: 18,
-    marginBottom: 9,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 1,
+    marginBottom: 10,
   },
   thumb: {
     width: 72,

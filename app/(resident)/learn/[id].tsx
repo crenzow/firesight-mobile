@@ -33,6 +33,7 @@ import { PhotoLightboxModal } from '../../../components/ui/PhotoLightboxModal';
 import { TextSizeModal, TextSizeStep } from '../../../components/learn/TextSizeModal';
 import { useBookmarks } from '../../../hooks/useBookmarks';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 const CATEGORY_LABEL = {
   prevention: 'FIRE PREVENTION',
@@ -96,7 +97,7 @@ function getArticleImageCredit(article: FireEducationArticle | null): string {
 }
 
 export default function LearnArticleScreen() {
-  const { colors, spacing, typography, radius, isDark } = useTheme();
+  const { colors, spacing, typography, radius, shadow, isDark } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [article, setArticle] = useState<FireEducationArticle | null>(null);
   const [allArticles, setAllArticles] = useState<FireEducationArticle[]>([]);
@@ -133,16 +134,24 @@ export default function LearnArticleScreen() {
     }
   }, [imageSource]);
 
+  const handleBack = useCallback(() => {
+    if (textSizeModalVisible) {
+      setTextSizeModalVisible(false);
+      return;
+    }
+    router.navigate('/(resident)/learn');
+  }, [textSizeModalVisible]);
+
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        router.navigate('/(resident)/learn');
+        handleBack();
         return true;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [])
+    }, [handleBack])
   );
 
   useEffect(() => {
@@ -209,7 +218,7 @@ export default function LearnArticleScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SecondaryHeader
         title={headerTitle}
-        onBack={() => router.navigate('/(resident)/learn')}
+        onBack={handleBack}
         rightElement={
           <View style={styles.headerRightCluster}>
             {/* Font Size Settings Button */}
@@ -259,12 +268,63 @@ export default function LearnArticleScreen() {
 
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.brandOrange} />
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, marginTop: 12, fontWeight: '500' }}>
-              Loading safety guide…
-            </Text>
-          </View>
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* 1. Category Eyebrow skeleton */}
+            <Skeleton width={110} height={22} borderRadius={8} />
+
+            {/* 2. Headline skeleton */}
+            <View style={{ marginTop: 14, gap: 8 }}>
+              <Skeleton width="95%" height={28} borderRadius={6} />
+              <Skeleton width="75%" height={28} borderRadius={6} />
+            </View>
+
+            {/* 3. Summary deck skeleton */}
+            <View style={{ marginTop: 14, gap: 6 }}>
+              <Skeleton width="100%" height={16} borderRadius={4} />
+              <Skeleton width="88%" height={16} borderRadius={4} />
+            </View>
+
+            {/* 4. Byline skeleton */}
+            <View style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Skeleton width={8} height={8} borderRadius={4} />
+              <Skeleton width={210} height={12} borderRadius={4} />
+            </View>
+
+            {/* 5. Media Hero card skeleton */}
+            <View style={{ marginTop: 20 }}>
+              <View
+                style={[
+                  styles.heroImageWrap,
+                  {
+                    height: 220,
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                ]}
+              >
+                <Skeleton width="100%" height={220} borderRadius={20} />
+              </View>
+            </View>
+
+            {/* 6. Body paragraph skeletons */}
+            <View style={{ marginTop: 24, gap: 10 }}>
+              <Skeleton width="100%" height={15} borderRadius={4} />
+              <Skeleton width="96%" height={15} borderRadius={4} />
+              <Skeleton width="92%" height={15} borderRadius={4} />
+              <Skeleton width="60%" height={15} borderRadius={4} />
+            </View>
+
+            <View style={{ marginTop: 20, gap: 10 }}>
+              <Skeleton width="100%" height={15} borderRadius={4} />
+              <Skeleton width="94%" height={15} borderRadius={4} />
+              <Skeleton width="75%" height={15} borderRadius={4} />
+            </View>
+          </ScrollView>
         ) : !article ? (
           <View style={styles.center}>
             <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>
@@ -321,7 +381,7 @@ export default function LearnArticleScreen() {
               </Text>
             </View>
 
-            {/* 5. Cinematic Photo Hero (Squircle 24px) - Only rendered when an image exists */}
+            {/* 5. Cinematic Photo Hero (Squircle 20px) - Only rendered when an image exists */}
             {imageSource && !imageLoadFailed ? (
               <View style={styles.mediaContainer}>
                 <Pressable
@@ -380,10 +440,18 @@ export default function LearnArticleScreen() {
                         ? isDark
                           ? '#1F1713'
                           : '#FFF7F2'
-                        : colors.surfaceElevated,
-                      borderColor: pressed ? colors.brandOrange : colors.border,
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                        : isDark
+                        ? colors.surfaceElevated
+                        : '#FFFFFF',
+                      borderColor: pressed
+                        ? colors.brandOrange
+                        : isDark
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'transparent',
+                      borderWidth: 1.5,
+                      transform: [{ scale: pressed ? 0.985 : 1 }],
                     },
+                    !isDark && shadow.card,
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={`Read next: ${nextArticle.title}`}
@@ -407,7 +475,7 @@ export default function LearnArticleScreen() {
                       styles.upNextChevronWrap,
                       {
                         backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
-                        borderColor: colors.border,
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
                       },
                     ]}
                   >
@@ -422,9 +490,10 @@ export default function LearnArticleScreen() {
               style={[
                 styles.sosCard,
                 {
-                  backgroundColor: colors.surfaceElevated,
-                  borderColor: colors.border,
+                  backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
                 },
+                !isDark && shadow.card,
               ]}
             >
               <View style={styles.sosHeaderRow}>
@@ -456,7 +525,7 @@ export default function LearnArticleScreen() {
                           styles.sosButton,
                           {
                             backgroundColor: pressed ? '#DC2626' : '#EF4444',
-                            transform: [{ scale: pressed ? 0.98 : 1 }],
+                            transform: [{ scale: pressed ? 0.985 : 1 }],
                           },
                         ]}
                         accessibilityRole="button"
@@ -593,7 +662,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    
     position: 'relative',
     backgroundColor: 'rgba(0, 0, 0, 0.02)',
   },
@@ -645,8 +713,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 18,
-    borderWidth: 1,
-    
+    borderWidth: 1.5,
   },
   upNextContent: {
     flex: 1,
@@ -680,8 +747,8 @@ const styles = StyleSheet.create({
   /* Apple Health style Emergency SOS Card */
   sosCard: {
     padding: 18,
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 18,
+    borderWidth: 1.5,
     gap: 14,
   },
   sosHeaderRow: {

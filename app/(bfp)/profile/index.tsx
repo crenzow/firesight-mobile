@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, ActivityIndicator } from 'react-native';
-import { router, usePathname } from 'expo-router';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, ActivityIndicator, BackHandler } from 'react-native';
+import { router, usePathname, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ShieldCheck, Settings as SettingsIcon, LogOut, Phone, Building2, IdCard, Edit3, Camera } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -19,7 +19,7 @@ import { PhotoOptionsModal, PhotoPreviewModal } from '../../../components/profil
 import { PhotoCropModal } from '../../../components/profile/PhotoCropModal';
 
 export default function BFPProfileScreen() {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, typography, shadow, isDark } = useTheme();
   const { user, logout, refreshUser, updateUser } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -84,6 +84,34 @@ export default function BFPProfileScreen() {
     router.replace('/(auth)/welcome');
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (showCropModal) {
+          setShowCropModal(false);
+          return true;
+        }
+        if (showPhotoPreview) {
+          setShowPhotoPreview(false);
+          return true;
+        }
+        if (showPhotoOptions) {
+          setShowPhotoOptions(false);
+          return true;
+        }
+        if (showLogoutModal) {
+          setShowLogoutModal(false);
+          return true;
+        }
+        router.replace('/(bfp)/dashboard');
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [showCropModal, showPhotoPreview, showPhotoOptions, showLogoutModal])
+  );
+
   if (!user) return null;
 
   const initials = getInitials(user.first_name, user.last_name);
@@ -94,14 +122,21 @@ export default function BFPProfileScreen() {
       <AppHeader variant="dark" />
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
         {/* ── Premium Identity Hero Card ── */}
-        <View style={[styles.heroCard, { marginHorizontal: spacing.lg, marginTop: spacing.md }]}>
+        <View
+          style={[
+            styles.heroCard,
+            { marginHorizontal: spacing.lg, marginTop: spacing.md },
+            !isDark && shadow.card,
+          ]}
+        >
           {/* Edit button */}
           <Pressable
             style={({ pressed }) => [
               styles.heroEditBtn,
               {
+                backgroundColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.16)',
+                borderColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.25)',
                 transform: [{ scale: pressed ? 0.90 : 1 }],
-                opacity: pressed ? 0.8 : 1,
               },
             ]}
             onPress={() => {
@@ -124,27 +159,38 @@ export default function BFPProfileScreen() {
                   styles.avatarWrap,
                   {
                     transform: [{ scale: pressed && !isUploadingPhoto ? 0.95 : 1 }],
-                    opacity: pressed ? 0.88 : 1,
+                    opacity: pressed ? 0.92 : 1,
                   },
                 ]}
               >
-                <View style={styles.avatarClip}>
-                  {isUploadingPhoto ? (
-                    <View style={[styles.avatarInner, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                {({ pressed }) => (
+                  <>
+                    <View
+                      style={[
+                        styles.avatarClip,
+                        {
+                          borderColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.25)',
+                        },
+                      ]}
+                    >
+                      {isUploadingPhoto ? (
+                        <View style={[styles.avatarInner, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        </View>
+                      ) : profileImageUri ? (
+                        <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
+                      ) : (
+                        <View style={styles.avatarInner}>
+                          <Text style={styles.avatarText}>{initials}</Text>
+                        </View>
+                      )}
                     </View>
-                  ) : profileImageUri ? (
-                    <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
-                  ) : (
-                    <View style={styles.avatarInner}>
-                      <Text style={styles.avatarText}>{initials}</Text>
+                    {/* Camera badge sitting cleanly on bottom-right corner without clipping */}
+                    <View style={styles.cameraBadge}>
+                      <Camera size={13} color="#FFFFFF" />
                     </View>
-                  )}
-                </View>
-                {/* Camera badge sitting cleanly on bottom-right corner without clipping */}
-                <View style={styles.cameraBadge}>
-                  <Camera size={13} color="#FFFFFF" />
-                </View>
+                  </>
+                )}
               </Pressable>
 
               <View style={styles.heroMeta}>
@@ -309,7 +355,7 @@ const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: string; i
 const styles = StyleSheet.create({
   // Hero card
   heroCard: {
-    borderRadius: 24,
+    borderRadius: 18,
     padding: 22,
     backgroundColor: '#0F1C3F',
     borderWidth: 1,

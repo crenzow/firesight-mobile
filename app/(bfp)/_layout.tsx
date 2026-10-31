@@ -21,6 +21,7 @@ export default function BFPLayout() {
   return (
     <Tabs
       tabBar={(props) => <BFPTabBar {...props} />}
+      backBehavior="initialRoute"
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },

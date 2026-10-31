@@ -1,19 +1,29 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Share, BackHandler, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
-import { Megaphone, Share2, ShieldCheck } from 'lucide-react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Megaphone, Share2 } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
 import { announcementService } from '../../services/api';
 import { Announcement } from '../../services/api/models';
 import { formatRelativeDate } from '../../utils/formatters';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 export default function AnnouncementsScreen() {
-  const { colors, spacing, typography, isDark } = useTheme();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const { colors, spacing, typography, shadow, isDark } = useTheme();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleBack = useCallback(() => {
+    if (from && (from.includes('notification') || from === '/(resident)/notifications')) {
+      router.replace('/(resident)/notifications');
+    } else {
+      router.replace('/(resident)/home');
+    }
+  }, [from]);
 
   const load = useCallback(async () => {
     try {
@@ -36,7 +46,7 @@ export default function AnnouncementsScreen() {
       }, 15000);
 
       const onBackPress = () => {
-        router.back();
+        handleBack();
         return true;
       };
 
@@ -45,7 +55,7 @@ export default function AnnouncementsScreen() {
         clearInterval(timer);
         subscription.remove();
       };
-    }, [load])
+    }, [load, handleBack])
   );
 
   const handleShare = async (item: Announcement) => {
@@ -61,55 +71,99 @@ export default function AnnouncementsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <SecondaryHeader title="Announcements" />
+      <SecondaryHeader title="Announcements" onBack={handleBack} />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
-        <FlatList
-          data={announcements}
-          keyExtractor={(item) => String(item.announcement_id)}
-          contentContainerStyle={{
-            paddingHorizontal: spacing.lg,
-            paddingTop: spacing.md,
-            paddingBottom: spacing.xxxl,
-          }}
-          initialNumToRender={5}
-          maxToRenderPerBatch={5}
-          windowSize={5}
-          removeClippedSubviews={Platform.OS === 'android'}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={() => {
-                setIsRefreshing(true);
-                load();
-              }}
-              tintColor={colors.brandOrange}
-            />
-          }
-          ListEmptyComponent={
-            !isLoading ? (
-              <View style={styles.emptyState}>
+        {isLoading ? (
+          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+            {[0, 1].map((key) => (
+              <View
+                key={key}
+                style={[
+                  styles.editorialCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  },
+                  !isDark && shadow.card,
+                ]}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <Skeleton width={110} height={12} borderRadius={4} />
+                    <Skeleton width={80} height={10} borderRadius={4} />
+                  </View>
+                  <Skeleton width={34} height={34} borderRadius={17} />
+                </View>
+
+                <View style={{ gap: 8, marginTop: 14 }}>
+                  <Skeleton width="90%" height={18} borderRadius={4} />
+                  <Skeleton width="100%" height={14} borderRadius={4} />
+                  <Skeleton width="65%" height={14} borderRadius={4} />
+                </View>
+
+                <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
+                <View style={styles.cardFooter}>
+                  <Skeleton width={200} height={11} borderRadius={4} />
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <FlatList
+            data={announcements}
+            keyExtractor={(item) => String(item.announcement_id)}
+            contentContainerStyle={{
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.md,
+              paddingBottom: spacing.xxxl,
+            }}
+            initialNumToRender={5}
+            maxToRenderPerBatch={5}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === 'android'}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={() => {
+                  setIsRefreshing(true);
+                  load();
+                }}
+                tintColor={colors.brandOrange}
+              />
+            }
+            ListEmptyComponent={
+              <View
+                style={[
+                  styles.emptyState,
+                  {
+                    backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  },
+                  !isDark && shadow.card,
+                ]}
+              >
                 <View style={[styles.emptyIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
                   <Megaphone size={28} color={colors.textMuted} />
                 </View>
-                <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700', marginTop: spacing.md }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '800', marginTop: 12 }}>
                   No Advisories Yet
                 </Text>
-                <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, marginTop: 4, textAlign: 'center', lineHeight: 20 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, textAlign: 'center', lineHeight: 18 }}>
                   Official public bulletins and fire prevention advisories from BFP Lian will appear here.
                 </Text>
               </View>
-            ) : null
-          }
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.editorialCard,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
-                },
-              ]}
-            >
+            }
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.editorialCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  },
+                  !isDark && shadow.card,
+                ]}
+              >
               {/* Card Header: Eyebrow + Date & Share */}
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
@@ -158,7 +212,6 @@ export default function AnnouncementsScreen() {
               {/* Station Authority Stamp */}
               <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
               <View style={styles.cardFooter}>
-                <ShieldCheck size={14} color={colors.brandOrange} />
                 <Text style={[styles.footerText, { color: colors.textMuted }]}>
                   Bureau of Fire Protection · Lian Fire Station
                 </Text>
@@ -166,6 +219,7 @@ export default function AnnouncementsScreen() {
             </View>
           )}
         />
+        )}
       </SafeAreaView>
     </View>
   );
@@ -173,8 +227,8 @@ export default function AnnouncementsScreen() {
 
 const styles = StyleSheet.create({
   editorialCard: {
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 18,
+    borderWidth: 1.5,
     padding: 20,
     marginBottom: 16,
   },
@@ -229,13 +283,15 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 32,
+    padding: 32,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    marginTop: 12,
   },
   emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
   },

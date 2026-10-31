@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ViewStyle, Platform, StyleSheet, StyleProp } from 'react-native';
+import { View, ViewStyle, StyleSheet, StyleProp } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
 export interface CardProps {
@@ -13,22 +13,22 @@ export interface CardProps {
 /**
  * Universal Card component used across both Resident and BFP interfaces.
  *
- * Enforces a consistent 16px (radius.lg) corner radius for all cards.
- *
- * Light mode : pure-white surface + soft rounded drop shadow.
- * Dark mode  : elevated surface color + subtle dark border.
+ * Design System Recipe:
+ * - Corner Radius: 18px squircle.
+ * - Light Mode: Pure-white surface + soft ambient drop shadow (shadow.card), borderless.
+ * - Dark Mode: Elevated dark surface + subtle translucent hairline border.
  */
 export const Card: React.FC<CardProps> = ({
   children,
   style,
   padding,
 }) => {
-  const { colors, radius, spacing, isDark } = useTheme();
+  const { colors, shadow, spacing, isDark } = useTheme();
   const resolvedPadding = padding ?? spacing.lg;
-  const borderRadius = radius.lg; // Fixed 16px corner radius across all cards
+  const borderRadius = 18;
 
   const cardBg = isDark ? colors.surfaceElevated : '#FFFFFF';
-  const cardBorderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB';
+  const cardBorderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent';
 
   const flattenedStyle = StyleSheet.flatten(style) || {};
   const {
@@ -62,6 +62,7 @@ export const Card: React.FC<CardProps> = ({
     zIndex,
     borderRadius,
     backgroundColor: cardBg,
+    ...(!isDark ? shadow.card : {}),
   };
 
   return (
@@ -71,7 +72,7 @@ export const Card: React.FC<CardProps> = ({
           {
             borderRadius,
             backgroundColor: cardBg,
-            borderWidth: 1,
+            borderWidth: isDark ? 1 : 0,
             borderColor: cardBorderColor,
             overflow: 'hidden',
             padding: resolvedPadding,
@@ -84,5 +85,3 @@ export const Card: React.FC<CardProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({});

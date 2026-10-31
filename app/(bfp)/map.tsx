@@ -200,9 +200,11 @@ export default function BFPMapScreen() {
           style={[
             styles.floatingHeader,
             {
-              backgroundColor: isDark ? 'rgba(15, 28, 63, 0.94)' : 'rgba(255, 255, 255, 0.96)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+              backgroundColor: isDark ? 'rgba(15, 28, 63, 0.94)' : '#FFFFFF',
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
             },
+            !isDark && shadow.card,
           ]}
         >
           {/* Top Row: Title, Subtitle, Search & Notification Actions */}
@@ -491,9 +493,11 @@ export default function BFPMapScreen() {
                     {
                       left: 16,
                       top: floatingTop,
-                      backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.96)',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                      backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : '#FFFFFF',
+                      borderWidth: isDark ? 1 : 0,
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
                     },
+                    !isDark && shadow.card,
                   ]}
                 >
                   <View style={styles.legendHeaderRow}>
@@ -584,8 +588,7 @@ const styles = StyleSheet.create({
   floatingHeader: {
     marginHorizontal: 16,
     marginTop: 6,
-    borderRadius: 22,
-    borderWidth: 1,
+    borderRadius: 18,
     paddingTop: 12,
     paddingBottom: 10,
     paddingHorizontal: 14,
@@ -670,10 +673,9 @@ const styles = StyleSheet.create({
   },
   incidentLegendCard: {
     position: 'absolute',
-    borderRadius: 16,
+    borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderWidth: 1,
   },
   legendHeaderRow: {
     flexDirection: 'row',

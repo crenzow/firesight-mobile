@@ -28,10 +28,10 @@ export default function MyReportsScreen() {
   }, []);
 
   const handleBack = useCallback(() => {
-    if (from) {
-      router.replace(from as any);
+    if (from && (from.includes('profile') || from === '/(resident)/profile')) {
+      router.replace('/(resident)/profile');
     } else {
-      router.back();
+      router.replace('/(resident)/home');
     }
   }, [from]);
 
@@ -111,8 +111,8 @@ export default function MyReportsScreen() {
                   <ReportListItem
                     report={report}
                     paddingHorizontal={spacing.lg}
-                    isFirst={index === 0}
-                    isLast={index === reports.length - 1}
+                    from="/(resident)/reports"
+                    listFrom={from}
                   />
                 </View>
               ))}

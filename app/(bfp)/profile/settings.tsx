@@ -29,7 +29,7 @@ export default function BFPSettingsScreen() {
         router.replace(`/(bfp)/${from}` as any);
       }
     } else {
-      router.back();
+      router.replace('/(bfp)/profile');
     }
   }, [from]);
 

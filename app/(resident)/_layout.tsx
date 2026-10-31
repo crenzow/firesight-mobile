@@ -17,6 +17,7 @@ export default function ResidentLayout() {
   return (
     <Tabs
       tabBar={(props) => <ResidentTabBar {...props} />}
+      backBehavior="initialRoute"
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },

@@ -8,6 +8,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { X, Navigation } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { BarangayRiskFeature } from '../../services/api/models';
 import { FIRE_STATION } from '../../constants/fireStation';
@@ -126,9 +127,10 @@ export const BarangayDetailCard: React.FC<BarangayDetailCardProps> = ({
       style={[
         styles.cardContainer,
         {
-          backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.96)',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-          borderRadius: 22,
+          backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : '#FFFFFF',
+          borderWidth: isDark ? 1 : 0,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+          borderRadius: 18,
           paddingHorizontal: spacing.md + 4,
           paddingVertical: spacing.md,
         },
@@ -144,19 +146,28 @@ export const BarangayDetailCard: React.FC<BarangayDetailCardProps> = ({
         </View>
 
         <Pressable
-          onPress={onClose}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            onClose();
+          }}
           hitSlop={10}
           style={({ pressed }) => [
             styles.closeButton,
             {
-              backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-              opacity: pressed ? 0.7 : 1,
+              backgroundColor: pressed
+                ? colors.brandOrange
+                : isDark
+                ? 'rgba(255,255,255,0.1)'
+                : 'rgba(0,0,0,0.06)',
+              transform: [{ scale: pressed ? 0.92 : 1 }],
             },
           ]}
           accessibilityRole="button"
           accessibilityLabel="Close details"
         >
-          <X size={15} color={colors.textSecondary} />
+          {({ pressed }) => (
+            <X size={15} color={pressed ? '#FFFFFF' : colors.textSecondary} />
+          )}
         </Pressable>
       </View>
 
@@ -182,7 +193,6 @@ const styles = StyleSheet.create({
     bottom: 24,
     left: 16,
     right: 16,
-    borderWidth: 1,
   },
   topRow: {
     flexDirection: 'row',

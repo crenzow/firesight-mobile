@@ -14,7 +14,9 @@ interface RadioOptionRowProps {
 }
 
 export const RadioOptionRow: React.FC<RadioOptionRowProps> = ({ icon, title, subtitle, selected, onPress, gradient }) => {
-  const { colors, spacing, typography, radius, isDark } = useTheme();
+  const { colors, spacing, typography, shadow, isDark } = useTheme();
+
+  const isHighlighted = selected;
 
   return (
     <Pressable
@@ -25,16 +27,21 @@ export const RadioOptionRow: React.FC<RadioOptionRowProps> = ({ icon, title, sub
       style={({ pressed }) => [
         styles.row,
         {
-          borderColor: pressed || selected ? colors.brandOrange : colors.border,
-          borderRadius: radius.md,
-          padding: spacing.md,
+          borderColor: pressed || isHighlighted
+            ? colors.brandOrange
+            : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent'),
+          borderRadius: 18,
+          padding: 14,
           marginBottom: spacing.sm,
           backgroundColor: pressed
             ? (isDark ? '#221915' : '#F9FAFB')
-            : (selected ? (isDark ? '#1C1613' : '#FFFFFF') : (isDark ? colors.surfaceElevated : '#FFFFFF')),
-          borderWidth: pressed || selected ? 1.5 : 1,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
+            : (isHighlighted
+            ? (isDark ? '#1C1613' : '#FFFFFF')
+            : (isDark ? colors.surfaceElevated : '#FFFFFF')),
+          borderWidth: 1.5,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
         },
+        !isDark && shadow.card,
       ]}
     >
       {({ pressed }) => (
@@ -49,20 +56,20 @@ export const RadioOptionRow: React.FC<RadioOptionRowProps> = ({ icon, title, sub
               icon
             )}
             <View style={{ marginLeft: spacing.sm }}>
-              <Text style={{ color: pressed ? colors.brandOrange : colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>{title}</Text>
+              <Text style={{ color: pressed || isHighlighted ? colors.brandOrange : colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>{title}</Text>
               {subtitle ? (
                 <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 1 }}>{subtitle}</Text>
               ) : null}
             </View>
           </View>
-          <View style={[styles.radioOuter, { borderColor: pressed || selected ? colors.brandOrange : colors.border }]}>
-            {selected || pressed ? (
+          <View style={[styles.radioOuter, { borderColor: pressed || isHighlighted ? colors.brandOrange : (isDark ? 'rgba(255, 255, 255, 0.2)' : colors.border) }]}>
+            {isHighlighted || pressed ? (
               <View
                 style={[
                   styles.radioInner,
                   {
                     backgroundColor: colors.brandOrange,
-                    opacity: pressed && !selected ? 0.4 : 1,
+                    opacity: pressed && !isHighlighted ? 0.4 : 1,
                   },
                 ]}
               />
@@ -75,11 +82,11 @@ export const RadioOptionRow: React.FC<RadioOptionRowProps> = ({ icon, title, sub
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1.5 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   left: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   iconWrap: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
