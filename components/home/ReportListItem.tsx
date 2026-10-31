@@ -72,7 +72,7 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
       style={({ pressed }) => [
         styles.row,
         {
-          paddingVertical: 13,
+          paddingVertical: 14,
           paddingHorizontal: horizontalPadding,
           borderTopLeftRadius: isFirst ? 18 : 0,
           borderTopRightRadius: isFirst ? 18 : 0,
@@ -95,7 +95,7 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
               style={[
                 styles.thumbnail,
                 {
-                  borderRadius: radius.md,
+                  borderRadius: 14,
                   backgroundColor: colors.surfaceElevated,
                 },
               ]}
@@ -107,7 +107,7 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
               style={[
                 styles.iconFallback,
                 {
-                  borderRadius: radius.md,
+                  borderRadius: 14,
                   backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#EEF2F8',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
                   borderWidth: 1,
@@ -115,7 +115,7 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
               ]}
             >
               <Flame
-                size={20}
+                size={24}
                 color={pressed ? colors.brandOrange : (isDark ? 'rgba(255,255,255,0.4)' : colors.brandNavy)}
                 strokeWidth={2}
               />
@@ -123,10 +123,10 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
           )}
 
           {/* Main Details */}
-          <View style={{ flex: 1, marginLeft: spacing.md, justifyContent: 'center' }}>
+          <View style={{ flex: 1, marginLeft: 13, justifyContent: 'center' }}>
             <View style={styles.topRow}>
               <Text
-                style={[styles.barangay, { color: colors.textPrimary, fontSize: typography.size.sm }]}
+                style={[styles.barangay, { color: colors.textPrimary, fontSize: 14.5 }]}
                 numberOfLines={1}
               >
                 {locationName}
@@ -135,14 +135,14 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
 
             <Text
               numberOfLines={1}
-              style={[styles.description, { color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 2 }]}
+              style={[styles.description, { color: colors.textSecondary, fontSize: 12.5, marginTop: 2.5 }]}
             >
               {report.description || 'No description provided'}
             </Text>
 
             <View style={styles.bottomRow}>
-              <Clock size={11} color={colors.textMuted} />
-              <Text style={[styles.date, { color: colors.textMuted, fontSize: typography.size.xs, marginLeft: 4 }]}>
+              <Clock size={12} color={colors.textMuted} />
+              <Text style={[styles.date, { color: colors.textMuted, fontSize: 12, marginLeft: 4 }]}>
                 {formatIncidentDateTime(report.created_at)}
               </Text>
             </View>
@@ -167,12 +167,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   thumbnail: {
-    width: 48,
-    height: 48,
+    width: 60,
+    height: 60,
+    borderRadius: 14,
   },
   iconFallback: {
-    width: 48,
-    height: 48,
+    width: 60,
+    height: 60,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

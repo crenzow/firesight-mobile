@@ -157,11 +157,11 @@ export default function HomeScreen() {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        paddingVertical: 10,
+                        paddingVertical: 12,
                       }}
                     >
-                      <Skeleton width={48} height={48} borderRadius={10} />
-                      <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
+                      <Skeleton width={60} height={60} borderRadius={14} />
+                      <View style={{ flex: 1, marginLeft: 13, justifyContent: 'center' }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                           <Skeleton width={70} height={18} borderRadius={6} />
                           <Skeleton width={50} height={12} borderRadius={4} />
@@ -187,7 +187,7 @@ export default function HomeScreen() {
                           styles.divider,
                           {
                             backgroundColor: colors.border,
-                            marginLeft: 14 + 48 + 12,
+                            marginLeft: 14 + 60 + 13,
                           },
                         ]}
                       />

@@ -177,11 +177,26 @@ export default function DashboardScreen() {
 
             {isLoading ? (
               [0, 1, 2].map((key) => (
-                <View key={key} style={styles.skeletonRow}>
-                  <Skeleton width={56} height={56} borderRadius={14} />
-                  <View style={{ flex: 1, marginLeft: spacing.md, gap: 8 }}>
-                    <Skeleton width="70%" height={14} />
-                    <Skeleton width="45%" height={12} />
+                <View
+                  key={key}
+                  style={[
+                    styles.skeletonCard,
+                    {
+                      backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                    },
+                    !isDark && shadow.card,
+                  ]}
+                >
+                  <Skeleton width={72} height={72} borderRadius={14} />
+                  <View style={styles.skeletonContentCol}>
+                    <View style={styles.skeletonTopRow}>
+                      <Skeleton width={68} height={18} borderRadius={6} />
+                      <Skeleton width={52} height={12} borderRadius={4} />
+                    </View>
+                    <Skeleton width="82%" height={16} borderRadius={4} style={{ marginBottom: 6 }} />
+                    <Skeleton width="55%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+                    <Skeleton width={110} height={18} borderRadius={6} />
                   </View>
                 </View>
               ))
@@ -233,7 +248,24 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '600', letterSpacing: -0.3 },
   seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 4, paddingHorizontal: 4 },
   seeAllText: { fontSize: 13, fontWeight: '600' },
-  skeletonRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  skeletonCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 10,
+    borderRadius: 18,
+    borderWidth: 1.5,
+  },
+  skeletonContentCol: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  skeletonTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   emptyState: { alignItems: 'center', padding: 24, borderRadius: 18, borderWidth: 1.5 },
   emptyIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
 });

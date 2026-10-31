@@ -90,7 +90,7 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({
 
       <ConfirmationDialog
         visible={isSourceDialogVisible}
-        type="info"
+        type="confirm"
         title="Add Fire Scene Photo"
         message="Select an incident photo from your photo library to attach to this resolved incident report."
         confirmText="Choose Photo"

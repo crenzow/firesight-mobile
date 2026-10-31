@@ -68,13 +68,15 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
               {
                 backgroundColor: pressed
                   ? (destructive ? colors.danger : colors.brandOrange)
+                  : gradient
+                  ? 'transparent'
                   : destructive
                   ? `${colors.danger}14`
-                  : (gradient ? 'transparent' : colors.surfaceElevated),
+                  : colors.surfaceElevated,
               },
             ]}
           >
-            {gradient && !destructive && !pressed ? (
+            {gradient && !pressed ? (
               <LinearGradient
                 colors={gradient}
                 start={{ x: 0, y: 0 }}

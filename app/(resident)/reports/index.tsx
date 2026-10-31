@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ClipboardList } from 'lucide-react-native';
@@ -8,6 +8,7 @@ import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader'
 import { reportService } from '../../../services/api/reportService';
 import { CommunityReport } from '../../../services/api/models';
 import { ReportListItem } from '../../../components/home/ReportListItem';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export default function MyReportsScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -62,8 +63,40 @@ export default function MyReportsScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
 
         {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.brandOrange} />
+          <View style={{ paddingTop: spacing.xs }}>
+            {[0, 1, 2, 3].map((n) => (
+              <View key={n}>
+                {n > 0 && (
+                  <View
+                    style={[
+                      styles.divider,
+                      {
+                        backgroundColor: colors.border,
+                        marginLeft: spacing.lg + 60 + spacing.md,
+                      },
+                    ]}
+                  />
+                )}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 14,
+                    paddingHorizontal: spacing.lg,
+                  }}
+                >
+                  <Skeleton width={60} height={60} borderRadius={14} />
+                  <View style={{ flex: 1, marginLeft: 13, justifyContent: 'center' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Skeleton width={70} height={18} borderRadius={6} />
+                      <Skeleton width={50} height={12} borderRadius={4} />
+                    </View>
+                    <Skeleton width="80%" height={15} borderRadius={4} style={{ marginBottom: 6 }} />
+                    <Skeleton width="50%" height={12} borderRadius={4} />
+                  </View>
+                </View>
+              </View>
+            ))}
           </View>
         ) : reports.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -103,7 +136,7 @@ export default function MyReportsScreen() {
                         styles.divider,
                         {
                           backgroundColor: colors.border,
-                          marginLeft: spacing.lg + 48 + spacing.md,
+                          marginLeft: spacing.lg + 60 + spacing.md,
                         },
                       ]}
                     />

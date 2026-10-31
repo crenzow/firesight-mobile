@@ -65,7 +65,8 @@ export default function IncidentsListScreen() {
           setSearch('');
           return true;
         }
-        return false;
+        router.replace('/(bfp)/dashboard');
+        return true;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);

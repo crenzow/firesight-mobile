@@ -9,6 +9,7 @@ import {
   Alert,
   BackHandler,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -24,6 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { contactService } from '../../services/api';
 import { EmergencyContact } from '../../services/api/models';
 
@@ -62,78 +64,12 @@ const CATEGORY_META = {
   },
 } as const;
 
-// Comprehensive emergency directory pre-loaded so hotlines are always accessible offline
-const FALLBACK_CONTACTS: EmergencyContact[] = [
-  {
-    contact_id: 1,
-    name: 'Bureau of Fire Protection',
-    category: 'fire',
-    phone_number: '160',
-    description: 'National fire emergency hotline',
-    is_primary: true,
-  },
-  {
-    contact_id: 5,
-    name: 'BFP Lian Fire Station',
-    category: 'fire',
-    phone_number: '(043) 778-1234',
-    description: 'Lian, Batangas local fire station',
-    is_primary: false,
-  },
-  {
-    contact_id: 2,
-    name: 'National Emergency Hotline',
-    category: 'disaster',
-    phone_number: '911',
-    description: 'Police, fire, and medical emergencies',
-    is_primary: false,
-  },
-  {
-    contact_id: 6,
-    name: 'Lian Municipal Police Station',
-    category: 'police',
-    phone_number: '(043) 778-5678',
-    description: 'Lian, Batangas local PNP station',
-    is_primary: false,
-  },
-  {
-    contact_id: 8,
-    name: 'Lian MDRRMO',
-    category: 'disaster',
-    phone_number: '(043) 778-3456',
-    description: 'Municipal Disaster Risk Reduction & Management',
-    is_primary: false,
-  },
-  {
-    contact_id: 3,
-    name: 'Philippine Red Cross',
-    category: 'medical',
-    phone_number: '143',
-    description: '24/7 medical & rescue response',
-    is_primary: false,
-  },
-  {
-    contact_id: 7,
-    name: 'Lian Rural Health Unit',
-    category: 'medical',
-    phone_number: '(043) 778-9012',
-    description: 'Lian, Batangas community health clinic',
-    is_primary: false,
-  },
-  {
-    contact_id: 4,
-    name: 'NDRRMC Hotline',
-    category: 'disaster',
-    phone_number: '(02) 8911-5061',
-    description: 'National disaster management office',
-    is_primary: false,
-  },
-];
-
 export default function EmergencyContactsScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { colors, spacing, typography, shadow, isDark } = useTheme();
-  const [contacts, setContacts] = useState<EmergencyContact[]>(FALLBACK_CONTACTS);
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<ContactCategory>('all');
 
   const handleBack = useCallback(() => {
@@ -156,18 +92,23 @@ export default function EmergencyContactsScreen() {
     }, [handleBack])
   );
 
-  useEffect(() => {
-    contactService
-      .list()
-      .then((data) => {
-        if (data && data.length > 0) {
-          setContacts(data);
-        }
-      })
-      .catch(() => {
-        // Retain fallback contacts
-      });
+  const loadContacts = useCallback(async () => {
+    try {
+      const data = await contactService.list();
+      if (Array.isArray(data)) {
+        setContacts(data);
+      }
+    } catch {
+      // Non-fatal — resident can pull to refresh
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadContacts();
+  }, [loadContacts]);
 
   const callNumber = (number: string, name: string) => {
     try {
@@ -285,9 +226,42 @@ export default function EmergencyContactsScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollBody}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => {
+                setIsRefreshing(true);
+                loadContacts();
+              }}
+              tintColor={colors.brandOrange}
+            />
+          }
         >
           {/* ── Primary Emergency Speed Dial Card (High-Urgency, Clean) ── */}
-          {primary && (
+          {isLoading ? (
+            <View
+              style={[
+                styles.primaryEmergencySkeleton,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                },
+                !isDark && shadow.card,
+              ]}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                <Skeleton width={14} height={14} borderRadius={7} />
+                <Skeleton width={160} height={12} borderRadius={4} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ gap: 6 }}>
+                  <Skeleton width={140} height={32} borderRadius={6} />
+                  <Skeleton width={180} height={14} borderRadius={4} />
+                </View>
+                <Skeleton width={68} height={42} borderRadius={16} />
+              </View>
+            </View>
+          ) : primary ? (
             <Pressable
               onPress={() => callNumber(primary.phone_number, primary.name)}
               style={({ pressed }) => [
@@ -320,7 +294,7 @@ export default function EmergencyContactsScreen() {
                 </View>
               </View>
             </Pressable>
-          )}
+          ) : null}
 
           {/* ── Filter Segmented Tabs ── */}
           <View style={styles.filterTabsWrapper}>
@@ -367,55 +341,91 @@ export default function EmergencyContactsScreen() {
             </ScrollView>
           </View>
 
-          {/* ── Section: Local Lian Batangas Stations ── */}
-          {localLianContacts.length > 0 && (
+          {/* ── Skeletons during Loading ── */}
+          {isLoading ? (
             <View style={styles.sectionBlock}>
               <View style={styles.sectionHeadingRow}>
-                <Text style={[styles.sectionHeading, { color: colors.textMuted }]}>
-                  LOCAL LIAN EMERGENCY SERVICES
-                </Text>
-                <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>
-                  {localLianContacts.length} active
-                </Text>
+                <Skeleton width={180} height={13} borderRadius={4} />
               </View>
 
-              {localLianContacts.map(renderContactCard)}
+              {[0, 1, 2, 3].map((i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.contactCard,
+                    {
+                      backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                      marginBottom: 10,
+                    },
+                    !isDark && shadow.card,
+                  ]}
+                >
+                  <View style={styles.cardInner}>
+                    <Skeleton width={44} height={44} borderRadius={14} />
+                    <View style={{ flex: 1, marginLeft: 14, gap: 6 }}>
+                      <Skeleton width={50} height={10} borderRadius={4} />
+                      <Skeleton width={140} height={15} borderRadius={4} />
+                      <Skeleton width={90} height={13} borderRadius={4} />
+                    </View>
+                    <Skeleton width={38} height={38} borderRadius={19} />
+                  </View>
+                </View>
+              ))}
             </View>
-          )}
+          ) : (
+            <>
+              {/* ── Section: Local Lian Batangas Stations ── */}
+              {localLianContacts.length > 0 && (
+                <View style={styles.sectionBlock}>
+                  <View style={styles.sectionHeadingRow}>
+                    <Text style={[styles.sectionHeading, { color: colors.textMuted }]}>
+                      LOCAL LIAN EMERGENCY SERVICES
+                    </Text>
+                    <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>
+                      {localLianContacts.length} active
+                    </Text>
+                  </View>
 
-          {/* ── Section: National 24/7 Hotlines ── */}
-          {nationalHotlines.length > 0 && (
-            <View style={styles.sectionBlock}>
-              <View style={styles.sectionHeadingRow}>
-                <Text style={[styles.sectionHeading, { color: colors.textMuted }]}>
-                  NATIONAL EMERGENCY HOTLINES
-                </Text>
-                <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>
-                  {nationalHotlines.length} active
-                </Text>
-              </View>
+                  {localLianContacts.map(renderContactCard)}
+                </View>
+              )}
 
-              {nationalHotlines.map(renderContactCard)}
-            </View>
-          )}
+              {/* ── Section: National 24/7 Hotlines ── */}
+              {nationalHotlines.length > 0 && (
+                <View style={styles.sectionBlock}>
+                  <View style={styles.sectionHeadingRow}>
+                    <Text style={[styles.sectionHeading, { color: colors.textMuted }]}>
+                      NATIONAL EMERGENCY HOTLINES
+                    </Text>
+                    <Text style={[styles.sectionCount, { color: colors.textSecondary }]}>
+                      {nationalHotlines.length} active
+                    </Text>
+                  </View>
 
-          {localLianContacts.length === 0 && nationalHotlines.length === 0 && (
-            <View
-              style={[
-                styles.emptyCard,
-                {
-                  backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                },
-                !isDark && shadow.card,
-              ]}
-            >
-              <Phone size={36} color={colors.textMuted} />
-              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Hotlines Found</Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                No emergency contacts matched this category filter.
-              </Text>
-            </View>
+                  {nationalHotlines.map(renderContactCard)}
+                </View>
+              )}
+
+              {localLianContacts.length === 0 && nationalHotlines.length === 0 && (
+                <View
+                  style={[
+                    styles.emptyCard,
+                    {
+                      backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                    },
+                    !isDark && shadow.card,
+                  ]}
+                >
+                  <Phone size={36} color={colors.textMuted} />
+                  <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Hotlines Found</Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                    No emergency contacts matched this category filter.
+                  </Text>
+                </View>
+              )}
+            </>
           )}
 
 
@@ -438,6 +448,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  primaryEmergencySkeleton: {
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1.5,
   },
   primaryTopRow: {
     flexDirection: 'row',

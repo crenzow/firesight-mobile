@@ -36,22 +36,22 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   icon,
   showCancel = true,
 }) => {
-  const { colors, spacing, typography, radius } = useTheme();
+  const { colors, spacing, typography, radius, isDark } = useTheme();
 
   if (!visible) return null;
 
   const getGradientColors = (): [string, string] => {
     switch (type) {
-      case 'success':
-        return ['#10B981', '#059669'];
       case 'danger':
       case 'error':
-        return ['#EF4444', '#DC2626'];
+        return [colors.danger, '#C53030'];
+      case 'success':
+        return [colors.success, '#168048'];
       case 'info':
-        return ['#3B82F6', '#2563EB'];
       case 'confirm':
       default:
-        return ['#FF6B00', '#E05D00'];
+        // Matches the primary confirm/save button color exactly
+        return [colors.brandOrange, colors.brandOrangeDeep];
     }
   };
 
@@ -73,6 +73,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
 
   const getConfirmButtonVariant = () => {
     if (type === 'danger' || type === 'error') return 'danger';
+    if (type === 'success') return 'success';
     return 'primary';
   };
 
@@ -97,8 +98,8 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
           style={[
             styles.dialogContainer,
             {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
+              backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
             },
           ]}
         >
@@ -163,10 +164,10 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                   onPress={onCancel}
                   variant="ghost"
                   style={{
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surfaceElevated,
-                    borderRadius: radius.full,
+                    borderWidth: 1.5,
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F3F4F6',
+                    borderRadius: 14,
                   }}
                   disabled={loading}
                 />
@@ -179,8 +180,13 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                 onPress={onConfirm}
                 variant={getConfirmButtonVariant()}
                 style={{
-                  borderRadius: radius.full,
-                  shadowColor: type === 'danger' || type === 'error' ? colors.danger : colors.brandOrange,
+                  borderRadius: 14,
+                  shadowColor:
+                    type === 'danger' || type === 'error'
+                      ? colors.danger
+                      : type === 'success'
+                      ? colors.success
+                      : colors.brandOrange,
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.2,
                   shadowRadius: 8,
@@ -207,29 +213,29 @@ const styles = StyleSheet.create({
   dialogContainer: {
     width: '100%',
     maxWidth: 380,
-    borderRadius: 24,
-    borderWidth: 1,
+    borderRadius: 22,
+    borderWidth: 1.5,
     padding: 24,
     alignItems: 'center',
     position: 'relative',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
     elevation: 10,
   },
   iconContainer: {
     marginBottom: 16,
   },
   iconGradient: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.16,
     shadowRadius: 8,
     elevation: 4,
   },

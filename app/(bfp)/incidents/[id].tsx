@@ -18,6 +18,7 @@ import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import {
   ShieldCheck,
   ShieldX,
+  Save,
   Pencil,
   Check,
   X,
@@ -411,7 +412,7 @@ export default function IncidentDetailScreen() {
       closeFullscreen();
       return;
     }
-    router.replace(backRoute as any);
+    router.navigate(backRoute as any);
   }, [isMapTypeModalOpen, dialog, isNavigating, isMapFullscreen, backRoute]);
 
   useFocusEffect(
@@ -558,21 +559,50 @@ export default function IncidentDetailScreen() {
     });
   };
 
-  const handleSaveDetails = async () => {
-    setIsActing(true);
-    try {
-      const updated = await incidentService.updateDetails(reportId, {
-        incident_type: incidentType ?? null,
-        cause_of_fire: causeOfFire ? causeOfFire.trim() : undefined,
-        casualties: casualties !== '' ? Number(casualties) || 0 : 0,
-        notes: notes ? notes.trim() : undefined,
-        alarm_level: alarmLevel ?? null,
-      });
-      setIncident(updated);
-      setIsEditingDetails(false);
-    } catch {
-      Alert.alert('Unable to save', 'Please try again once the backend endpoint is available.');
-    } finally { setIsActing(false); }
+  const handleCancelEditDetails = () => {
+    Haptics.selectionAsync().catch(() => {});
+    if (incident) {
+      setCauseOfFire(incident.cause_of_fire ?? '');
+      setCasualties(String(incident.casualties ?? 0));
+      setNotes(incident.notes ?? '');
+      setAlarmLevel((incident.alarm_level as AlarmLevel) ?? null);
+      setIncidentType(incident.incident_type ?? null);
+    }
+    setIsEditingDetails(false);
+  };
+
+  const handleStartEditDetails = () => {
+    Haptics.selectionAsync().catch(() => {});
+    setIsEditingDetails(true);
+  };
+
+  const handleSaveDetails = () => {
+    setDialog({
+      type: 'confirm',
+      title: 'Save Incident Details?',
+      message: 'Are you sure you want to save the updated classification, alarm level, casualties, and notes?',
+      confirmText: 'Save Changes',
+      icon: <Save size={28} color="#FFFFFF" strokeWidth={2.5} />,
+      onConfirm: async () => {
+        setIsActing(true);
+        try {
+          const updated = await incidentService.updateDetails(reportId, {
+            incident_type: incidentType ?? null,
+            cause_of_fire: causeOfFire ? causeOfFire.trim() : undefined,
+            casualties: casualties !== '' ? Number(casualties) || 0 : 0,
+            notes: notes ? notes.trim() : undefined,
+            alarm_level: alarmLevel ?? null,
+          });
+          setIncident(updated);
+          setIsEditingDetails(false);
+          setDialog(null);
+        } catch {
+          Alert.alert('Unable to save', 'Please try again once the backend endpoint is available.');
+        } finally {
+          setIsActing(false);
+        }
+      },
+    });
   };
 
   const handleAddEvidence = async (localUri: string) => {
@@ -1098,34 +1128,27 @@ export default function IncidentDetailScreen() {
               title="INCIDENT DETAILS"
               action={
                 <Pressable
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    setIsEditingDetails((v) => !v);
-                  }}
+                  onPress={isEditingDetails ? handleCancelEditDetails : handleStartEditDetails}
+                  hitSlop={10}
                   style={({ pressed }) => [
-                    styles.editPill,
-                    {
-                      backgroundColor: isEditingDetails
-                        ? 'rgba(52, 199, 89, 0.12)'
-                        : 'rgba(0, 0, 0, 0.05)',
-                      transform: [{ scale: pressed ? 0.95 : 1 }],
-                    },
+                    styles.headerActionBtn,
+                    { opacity: pressed ? 0.6 : 1 },
                   ]}
                 >
                   {isEditingDetails ? (
-                    <Check size={12} color="#34C759" strokeWidth={2.4} />
+                    <X size={13} color={colors.danger} strokeWidth={2.4} />
                   ) : (
-                    <Pencil size={12} color="#1C1C1E" strokeWidth={2.4} />
+                    <Pencil size={13} color={colors.brandOrange} strokeWidth={2.4} />
                   )}
                   <Text
                     style={{
-                      color: isEditingDetails ? '#34C759' : '#1C1C1E',
-                      fontSize: 11,
-                      fontWeight: '700',
+                      color: isEditingDetails ? colors.danger : colors.brandOrange,
+                      fontSize: 13,
+                      fontWeight: '600',
                       marginLeft: 4,
                     }}
                   >
-                    {isEditingDetails ? 'Done' : 'Edit'}
+                    {isEditingDetails ? 'Cancel' : 'Edit'}
                   </Text>
                 </Pressable>
               }
@@ -1643,13 +1666,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // Edit pill
-  editPill: {
+  // Header action button
+  headerActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
   },
 
   // Info rows

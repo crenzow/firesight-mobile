@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, Pressable, ScrollView, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, ScrollView, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useNavigation } from 'expo-router';
 import { ChevronLeft, MapPin, AlertTriangle, RefreshCw, Maximize2, X } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
 import { Button } from '../../components/ui/Button';
+import { ConfirmationDialog } from '../../components/ui/ConfirmationDialog';
 import { PhotoLightboxModal } from '../../components/ui/PhotoLightboxModal';
 import { reportService } from '../../services/api/reportService';
 import { ApiError } from '../../services/api/client';
@@ -182,38 +183,18 @@ export default function ReviewScreen() {
         </View>
       </ScrollView>
 
-      <Modal visible={isConfirmVisible} transparent animationType="fade" onRequestClose={() => setIsConfirmVisible(false)}>
-        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
-          <View style={[styles.modalCard, { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl }, shadow.card]}>
-            <View style={[styles.modalIcon, { backgroundColor: `${colors.warning}1A` }]}>
-              <AlertTriangle size={28} color={colors.warning} />
-            </View>
-            <Text style={{ color: colors.textPrimary, fontSize: typography.size.lg, fontWeight: '700', textAlign: 'center', marginTop: spacing.md }}>
-              Confirm Fire Report
-            </Text>
-            <Text
-              style={{
-                color: colors.textSecondary,
-                fontSize: typography.size.sm,
-                textAlign: 'center',
-                marginTop: spacing.xs,
-                lineHeight: 19,
-              }}
-            >
-              You are about to submit a fire incident report to the Bureau of Fire Protection. This will alert BFP
-              personnel immediately.
-            </Text>
-            <View style={[styles.modalActions, { marginTop: spacing.lg }]}>
-              <View style={{ flex: 1 }}>
-                <Button label="Cancel" variant="outline" onPress={() => setIsConfirmVisible(false)} disabled={isSubmitting} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button label="Submit Report" onPress={handleSubmit} loading={isSubmitting} />
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <ConfirmationDialog
+        visible={isConfirmVisible}
+        type="confirm"
+        title="Confirm Fire Report"
+        message="You are about to submit a fire incident report to the Bureau of Fire Protection. This will alert BFP personnel immediately."
+        confirmText="Submit Report"
+        cancelText="Cancel"
+        loading={isSubmitting}
+        onConfirm={handleSubmit}
+        onCancel={() => setIsConfirmVisible(false)}
+        icon={<AlertTriangle size={28} color="#FFFFFF" strokeWidth={2.5} />}
+      />
 
       {/* Fullscreen photo viewer modal */}
       {draft.photoUri ? (
@@ -259,33 +240,4 @@ const styles = StyleSheet.create({
   fieldLabel: { fontWeight: '600' },
   textArea: { borderWidth: 1.5, padding: 12, minHeight: 90, textAlignVertical: 'top' },
   warningCard: { flexDirection: 'row', padding: 12, borderWidth: 1 },
-  modalOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  modalCard: { width: '100%', alignItems: 'center' },
-  modalIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
-  modalActions: { flexDirection: 'row', gap: 12, width: '100%' },
-
-  // Fullscreen modal
-  modalBg: {
-    flex: 1,
-    backgroundColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalImage: {
-    width: '100%',
-    height: '100%',
-  },
-  modalClose: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    left: 0,
-  },
-  closeButton: {
-    alignSelf: 'flex-end',
-    margin: 16,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 10,
-    borderRadius: 20,
-  },
 });

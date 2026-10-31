@@ -96,6 +96,14 @@ export default function RegisterStep3() {
     }
   };
 
+  const handleDeclineLegal = () => {
+    if (legalDocType === 'terms') {
+      updateForm({ agreedToTerms: false });
+    } else if (legalDocType === 'privacy') {
+      setAgreedToPrivacy(false);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.brandNavy }}>
       <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']} />
@@ -230,8 +238,10 @@ export default function RegisterStep3() {
       <LegalModal
         visible={!!legalDocType}
         type={legalDocType ?? 'terms'}
+        mode="consent"
         onClose={() => setLegalDocType(null)}
         onReadComplete={handleReadComplete}
+        onDecline={handleDeclineLegal}
         alreadyRead={legalDocType === 'terms' ? hasReadTerms : hasReadPrivacy}
       />
     </View>

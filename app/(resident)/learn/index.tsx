@@ -226,7 +226,42 @@ export default function LearnScreen() {
           </View>
 
           {/* Featured Hero Card or Carousel (Shown only when not searching and not on Saved tab) */}
-          {featuredArticles.length > 0 && (
+          {isLoading && !isSearching && !isSavedTab ? (
+            <View style={{ marginTop: spacing.lg }}>
+              <View style={[styles.sectionHeaderRow, { marginBottom: 10 }]}>
+                <Skeleton width={120} height={14} borderRadius={4} />
+              </View>
+              <View
+                style={[
+                  styles.featuredSkeletonCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  },
+                  !isDark && shadow.card,
+                ]}
+              >
+                {/* Top Badge Skeleton */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Skeleton width={120} height={22} borderRadius={11} />
+                </View>
+
+                {/* Title Skeleton */}
+                <Skeleton width="88%" height={22} borderRadius={6} style={{ marginBottom: 8 }} />
+                <Skeleton width="60%" height={22} borderRadius={6} style={{ marginBottom: 14 }} />
+
+                {/* Summary Skeleton */}
+                <Skeleton width="96%" height={14} borderRadius={4} style={{ marginBottom: 6 }} />
+                <Skeleton width="75%" height={14} borderRadius={4} style={{ marginBottom: 20 }} />
+
+                {/* Bottom Row Skeleton */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Skeleton width={80} height={24} borderRadius={8} />
+                  <Skeleton width={110} height={32} borderRadius={14} />
+                </View>
+              </View>
+            </View>
+          ) : featuredArticles.length > 0 && (
             <View style={{ marginTop: spacing.lg }}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={[styles.sectionHeading, { color: colors.textMuted }]}>
@@ -325,11 +360,15 @@ export default function LearnScreen() {
                 ? "SAVED GUIDES"
                 : "ALL GUIDES"}
             </Text>
-            <View style={[styles.countBadge, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-              <Text style={[styles.countText, { color: colors.textSecondary }]}>
-                {filtered.length} {filtered.length === 1 ? "guide" : "guides"}
-              </Text>
-            </View>
+            {isLoading ? (
+              <Skeleton width={60} height={20} borderRadius={10} />
+            ) : (
+              <View style={[styles.countBadge, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                <Text style={[styles.countText, { color: colors.textSecondary }]}>
+                  {filtered.length} {filtered.length === 1 ? "guide" : "guides"}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Articles List */}
@@ -341,8 +380,8 @@ export default function LearnScreen() {
                   style={[
                     styles.skeletonCard,
                     {
-                      backgroundColor: colors.surfaceElevated,
-                      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "#E5E7EB",
+                      backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
                     },
                     !isDark && shadow.card,
                   ]}
@@ -483,6 +522,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
+  },
+  featuredSkeletonCard: {
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    minHeight: 210,
+    justifyContent: "space-between",
   },
   skeletonCard: {
     flexDirection: "row",

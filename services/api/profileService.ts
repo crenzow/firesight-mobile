@@ -8,6 +8,7 @@ export interface UpdateProfilePayload {
   suffix?: string | null;
   contact_number?: string;
   password?: string;
+  current_password?: string;
   house_no_street?: string;
   barangay_id?: number;
   photoUri?: string;
@@ -41,6 +42,9 @@ export const profileService = {
       if (payload.password !== undefined && payload.password.trim() !== '') {
         formData.append('password', payload.password);
       }
+      if (payload.current_password !== undefined && payload.current_password.trim() !== '') {
+        formData.append('current_password', payload.current_password);
+      }
       if (payload.house_no_street !== undefined) formData.append('house_no_street', payload.house_no_street);
       if (payload.barangay_id !== undefined) formData.append('barangay_id', String(payload.barangay_id));
 
@@ -70,5 +74,9 @@ export const profileService = {
 
   deletePhoto: async (): Promise<AppUser> => {
     return apiClient.put<AppUser>('/profile/update.php', { remove_photo: true });
+  },
+
+  deleteAccount: async (): Promise<{ message: string }> => {
+    return apiClient.post<{ message: string }>('/profile/delete_account.php', {});
   },
 };

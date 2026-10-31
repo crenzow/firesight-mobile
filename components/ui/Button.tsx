@@ -10,7 +10,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
 
 interface ButtonProps {
   label: string;
@@ -60,6 +60,8 @@ export const Button: React.FC<ButtonProps> = ({
         return pressed ? colors.brandOrange : colors.brandNavy;
       case 'danger':
         return pressed ? '#B93336' : colors.danger;
+      case 'success':
+        return pressed ? '#168048' : colors.success;
       case 'outline':
         return pressed ? colors.brandOrange : 'transparent';
       case 'ghost':
