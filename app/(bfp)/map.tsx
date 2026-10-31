@@ -36,10 +36,13 @@ import { useNotifications } from '../../context/NotificationContext';
 const LIAN_CENTER = { lat: 14.0065, lng: 120.6425 };
 
 const ALARM_LEGEND_ITEMS = [
-  { label: 'Task Force / General', color: '#E14245' },
-  { label: '3rd – 5th Alarm', color: '#F4622B' },
-  { label: '2nd Alarm', color: '#E8A33D' },
-  { label: '1st Alarm / Initial', color: '#3B82C4' },
+  { label: '1st Alarm', color: '#34D399' },
+  { label: '2nd Alarm', color: '#10B981' },
+  { label: '3rd Alarm', color: '#FBBF24' },
+  { label: '4th Alarm', color: '#F59E0B' },
+  { label: '5th Alarm', color: '#F97316' },
+  { label: 'Task Force', color: '#DC2626' },
+  { label: 'General Alarm', color: '#881337' },
 ];
 
 export default function BFPMapScreen() {
@@ -502,7 +505,7 @@ export default function BFPMapScreen() {
                 >
                   <View style={styles.legendHeaderRow}>
                     <Text style={[styles.legendTitle, { color: colors.textMuted, fontSize: typography.size.xs }]}>
-                      ALARM LEVEL CODING
+                      ALARM LEVEL
                     </Text>
                     <Pressable
                       onPress={() => {

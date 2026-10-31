@@ -49,6 +49,8 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
 
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
   const [stageLayout, setStageLayout] = useState<{ width: number; height: number } | null>(null);
+  const [normalizedUri, setNormalizedUri] = useState<string | null>(null);
+  const [isLoadingImage, setIsLoadingImage] = useState<boolean>(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Native UI thread shared values for 60fps pan & pinch
@@ -69,6 +71,8 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   const baseHeight = imageSize ? imageSize.height * baseScale : CROP_SIZE;
 
   useEffect(() => {
+    let isCancelled = false;
+
     if (visible && imageUri) {
       translationX.value = 0;
       translationY.value = 0;
@@ -76,17 +80,50 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
       prevTranslationY.value = 0;
       scale.value = 1.0;
       savedScale.value = 1.0;
-      Image.getSize(
-        imageUri,
-        (w, h) => {
-          setImageSize({ width: w, height: h });
-        },
-        () => {
-          Alert.alert('Error', 'Unable to load photo for adjustment.');
-          onClose();
+      setImageSize(null);
+      setNormalizedUri(null);
+      setIsLoadingImage(true);
+
+      (async () => {
+        try {
+          // Normalize photo: baking EXIF orientation directly into the physical bitmap
+          // ensures physical pixel coordinates 100% match on-screen visual dimensions.
+          const normalized = await manipulateAsync(
+            imageUri,
+            [],
+            { compress: 0.95, format: SaveFormat.JPEG }
+          );
+
+          if (isCancelled) return;
+          setNormalizedUri(normalized.uri);
+          setImageSize({ width: normalized.width, height: normalized.height });
+        } catch {
+          if (isCancelled) return;
+          // Fallback if manipulateAsync fails
+          Image.getSize(
+            imageUri,
+            (w, h) => {
+              if (isCancelled) return;
+              setNormalizedUri(imageUri);
+              setImageSize({ width: w, height: h });
+            },
+            () => {
+              if (isCancelled) return;
+              Alert.alert('Error', 'Unable to load photo for adjustment.');
+              onClose();
+            }
+          );
+        } finally {
+          if (!isCancelled) {
+            setIsLoadingImage(false);
+          }
         }
-      );
+      })();
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [visible, imageUri, onClose, scale, savedScale, translationX, translationY, prevTranslationX, prevTranslationY]);
 
   // Industry Standard Gesture: Pinch
@@ -155,7 +192,8 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
 
   // Perform accurate crop using expo-image-manipulator
   const handleApply = async () => {
-    if (!imageUri || !imageSize || isProcessing) return;
+    const activeUri = normalizedUri || imageUri;
+    if (!activeUri || !imageSize || isProcessing || isLoadingImage) return;
     setIsProcessing(true);
     try {
       const currentScale = baseScale * scale.value;
@@ -174,7 +212,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
       const cropHeight = Math.min(imageSize.height - originY, Math.round(cropOrigSize));
 
       const result = await manipulateAsync(
-        imageUri,
+        activeUri,
         [
           {
             crop: {
@@ -225,10 +263,16 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
             </View>
             <Pressable
               onPress={handleApply}
-              disabled={isProcessing}
-              style={[styles.applyBtn, { backgroundColor: colors.brandOrange }]}
+              disabled={isProcessing || isLoadingImage || !imageSize}
+              style={[
+                styles.applyBtn,
+                {
+                  backgroundColor: colors.brandOrange,
+                  opacity: isProcessing || isLoadingImage || !imageSize ? 0.6 : 1,
+                },
+              ]}
             >
-              {isProcessing ? (
+              {isProcessing || isLoadingImage ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -243,7 +287,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
           <GestureDetector gesture={composedGesture}>
             <Animated.View style={styles.stage} onLayout={onStageLayout}>
               {/* Full Image in Background with Native Transform */}
-              {stageLayout && imageSize ? (
+              {stageLayout && imageSize && normalizedUri ? (
                 <Animated.View
                   style={[
                     styles.imageContainer,
@@ -258,7 +302,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                   pointerEvents="none"
                 >
                   <Image
-                    source={{ uri: imageUri }}
+                    source={{ uri: normalizedUri }}
                     style={{ width: '100%', height: '100%' }}
                     resizeMode="cover"
                   />

@@ -44,25 +44,31 @@ export function getAlarmColor(alarm: AlarmLevel | string | null | undefined, col
   if (!alarm) return colors.textMuted;
   switch (alarm) {
     case '1st_alarm':
-      return '#3B82F6'; // Blue
+      return '#34D399';
     case '2nd_alarm':
-      return '#0D9488'; // Teal
+      return '#10B981';
     case '3rd_alarm':
-      return '#EAB308'; // Amber / Yellow
+      return '#FBBF24';
     case '4th_alarm':
-      return '#F97316'; // Orange
+      return '#F59E0B';
     case '5th_alarm':
-      return '#EA580C'; // Deep Orange
+      return '#F97316';
     case 'task_force_alpha':
+      return '#EA580C';
     case 'task_force_bravo':
+      return '#EF4444';
     case 'task_force_charlie':
+      return '#DC2626';
     case 'task_force_delta':
+      return '#B91C1C';
     case 'task_force_echo':
+      return '#991B1B';
     case 'task_force_hotel':
+      return '#BE123C';
     case 'task_force_india':
-      return '#DC2626'; // Red / Task Force
+      return '#9F1239';
     case 'general_alarm':
-      return '#991B1B'; // Dark Red / General Alarm
+      return '#881337';
     default:
       return colors.brandOrange;
   }

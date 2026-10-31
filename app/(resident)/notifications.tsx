@@ -20,20 +20,19 @@ const ICONS: Record<string, any> = {
 export default function NotificationsScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { colors, spacing, typography, isDark } = useTheme();
-  const { notifications, refresh, markRead, markAllRead } = useNotifications();
+  const { notifications, refresh, markRead } = useNotifications();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     setIsRefreshing(true);
     try {
       await refresh();
-      await markAllRead();
     } catch {
       // Non-fatal
     } finally {
       setIsRefreshing(false);
     }
-  }, [refresh, markAllRead]);
+  }, [refresh]);
 
   const handleBack = useCallback(() => {
     if (from) {
@@ -66,6 +65,17 @@ export default function NotificationsScreen() {
   const handlePress = async (notification: Notification) => {
     if (!notification.is_read) {
       await markRead(notification.notification_id);
+    }
+    if (notification.report_id) {
+      router.push({
+        pathname: '/(resident)/reports/[id]',
+        params: { id: String(notification.report_id), from: '/(resident)/notifications' },
+      } as any);
+    } else if (notification.notification_type === 'incident_alert' || notification.notification_type === 'status_update') {
+      router.push({
+        pathname: '/(resident)/reports',
+        params: { from: '/(resident)/notifications' },
+      } as any);
     }
   };
 
@@ -191,12 +201,14 @@ export default function NotificationsScreen() {
                         {item.message}
                       </Text>
 
-                      <View style={styles.timeRow}>
-                        <Clock size={11} color={colors.textMuted} />
-                        <Text style={[styles.timeText, { color: colors.textMuted, fontSize: typography.size.xs, marginLeft: 4 }]}>
-                          {formatRelativeDate(item.created_at)}
-                        </Text>
-                      </View>
+                      <Text
+                        style={[
+                          styles.timeText,
+                          { color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 },
+                        ]}
+                      >
+                        {formatRelativeDate(item.created_at)}
+                      </Text>
                     </View>
                   </>
                 )}

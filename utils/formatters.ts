@@ -1,5 +1,7 @@
 export function formatRelativeDate(isoString: string): string {
+  if (!isoString) return '';
   const date = new Date(isoString.replace(' ', 'T'));
+  if (isNaN(date.getTime())) return '';
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
@@ -11,7 +13,12 @@ export function formatRelativeDate(isoString: string): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+  const isSameYear = date.getFullYear() === now.getFullYear();
+  return date.toLocaleDateString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    ...(isSameYear ? {} : { year: 'numeric' }),
+  });
 }
 
 export function formatIncidentDateTime(isoString?: string | null): string {

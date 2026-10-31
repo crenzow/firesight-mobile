@@ -809,9 +809,28 @@ function buildMapHtml({
         const lng = parseFloat(i.lng);
         if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
 
-        const isTaskForceOrGeneral = i.alarm && (i.alarm.indexOf('task_force') !== -1 || i.alarm === 'general_alarm');
-        const isHighAlarm = i.alarm === '3rd_alarm' || i.alarm === '4th_alarm' || i.alarm === '5th_alarm';
-        const color = isTaskForceOrGeneral ? '#E14245' : isHighAlarm ? '#F4622B' : i.alarm === '2nd_alarm' ? '#E8A33D' : '#3B82C4';
+        var alarmColors = {
+          '1st_alarm': '#34D399',
+          '2nd_alarm': '#10B981',
+          '3rd_alarm': '#FBBF24',
+          '4th_alarm': '#F59E0B',
+          '5th_alarm': '#F97316',
+          'task_force_alpha': '#EA580C',
+          'task_force_bravo': '#EF4444',
+          'task_force_charlie': '#DC2626',
+          'task_force_delta': '#B91C1C',
+          'task_force_echo': '#991B1B',
+          'task_force_hotel': '#BE123C',
+          'task_force_india': '#9F1239',
+          'general_alarm': '#881337'
+        };
+        var color = (i.alarm && alarmColors[i.alarm])
+          ? alarmColors[i.alarm]
+          : (i.alarm && i.alarm.indexOf('task_force') !== -1)
+            ? '#DC2626'
+            : (i.alarm === 'general_alarm')
+              ? '#881337'
+              : '#34D399';
 
         const marker = L.circleMarker([lat, lng], {
           radius: 9,
