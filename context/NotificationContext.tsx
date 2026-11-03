@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { AppState } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useAuth } from './AuthContext';
+import { secureStorage } from '../services/storage/secureStorage';
 import { notificationService } from '../services/api';
 import { Notification } from '../services/api/models';
 import {
@@ -46,15 +47,41 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const currentPath = usePathname();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activeBanner, setActiveBanner] = useState<CompactBannerData | null>(null);
+  const [bannerQueue, setBannerQueue] = useState<CompactBannerData[]>([]);
+  const activeBanner = bannerQueue.length > 0 ? bannerQueue[0] : null;
   const { isAuthenticated, user } = useAuth();
   const appState = useRef(AppState.currentState);
-  const lastSeenNotifId = useRef<number | null>(null);
 
   const dismissEmergencyAlert = useCallback(() => {
     stopEmergencySiren();
-    setActiveBanner(null);
+    setBannerQueue((prev) => prev.slice(1));
   }, []);
+
+  // Pro-app audio & haptic orchestration:
+  // When a banner drops (or cascades to next in queue), cut previous sound immediately
+  // and trigger the new sound/vibration immediately without waiting.
+  const activeBannerKey = activeBanner
+    ? activeBanner.id || `${activeBanner.reportId}-${activeBanner.title}`
+    : null;
+
+  useEffect(() => {
+    if (!activeBanner) {
+      stopEmergencySiren();
+      return;
+    }
+
+    // Cut off previous sound immediately
+    stopEmergencySiren();
+
+    // Trigger fresh audio & haptics for the dropping banner
+    if (activeBanner.isEmergency) {
+      playEmergencySiren();
+      triggerUrgentVibration();
+    } else {
+      playGentleChime();
+      triggerStandardVibration();
+    }
+  }, [activeBannerKey]);
 
   const triggerEmergencyAlert = useCallback(
     (alert: {
@@ -65,30 +92,37 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       notificationType?: string;
       isEmergency?: boolean;
     }) => {
-      // 1. Show compact banner
-      setActiveBanner({
-        reportId: alert.reportId,
-        title: alert.title,
-        message: alert.message,
-        location: alert.location,
-      });
-
       // Strictly: Only incoming fire incident alerts (incident_alert) received by BFP personnel
       // get the tactical siren and urgent alarm vibration.
       const isBfpEmergency =
         user?.role === 'bfp_personnel' &&
         (alert.isEmergency !== undefined
           ? Boolean(alert.isEmergency)
-          : alert.notificationType === 'incident_alert');
+          : alert.notificationType === 'incident_alert' ||
+            Boolean(alert.title && /fire|incident/i.test(alert.title)));
 
-      if (isBfpEmergency) {
-        playEmergencySiren();
-        triggerUrgentVibration();
-      } else {
-        // Routine alerts (resident confirmations, status updates) play a simple gentle chime
-        playGentleChime();
-        triggerStandardVibration();
-      }
+      // Enqueue compact banner with unique timestamped ID
+      const bannerItem: CompactBannerData = {
+        id: `alert-${alert.reportId}-${Date.now()}-${Math.random()}`,
+        reportId: alert.reportId,
+        title: alert.title,
+        message: alert.message,
+        location: alert.location,
+        isEmergency: isBfpEmergency,
+      };
+
+      setBannerQueue((prev) => {
+        // Preempt routine non-emergency banner immediately if a fire incident emergency arrives
+        if (isBfpEmergency && prev.length > 0 && !prev[0].isEmergency) {
+          return [bannerItem, ...prev];
+        }
+        // If a routine notification arrives while another routine banner is resting on screen,
+        // instantly drop over it like social media apps (Messenger, WhatsApp, Instagram)
+        if (!isBfpEmergency && prev.length > 0 && !prev[0].isEmergency) {
+          return [bannerItem, ...prev.slice(1)];
+        }
+        return [...prev, bannerItem];
+      });
 
       // Keep in phone's notification tray for history
       presentLocalNotification({
@@ -104,8 +138,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     async (reportId: number) => {
       if (!reportId || reportId <= 0) return;
 
-      // 1. Dismiss in-app emergency alert/banner and phone status bar notification
-      dismissEmergencyAlert();
+      // 1. Dismiss any banners matching this report and dismiss phone status bar notification
+      stopEmergencySiren();
+      setBannerQueue((prev) => prev.filter((b) => b.reportId !== reportId));
       await dismissNotificationByReportId(reportId);
 
       // 2. Find any matching unread notifications in local state
@@ -134,7 +169,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       }
     },
-    [dismissEmergencyAlert]
+    []
   );
 
   const handleBannerPress = useCallback(
@@ -162,7 +197,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     [user?.role, dismissEmergencyAlert, markReportRead, currentPath]
   );
 
+  const isRefreshingRef = useRef(false);
+
   const refresh = useCallback(async () => {
+    if (!user?.user_id || isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     try {
       const list = await notificationService.list();
       setNotifications(list);
@@ -170,38 +209,77 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (list.length > 0) {
         const newestId = Math.max(...list.map((n: Notification) => n.notification_id));
+        const lastPresentedId = await secureStorage.getLastPresentedNotifId(user.user_id);
 
-        if (lastSeenNotifId.current !== null && newestId > lastSeenNotifId.current) {
-          // New notifications arrived while user is active
-          const newAlerts = list.filter(
-            (n: Notification) => n.notification_id > (lastSeenNotifId.current ?? 0) && !n.is_read
-          );
+        if (lastPresentedId === 0) {
+          // On first launch / fresh login, establish watermark silently so historical
+          // notifications do NOT spam the user with past banners or sirens.
+          await secureStorage.setLastPresentedNotifId(user.user_id, newestId);
+        } else if (newestId > lastPresentedId) {
+          // Brand-new notifications arrived that have never been presented on this hardware
+          const unpresentedAlerts = list
+            .filter((n: Notification) => n.notification_id > lastPresentedId && !n.is_read)
+            .sort((a, b) => a.notification_id - b.notification_id);
 
-          for (const alert of newAlerts) {
-            // Strictly check: BFP Personnel receiving new pending fire report
-            const isBfpPendingIncident =
-              user?.role === 'bfp_personnel' &&
-              alert.notification_type === 'incident_alert';
+          if (unpresentedAlerts.length > 0) {
+            // Advance watermark immediately
+            await secureStorage.setLastPresentedNotifId(user.user_id, newestId);
 
-            triggerEmergencyAlert({
-              reportId: alert.report_id ?? 0,
-              title: alert.title,
-              message: alert.message,
-              notificationType: alert.notification_type,
-              isEmergency: isBfpPendingIncident,
+            // Cap the in-app queue to top 3 newest alerts to prevent notification fatigue
+            const alertsToQueue = unpresentedAlerts.slice(-3);
+
+            const queueItems: CompactBannerData[] = alertsToQueue.map((alert, idx) => {
+              const isBfpEmergency =
+                user?.role === 'bfp_personnel' &&
+                (alert.notification_type === 'incident_alert' ||
+                  Boolean(alert.title && /fire|incident/i.test(alert.title)));
+              return {
+                id: `sync-${alert.notification_id}-${Date.now()}-${idx}`,
+                reportId: alert.report_id ?? 0,
+                title: alert.title,
+                message: alert.message,
+                isEmergency: isBfpEmergency,
+              };
             });
+
+            setBannerQueue((prev) => {
+              const hasEmergency = queueItems.some((q) => q.isEmergency);
+              if (hasEmergency && prev.length > 0 && !prev[0].isEmergency) {
+                const emergencies = queueItems.filter((q) => q.isEmergency);
+                const routine = queueItems.filter((q) => !q.isEmergency);
+                return [...emergencies, ...prev, ...routine];
+              }
+              return [...prev, ...queueItems];
+            });
+
+            // Post all unpresented alerts to phone system notification tray
+            for (const alert of unpresentedAlerts) {
+              const isBfpIncident =
+                user?.role === 'bfp_personnel' &&
+                (alert.notification_type === 'incident_alert' ||
+                  (alert.title && /fire|incident/i.test(alert.title)));
+              presentLocalNotification({
+                title: alert.title,
+                body: alert.message,
+                data: {
+                  report_id: alert.report_id,
+                  type: isBfpIncident ? 'incident_alert' : 'status_update',
+                },
+              });
+            }
           }
         }
-
-        lastSeenNotifId.current = newestId;
       }
     } catch {
       // Fail silently — badge just won't update
+    } finally {
+      isRefreshingRef.current = false;
     }
-  }, [triggerEmergencyAlert, user?.role]);
+  }, [user?.user_id, user?.role]);
 
   const markAllRead = useCallback(async () => {
-    dismissEmergencyAlert();
+    stopEmergencySiren();
+    setBannerQueue([]);
     await dismissAllPresentedNotifications();
     try {
       await notificationService.markAllRead?.();
@@ -210,7 +288,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     setUnreadCount(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-  }, [dismissEmergencyAlert]);
+  }, []);
 
   const markRead = useCallback(async (notificationId: number) => {
     let matchedReportId: number | null = null;
@@ -270,6 +348,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } else {
       setNotifications([]);
       setUnreadCount(0);
+      setBannerQueue([]);
+      stopEmergencySiren();
     }
 
     const sub = AppState.addEventListener('change', (nextState) => {
@@ -304,6 +384,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       {children}
       <CompactNotificationBanner
         data={activeBanner}
+        hasMoreInQueue={bannerQueue.length > 1}
         onPress={handleBannerPress}
         onDismiss={dismissEmergencyAlert}
       />

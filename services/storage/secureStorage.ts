@@ -35,6 +35,25 @@ export const secureStorage = {
     await SecureStore.deleteItemAsync(AUTH_USER_KEY);
   },
 
+  async getLastPresentedNotifId(userId: number): Promise<number> {
+    if (!userId) return 0;
+    try {
+      const raw = await SecureStore.getItemAsync(`firesight_last_presented_notif_${userId}`);
+      return raw ? parseInt(raw, 10) : 0;
+    } catch {
+      return 0;
+    }
+  },
+
+  async setLastPresentedNotifId(userId: number, id: number): Promise<void> {
+    if (!userId || !id) return;
+    try {
+      await SecureStore.setItemAsync(`firesight_last_presented_notif_${userId}`, String(id));
+    } catch {
+      // Best-effort
+    }
+  },
+
   async clearAll(): Promise<void> {
     await Promise.all([this.clearToken(), this.clearUser()]);
   },

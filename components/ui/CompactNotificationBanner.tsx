@@ -17,35 +17,44 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const firesightLogo = require('../../assets/images/firesight-logo.png');
 
 export interface CompactBannerData {
+  id?: string;
   reportId: number;
   title: string;
   message: string;
   location?: string;
+  isEmergency?: boolean;
 }
 
 interface CompactNotificationBannerProps {
   data: CompactBannerData | null;
+  hasMoreInQueue?: boolean;
   onPress: (reportId: number) => void;
   onDismiss: () => void;
 }
 
 /**
- * An iOS-styled notification banner matching the layout in the reference photo:
+ * An iOS-styled notification banner matching social media heads-up notifications:
  * - Top row: Transparent eye logo + "FIRESIGHT" on the left, "now" on the far right.
  * - Body: Full-width bold title and readable message snippet.
  * - Multi-directional gestures:
  *   * Slide left / right to dismiss with smooth fading opacity & subtle rotation.
  *   * Swipe up to tuck back into the status bar.
  *   * Release without threshold springs back to center.
+ * - Social media burst cadence:
+ *   * Routine notifications rapidly drop over each other (650ms), immediately cutting previous chime.
+ *   * Emergency fire alarms (reported / pending) run full 12s siren cycle without interruption.
+ *   * Final resting banner stays 5s for readability.
  */
 export const CompactNotificationBanner: React.FC<CompactNotificationBannerProps> = ({
   data,
+  hasMoreInQueue = false,
   onPress,
   onDismiss,
 }) => {
   const translateY = useRef(new Animated.Value(-180)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstDrop = useRef(true);
 
   const opacity = translateX.interpolate({
     inputRange: [-SCREEN_WIDTH * 0.75, 0, SCREEN_WIDTH * 0.75],
@@ -145,28 +154,49 @@ export const CompactNotificationBanner: React.FC<CompactNotificationBannerProps>
   useEffect(() => {
     if (data) {
       translateX.setValue(0);
-      translateY.setValue(-180);
+
+      // Social media style card drop:
+      // If already on-screen, physical drop bounce from -45px;
+      // If entering from hidden status bar for the first time, drop from -180px.
+      const initialY = isFirstDrop.current ? -180 : -45;
+      translateY.setValue(initialY);
+      isFirstDrop.current = false;
 
       Animated.spring(translateY, {
         toValue: 0,
-        damping: 18,
-        stiffness: 140,
+        damping: 16,
+        stiffness: 180,
         useNativeDriver: true,
       }).start();
 
-      // Auto dismiss after 12 seconds matching the full emergency dispatch alert duration
+      // Operational Cadence:
+      // 1. Emergency Fire Alerts (BFP Incident Reported / Pending):
+      //    Must NEVER be rushed or cut off. They play their full 12s siren cycle uninterrupted.
+      // 2. Rapid Soc-Med Style Cascade for Routine Notifications:
+      //    When multiple routine notifications arrive, each drops in quickly over the previous one (650ms),
+      //    cutting off the previous chime immediately (ding-ding-ding).
+      // 3. The final routine banner rests for 5.0s so the user has time to read and interact.
+      const displayDuration = data.isEmergency
+        ? 12000
+        : hasMoreInQueue
+          ? 650
+          : 5000;
+
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         dismissUpwards();
-      }, 12000);
+      }, displayDuration);
 
       return () => {
         if (timerRef.current) clearTimeout(timerRef.current);
       };
     } else {
-      dismissUpwards();
+      isFirstDrop.current = true;
+      translateY.setValue(-180);
+      translateX.setValue(0);
+      if (timerRef.current) clearTimeout(timerRef.current);
     }
-  }, [data]);
+  }, [data?.id ?? data?.reportId ?? data?.title, hasMoreInQueue, data?.isEmergency]);
 
   const handlePress = () => {
     if (!data) return;
@@ -244,7 +274,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 6 : 0,
   },
   card: {
-    backgroundColor: '#FFFFFF', // Clean white background
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.08)',
@@ -271,13 +301,13 @@ const styles = StyleSheet.create({
     marginRight: 7,
   },
   appNameText: {
-    color: '#475569', // Subtle neutral slate (matching photo style)
+    color: '#475569',
     fontSize: 12,
     fontWeight: '600',
     letterSpacing: 0.6,
   },
   timeText: {
-    color: '#64748B', // Far right "now" timestamp
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '400',
   },
@@ -285,14 +315,14 @@ const styles = StyleSheet.create({
     // Spans full card width
   },
   titleText: {
-    color: '#0F172A', // Crisp bold black
+    color: '#0F172A',
     fontSize: 14.5,
     fontWeight: '700',
     letterSpacing: 0.1,
     marginBottom: 3,
   },
   messageText: {
-    color: '#475569', // Readable slate gray
+    color: '#475569',
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '400',

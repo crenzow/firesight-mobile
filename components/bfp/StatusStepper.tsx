@@ -12,7 +12,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { BFPIncidentStatus, STATUS_ORDER } from './IncidentStatusBadge';
-import { BFPIncidentStatusHistoryEntry } from '../../services/api/bfpModels';
+import { BFPIncidentStatusHistoryEntry, abbreviateNoteRanks } from '../../services/api/bfpModels';
 import { formatIncidentDateTime } from '../../utils/formatters';
 
 interface StageDefinition {
@@ -105,7 +105,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
               Officer Remarks:
             </Text>
             <Text style={{ color: colors.textPrimary, fontSize: 13, marginTop: 2, lineHeight: 18 }}>
-              {invalidEntry.notes}
+              {abbreviateNoteRanks(invalidEntry.notes)}
             </Text>
           </View>
         ) : null}
@@ -233,7 +233,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
                   </View>
 
                   <Text style={[styles.activeStepDesc, { color: colors.textSecondary }]}>
-                    {entry?.notes?.trim() ? entry.notes.trim() : stage.defaultDescription}
+                    {entry?.notes?.trim() ? abbreviateNoteRanks(entry.notes.trim()) : stage.defaultDescription}
                   </Text>
 
                   {timestamp ? (
@@ -257,7 +257,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
                   </View>
 
                   <Text style={[styles.compactStepDesc, { color: colors.textSecondary }]}>
-                    {entry?.notes?.trim() ? entry.notes.trim() : stage.defaultDescription}
+                    {entry?.notes?.trim() ? abbreviateNoteRanks(entry.notes.trim()) : stage.defaultDescription}
                   </Text>
                 </View>
               ) : isNext ? (

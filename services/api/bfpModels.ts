@@ -35,6 +35,13 @@ export interface BFPIncident {
   alarm_level?: AlarmLevel | null;
   cause_of_fire?: string | null;
   casualties?: number | null;
+  injuries?: number | null;
+  fatalities?: number | null;
+  establishment_name?: string | null;
+  owner_name?: string | null;
+  occupant_name?: string | null;
+  time_fire_started?: string | null;
+  time_fire_out?: string | null;
   notes?: string | null;
   // Additional photos added by BFP personnel during investigation
   // (see migration_add_report_evidence.sql) — separate from report_image,
@@ -100,6 +107,31 @@ export function formatOfficerWithRank(name: string, rank?: string | null): strin
   return abbr ? `${abbr} ${name}` : name;
 }
 
+/**
+ * Normalizes any long-form BFP rank strings in status notes into standard abbreviations (e.g. SFO4, FO1).
+ */
+export function abbreviateNoteRanks(note?: string | null): string {
+  if (!note) return '';
+  return note
+    .replace(/Senior Fire Officer 4/g, 'SFO4')
+    .replace(/Senior Fire Officer 3/g, 'SFO3')
+    .replace(/Senior Fire Officer 2/g, 'SFO2')
+    .replace(/Senior Fire Officer 1/g, 'SFO1')
+    .replace(/Fire Officer 3/g, 'FO3')
+    .replace(/Fire Officer 2/g, 'FO2')
+    .replace(/Fire Officer 1/g, 'FO1')
+    .replace(/Senior Fire Inspector/g, 'FSINSP')
+    .replace(/Chief Fire Inspector/g, 'FCINSP')
+    .replace(/Fire Inspector/g, 'FINSP')
+    .replace(/Chief Inspector/g, 'CINSP')
+    .replace(/Senior Inspector/g, 'SINSP')
+    .replace(/Inspector/g, 'INSP')
+    .replace(/Senior Superintendent/g, 'SSUPT')
+    .replace(/Chief Superintendent/g, 'CSUPT')
+    .replace(/Superintendent/g, 'SUPT')
+    .replace(/Non-Uniformed Personnel/g, 'NUP');
+}
+
 export interface IncidentDispatch {
   dispatch_id: number;
   dispatched_at: string;
@@ -145,6 +177,13 @@ export interface UpdateIncidentDetailsPayload {
   incident_type?: IncidentType | null;
   cause_of_fire?: string;
   casualties?: number;
+  injuries?: number;
+  fatalities?: number;
+  establishment_name?: string | null;
+  owner_name?: string | null;
+  occupant_name?: string | null;
+  time_fire_started?: string | null;
+  time_fire_out?: string | null;
   notes?: string;
   alarm_level?: AlarmLevel | null;
 }

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import {
   ShieldCheck,
@@ -61,7 +62,7 @@ import { incidentService } from '../../../services/api/incidentService';
 import { reverseGeocode } from '../../../utils/geocoding';
 import { BFPIncident, BFPIncidentStatusHistoryEntry, IncidentType } from '../../../services/api/bfpModels';
 import { BFPIncidentStatus } from '../../../components/bfp/IncidentStatusBadge';
-import { formatFullDate, formatTime } from '../../../utils/formatters';
+import { formatFullDate, formatTime, formatIncidentDateTime } from '../../../utils/formatters';
 import { FIRE_STATION } from '../../../constants/fireStation';
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
 import { MapTypeModal } from '../../../components/map/MapTypeModal';
@@ -224,6 +225,24 @@ const FieldLabel: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
+const parseDateSafe = (val: string | null | undefined): Date => {
+  if (!val) return new Date();
+  const normalized = val.includes(' ') && !val.includes('T') ? val.replace(' ', 'T') : val;
+  const d = new Date(normalized);
+  return isNaN(d.getTime()) ? new Date() : d;
+};
+
+const formatToDbDateTime = (date: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function IncidentDetailScreen() {
   const { colors, spacing, typography, radius, isDark } = useTheme();
@@ -265,7 +284,17 @@ export default function IncidentDetailScreen() {
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
   const [causeOfFire, setCauseOfFire] = useState('');
-  const [casualties, setCasualties] = useState('0');
+  const [injuries, setInjuries] = useState('0');
+  const [fatalities, setFatalities] = useState('0');
+  const [establishmentName, setEstablishmentName] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [occupantName, setOccupantName] = useState('');
+  const [timeFireStarted, setTimeFireStarted] = useState('');
+  const [timeFireOut, setTimeFireOut] = useState('');
+  const [fireStartedDate, setFireStartedDate] = useState<Date>(new Date());
+  const [fireOutDate, setFireOutDate] = useState<Date>(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [activeTimePickerField, setActiveTimePickerField] = useState<'started' | 'out'>('started');
   const [notes, setNotes] = useState('');
   const [alarmLevel, setAlarmLevel] = useState<AlarmLevel | null>(null);
   const [incidentType, setIncidentType] = useState<IncidentType | null>(null);
@@ -484,7 +513,19 @@ export default function IncidentDetailScreen() {
           : [];
         setHistory(resolvedHistory);
         setCauseOfFire(detail.cause_of_fire ?? '');
-        setCasualties(String(detail.casualties ?? 0));
+        setInjuries(String(detail.injuries ?? 0));
+        setFatalities(String(detail.fatalities ?? 0));
+        setEstablishmentName(detail.establishment_name ?? '');
+        setOwnerName(detail.owner_name ?? '');
+        setOccupantName(detail.occupant_name ?? '');
+        const startedStr = detail.time_fire_started || detail.created_at || '';
+        const outStr =
+          detail.time_fire_out ||
+          (resolvedHistory.find((h) => h.status === 'resolved')?.created_at ?? '');
+        setTimeFireStarted(startedStr);
+        setFireStartedDate(parseDateSafe(startedStr));
+        setTimeFireOut(outStr);
+        setFireOutDate(parseDateSafe(outStr));
         setNotes(detail.notes ?? '');
         setAlarmLevel((detail.alarm_level as AlarmLevel) ?? null);
         setIncidentType(detail.incident_type ?? null);
@@ -614,12 +655,46 @@ export default function IncidentDetailScreen() {
     Haptics.selectionAsync().catch(() => {});
     if (incident) {
       setCauseOfFire(incident.cause_of_fire ?? '');
-      setCasualties(String(incident.casualties ?? 0));
+      setInjuries(String(incident.injuries ?? 0));
+      setFatalities(String(incident.fatalities ?? 0));
+      setEstablishmentName(incident.establishment_name ?? '');
+      setOwnerName(incident.owner_name ?? '');
+      setOccupantName(incident.occupant_name ?? '');
+      const startedStr = incident.time_fire_started || incident.created_at || '';
+      const outStr =
+        incident.time_fire_out ||
+        (history.find((h) => h.status === 'resolved')?.created_at ?? '');
+      setTimeFireStarted(startedStr);
+      setFireStartedDate(parseDateSafe(startedStr));
+      setTimeFireOut(outStr);
+      setFireOutDate(parseDateSafe(outStr));
       setNotes(incident.notes ?? '');
       setAlarmLevel((incident.alarm_level as AlarmLevel) ?? null);
       setIncidentType(incident.incident_type ?? null);
     }
+    setShowTimePicker(false);
     setIsEditingDetails(false);
+  };
+
+  const handlePickerChange = (event: any, selected?: Date) => {
+    setShowTimePicker(false);
+    if (event?.type === 'dismissed' || !selected) {
+      return;
+    }
+    if (activeTimePickerField === 'started') {
+      const base = new Date(fireStartedDate);
+      base.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+      setFireStartedDate(base);
+      setTimeFireStarted(formatToDbDateTime(base));
+    } else {
+      const base = new Date(fireOutDate);
+      base.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+      if (base < fireStartedDate) {
+        base.setDate(fireStartedDate.getDate() + 1);
+      }
+      setFireOutDate(base);
+      setTimeFireOut(formatToDbDateTime(base));
+    }
   };
 
   const handleStartEditDetails = () => {
@@ -631,7 +706,7 @@ export default function IncidentDetailScreen() {
     setDialog({
       type: 'confirm',
       title: 'Save Incident Details?',
-      message: 'Are you sure you want to save the updated classification, alarm level, casualties, and notes?',
+      message: 'Are you sure you want to save the updated classification, alarm level, occupancy, casualties, and notes?',
       confirmText: 'Save Changes',
       icon: <Save size={28} color="#FFFFFF" strokeWidth={2.5} />,
       onConfirm: async () => {
@@ -640,7 +715,13 @@ export default function IncidentDetailScreen() {
           const updated = await incidentService.updateDetails(reportId, {
             incident_type: incidentType ?? null,
             cause_of_fire: causeOfFire ? causeOfFire.trim() : undefined,
-            casualties: casualties !== '' ? Number(casualties) || 0 : 0,
+            injuries: injuries !== '' ? Number(injuries) || 0 : 0,
+            fatalities: fatalities !== '' ? Number(fatalities) || 0 : 0,
+            establishment_name: establishmentName ? establishmentName.trim() : undefined,
+            owner_name: ownerName ? ownerName.trim() : undefined,
+            occupant_name: occupantName ? occupantName.trim() : undefined,
+            time_fire_started: timeFireStarted ? timeFireStarted.trim() : undefined,
+            time_fire_out: timeFireOut ? timeFireOut.trim() : undefined,
             notes: notes ? notes.trim() : undefined,
             alarm_level: alarmLevel ?? null,
           });
@@ -1207,6 +1288,112 @@ export default function IncidentDetailScreen() {
 
             {isEditingDetails ? (
               <Card padding={spacing.md}>
+                <FieldLabel text="ESTABLISHMENT NAME" />
+                <TextInput
+                  value={establishmentName}
+                  onChangeText={setEstablishmentName}
+                  placeholder="Complete name of the establishment"
+                  placeholderTextColor={colors.textMuted}
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.textPrimary,
+                      borderColor: colors.border,
+                      borderRadius: radius.md,
+                      backgroundColor: colors.background,
+                    },
+                  ]}
+                />
+
+                <FieldLabel text="OWNER" />
+                <TextInput
+                  value={ownerName}
+                  onChangeText={setOwnerName}
+                  placeholder="Structure or property owner"
+                  placeholderTextColor={colors.textMuted}
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.textPrimary,
+                      borderColor: colors.border,
+                      borderRadius: radius.md,
+                      backgroundColor: colors.background,
+                    },
+                  ]}
+                />
+
+                <FieldLabel text="OCCUPANT" />
+                <TextInput
+                  value={occupantName}
+                  onChangeText={setOccupantName}
+                  placeholder="Tenant or resident occupant"
+                  placeholderTextColor={colors.textMuted}
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.textPrimary,
+                      borderColor: colors.border,
+                      borderRadius: radius.md,
+                      backgroundColor: colors.background,
+                    },
+                  ]}
+                />
+
+                <FieldLabel text="TIME FIRE STARTED" />
+                <Pressable
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTimePickerField('started');
+                    setShowTimePicker(true);
+                  }}
+                  style={({ pressed }) => [
+                    styles.pickerButton,
+                    {
+                      borderColor: colors.border,
+                      borderRadius: radius.md,
+                      backgroundColor: colors.background,
+                      opacity: pressed ? 0.75 : 1,
+                    },
+                  ]}
+                >
+                  <Clock size={16} color={colors.textMuted} />
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, marginLeft: 10, fontWeight: '500' }}>
+                    {fireStartedDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  </Text>
+                </Pressable>
+
+                <FieldLabel text="TIME FIRE OUT" />
+                <Pressable
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTimePickerField('out');
+                    setShowTimePicker(true);
+                  }}
+                  style={({ pressed }) => [
+                    styles.pickerButton,
+                    {
+                      borderColor: colors.border,
+                      borderRadius: radius.md,
+                      backgroundColor: colors.background,
+                      opacity: pressed ? 0.75 : 1,
+                    },
+                  ]}
+                >
+                  <Clock size={16} color={colors.textMuted} />
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, marginLeft: 10, fontWeight: '500' }}>
+                    {fireOutDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  </Text>
+                </Pressable>
+
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={activeTimePickerField === 'started' ? fireStartedDate : fireOutDate}
+                    mode="time"
+                    display="default"
+                    onChange={handlePickerChange}
+                  />
+                )}
+
                 <FieldLabel text="INCIDENT TYPE" />
                 <SelectField
                   title="Incident Type"
@@ -1247,23 +1434,47 @@ export default function IncidentDetailScreen() {
                   ]}
                 />
 
-                <FieldLabel text="CASUALTIES" />
-                <TextInput
-                  value={casualties}
-                  onChangeText={setCasualties}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  placeholderTextColor={colors.textMuted}
-                  style={[
-                    styles.input,
-                    {
-                      color: colors.textPrimary,
-                      borderColor: colors.border,
-                      borderRadius: radius.md,
-                      backgroundColor: colors.background,
-                    },
-                  ]}
-                />
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <FieldLabel text="INJURIES" />
+                    <TextInput
+                      value={injuries}
+                      onChangeText={setInjuries}
+                      keyboardType="number-pad"
+                      placeholder="0"
+                      placeholderTextColor={colors.textMuted}
+                      style={[
+                        styles.input,
+                        {
+                          color: colors.textPrimary,
+                          borderColor: colors.border,
+                          borderRadius: radius.md,
+                          backgroundColor: colors.background,
+                        },
+                      ]}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <FieldLabel text="FATALITIES" />
+                    <TextInput
+                      value={fatalities}
+                      onChangeText={setFatalities}
+                      keyboardType="number-pad"
+                      placeholder="0"
+                      placeholderTextColor={colors.textMuted}
+                      style={[
+                        styles.input,
+                        {
+                          color: colors.textPrimary,
+                          borderColor: colors.border,
+                          borderRadius: radius.md,
+                          backgroundColor: colors.background,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
 
                 <FieldLabel text="NOTES" />
                 <TextInput
@@ -1291,6 +1502,27 @@ export default function IncidentDetailScreen() {
               </Card>
             ) : (
               <Card padding={0}>
+                <InfoRow label="Establishment" value={incident.establishment_name || 'None'} />
+                <InfoRow label="Owner" value={incident.owner_name || 'Unspecified'} />
+                <InfoRow label="Occupant" value={incident.occupant_name || 'Unspecified'} />
+                <InfoRow
+                  label="Time Fire Started"
+                  value={
+                    incident.time_fire_started
+                      ? formatTime(incident.time_fire_started)
+                      : incident.created_at
+                      ? formatTime(incident.created_at)
+                      : 'Unspecified'
+                  }
+                />
+                <InfoRow
+                  label="Time Fire Out"
+                  value={
+                    incident.time_fire_out
+                      ? formatTime(incident.time_fire_out)
+                      : 'Unspecified'
+                  }
+                />
                 <InfoRow 
                   label="Incident Type" 
                   value={INCIDENT_TYPE_OPTIONS.find((t) => t.id === incident.incident_type)?.name || incident.incident_type || 'Unspecified'} 
@@ -1304,8 +1536,12 @@ export default function IncidentDetailScreen() {
                   value={incident.cause_of_fire || 'Not yet determined'}
                 />
                 <InfoRow
-                  label="Casualties"
-                  value={String(incident.casualties ?? 0)}
+                  label="Injuries"
+                  value={String(incident.injuries ?? 0)}
+                />
+                <InfoRow
+                  label="Fatalities"
+                  value={String(incident.fatalities ?? 0)}
                 />
                 <InfoRow
                   label="Notes"
@@ -1953,6 +2189,15 @@ const styles = StyleSheet.create({
     minHeight: 90,
     textAlignVertical: 'top',
     paddingTop: 12,
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 6,
+    minHeight: 48,
   },
 
   // History

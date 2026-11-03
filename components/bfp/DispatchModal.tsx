@@ -45,7 +45,7 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
   const [selectedOfficers, setSelectedOfficers] = useState<BFPPersonnelItem[]>([]);
   const [selectedTrucks, setSelectedTrucks] = useState<string[]>(['Fire Truck 1']); // Default to primary truck
 
-  // Picker modal states
+  // Picker sheet states (rendered as overlays inside modal to prevent Android nested modal bug)
   const [showOfficerPicker, setShowOfficerPicker] = useState(false);
   const [showTruckPicker, setShowTruckPicker] = useState(false);
 
@@ -387,159 +387,159 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
               </Pressable>
             </View>
           </View>
-        </View>
-      </View>
 
-      {/* ── SUB-MODAL: TRUCK PICKER ────────────────────────────────────────── */}
-      <Modal visible={showTruckPicker} transparent animationType="fade" onRequestClose={() => setShowTruckPicker(false)}>
-        <View style={styles.subModalOverlay}>
-          <View
-            style={[
-              styles.subModalContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                borderRadius: radius.xl,
-              },
-            ]}
-          >
-            <View style={[styles.subModalHeader, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
-              <Text style={[styles.subModalTitle, { color: colors.textPrimary }]}>Select Fire Truck</Text>
-              <Pressable
-                onPress={() => setShowTruckPicker(false)}
-                hitSlop={8}
+          {/* ── IN-MODAL OVERLAY: TRUCK PICKER (Eliminates Android nested modal conflict) ── */}
+          {showTruckPicker && (
+            <View style={styles.subModalOverlay}>
+              <View
                 style={[
-                  styles.closeButton,
-                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' },
+                  styles.subModalContainer,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                    borderRadius: radius.xl,
+                  },
                 ]}
               >
-                <X size={16} color={colors.textSecondary} strokeWidth={2.2} />
-              </Pressable>
-            </View>
+                <View style={[styles.subModalHeader, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
+                  <Text style={[styles.subModalTitle, { color: colors.textPrimary }]}>Select Fire Truck</Text>
+                  <Pressable
+                    onPress={() => setShowTruckPicker(false)}
+                    hitSlop={8}
+                    style={[
+                      styles.closeButton,
+                      { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' },
+                    ]}
+                  >
+                    <X size={16} color={colors.textSecondary} strokeWidth={2.2} />
+                  </Pressable>
+                </View>
 
-            <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.xs }}>
-              {availableTrucks.map((truck) => (
-                <Pressable
-                  key={truck.id}
-                  onPress={() => handleAddTruck(truck.name)}
-                  style={({ pressed }) => [
-                    styles.pickerItem,
-                    {
-                      backgroundColor: pressed ? 'rgba(244, 98, 43, 0.1)' : colors.surfaceElevated,
-                      borderColor: colors.border,
-                      borderRadius: radius.md,
-                    },
-                  ]}
-                >
-                  <View style={{ flex: 1, paddingVertical: 4 }}>
-                    <Text style={[styles.pickerItemName, { color: colors.textPrimary }]}>{truck.name}</Text>
-                  </View>
-                  <Plus size={16} color={colors.brandOrange} strokeWidth={2.5} />
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── SUB-MODAL: OFFICER PICKER ──────────────────────────────────────── */}
-      <Modal visible={showOfficerPicker} transparent animationType="fade" onRequestClose={() => setShowOfficerPicker(false)}>
-        <View style={styles.subModalOverlay}>
-          <View
-            style={[
-              styles.subModalContainer,
-              {
-                backgroundColor: colors.surface,
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                borderRadius: radius.xl,
-                maxHeight: '80%',
-              },
-            ]}
-          >
-            <View style={[styles.subModalHeader, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
-              <Text style={[styles.subModalTitle, { color: colors.textPrimary }]}>Select Responding Officer</Text>
-              <Pressable
-                onPress={() => setShowOfficerPicker(false)}
-                hitSlop={8}
-                style={[
-                  styles.closeButton,
-                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' },
-                ]}
-              >
-                <X size={16} color={colors.textSecondary} strokeWidth={2.2} />
-              </Pressable>
-            </View>
-
-            {/* Search Box */}
-            <View style={[styles.searchContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-              <Search size={15} color={colors.textMuted} style={{ marginRight: 8 }} />
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Search officer name or rank..."
-                placeholderTextColor={colors.textMuted}
-                style={[styles.searchInput, { color: colors.textPrimary }]}
-                autoCapitalize="none"
-              />
-            </View>
-
-            {isLoadingPersonnel ? (
-              <View style={{ padding: 32, alignItems: 'center' }}>
-                <ActivityIndicator size="small" color={colors.brandOrange} />
-                <Text style={{ marginTop: 8, color: colors.textMuted, fontSize: 13 }}>Loading station crew...</Text>
-              </View>
-            ) : (
-              <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.xs }}>
-                {filteredPersonnel.length === 0 ? (
-                  <View style={{ padding: 20, alignItems: 'center' }}>
-                    <Text style={{ color: colors.textMuted, textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
-                      {searchQuery ? 'No matching officers found.' : 'No personnel loaded.'}
-                    </Text>
+                <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.xs }}>
+                  {availableTrucks.map((truck) => (
                     <Pressable
-                      onPress={openOfficerPicker}
-                      style={{
-                        paddingHorizontal: 14,
-                        paddingVertical: 7,
-                        backgroundColor: colors.surfaceElevated,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                      }}
+                      key={truck.id}
+                      onPress={() => handleAddTruck(truck.name)}
+                      style={({ pressed }) => [
+                        styles.pickerItem,
+                        {
+                          backgroundColor: pressed ? 'rgba(244, 98, 43, 0.1)' : colors.surfaceElevated,
+                          borderColor: colors.border,
+                          borderRadius: radius.md,
+                        },
+                      ]}
                     >
-                      <Text style={{ color: colors.brandOrange, fontSize: 12, fontWeight: '700' }}>Retry Loading</Text>
+                      <View style={{ flex: 1, paddingVertical: 4 }}>
+                        <Text style={[styles.pickerItemName, { color: colors.textPrimary }]}>{truck.name}</Text>
+                      </View>
+                      <Plus size={16} color={colors.brandOrange} strokeWidth={2.5} />
                     </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+
+          {/* ── IN-MODAL OVERLAY: OFFICER PICKER ── */}
+          {showOfficerPicker && (
+            <View style={styles.subModalOverlay}>
+              <View
+                style={[
+                  styles.subModalContainer,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                    borderRadius: radius.xl,
+                    maxHeight: '85%',
+                  },
+                ]}
+              >
+                <View style={[styles.subModalHeader, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
+                  <Text style={[styles.subModalTitle, { color: colors.textPrimary }]}>Select Responding Officer</Text>
+                  <Pressable
+                    onPress={() => setShowOfficerPicker(false)}
+                    hitSlop={8}
+                    style={[
+                      styles.closeButton,
+                      { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' },
+                    ]}
+                  >
+                    <X size={16} color={colors.textSecondary} strokeWidth={2.2} />
+                  </Pressable>
+                </View>
+
+                {/* Search Box */}
+                <View style={[styles.searchContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                  <Search size={15} color={colors.textMuted} style={{ marginRight: 8 }} />
+                  <TextInput
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Search officer name or rank..."
+                    placeholderTextColor={colors.textMuted}
+                    style={[styles.searchInput, { color: colors.textPrimary }]}
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                {isLoadingPersonnel ? (
+                  <View style={{ padding: 32, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color={colors.brandOrange} />
+                    <Text style={{ marginTop: 8, color: colors.textMuted, fontSize: 13 }}>Loading station crew...</Text>
                   </View>
                 ) : (
-                  filteredPersonnel.map((person) => {
-                    const officerTitle = formatOfficerWithRank(person.name, person.rank);
-                    return (
-                      <Pressable
-                        key={person.user_id}
-                        onPress={() => handleAddOfficer(person)}
-                        style={({ pressed }) => [
-                          styles.pickerItem,
-                          {
-                            backgroundColor: pressed ? 'rgba(244, 98, 43, 0.1)' : colors.surfaceElevated,
+                  <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.xs }}>
+                    {filteredPersonnel.length === 0 ? (
+                      <View style={{ padding: 20, alignItems: 'center' }}>
+                        <Text style={{ color: colors.textMuted, textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
+                          {searchQuery ? 'No matching officers found.' : 'No personnel loaded.'}
+                        </Text>
+                        <Pressable
+                          onPress={openOfficerPicker}
+                          style={{
+                            paddingHorizontal: 14,
+                            paddingVertical: 7,
+                            backgroundColor: colors.surfaceElevated,
+                            borderRadius: 8,
+                            borderWidth: 1,
                             borderColor: colors.border,
-                            borderRadius: radius.md,
-                          },
-                        ]}
-                      >
-                        <View style={{ flex: 1, paddingVertical: 4 }}>
-                          <Text style={[styles.pickerItemName, { color: colors.textPrimary }]}>
-                            {officerTitle}
-                          </Text>
-                        </View>
-                        <Plus size={16} color={colors.brandOrange} strokeWidth={2.5} />
-                      </Pressable>
-                    );
-                  })
+                          }}
+                        >
+                          <Text style={{ color: colors.brandOrange, fontSize: 12, fontWeight: '700' }}>Retry Loading</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      filteredPersonnel.map((person) => {
+                        const officerTitle = formatOfficerWithRank(person.name, person.rank);
+                        return (
+                          <Pressable
+                            key={person.user_id}
+                            onPress={() => handleAddOfficer(person)}
+                            style={({ pressed }) => [
+                              styles.pickerItem,
+                              {
+                                backgroundColor: pressed ? 'rgba(244, 98, 43, 0.1)' : colors.surfaceElevated,
+                                borderColor: colors.border,
+                                borderRadius: radius.md,
+                              },
+                            ]}
+                          >
+                            <View style={{ flex: 1, paddingVertical: 4 }}>
+                              <Text style={[styles.pickerItemName, { color: colors.textPrimary }]}>
+                                {officerTitle}
+                              </Text>
+                            </View>
+                            <Plus size={16} color={colors.brandOrange} strokeWidth={2.5} />
+                          </Pressable>
+                        );
+                      })
+                    )}
+                  </ScrollView>
                 )}
-              </ScrollView>
-            )}
-          </View>
+              </View>
+            </View>
+          )}
         </View>
-      </Modal>
+      </View>
     </Modal>
   );
 };
@@ -558,6 +558,7 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
     borderWidth: 1,
     overflow: 'hidden',
+    position: 'relative',
   },
   header: {
     paddingHorizontal: 18,
@@ -682,17 +683,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // Sub-modal styles (uniform with main modal)
+  // Sub-modal overlay styles (anchored inside parent container)
   subModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
+    zIndex: 9999,
   },
   subModalContainer: {
     width: '100%',
-    maxWidth: 440,
+    maxWidth: 400,
     borderWidth: 1,
     overflow: 'hidden',
   },
