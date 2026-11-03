@@ -8,6 +8,7 @@ import {
   Check,
   ChevronRight,
   XCircle,
+  Plus,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
@@ -59,6 +60,7 @@ interface StatusStepperProps {
   history?: BFPIncidentStatusHistoryEntry[];
   createdAt?: string | null;
   onAdvance?: (nextStatus: BFPIncidentStatus) => void;
+  onDeployAdditionalUnits?: () => void;
   disabled?: boolean;
   hideActionButtons?: boolean;
 }
@@ -72,6 +74,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
   history,
   createdAt,
   onAdvance,
+  onDeployAdditionalUnits,
   disabled = false,
   hideActionButtons = false,
 }) => {
@@ -125,7 +128,8 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
         const isLast = index === STAGES.length - 1;
         const StepIcon = stage.Icon;
 
-        // Find relevant history entry
+        // Find relevant history entries (supports multiple dispatches / reinforcements)
+        const stageEntries = safeHistory.filter((h) => h.status === stage.key && Boolean(h.notes?.trim()));
         const entry = safeHistory.slice().reverse().find((h) => h.status === stage.key);
         const timestamp = entry?.created_at ?? (stage.key === 'pending' ? createdAt : null);
 
@@ -232,14 +236,70 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
                     )}
                   </View>
 
-                  <Text style={[styles.activeStepDesc, { color: colors.textSecondary }]}>
-                    {entry?.notes?.trim() ? abbreviateNoteRanks(entry.notes.trim()) : stage.defaultDescription}
-                  </Text>
+                  {stageEntries.length > 1 ? (
+                    <View style={styles.dispatchNotesContainer}>
+                      {stageEntries.map((item, idx) => (
+                        <View
+                          key={item.history_id || idx}
+                          style={[
+                            styles.dispatchCard,
+                            {
+                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
+                              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+                            },
+                          ]}
+                        >
+                          <View style={styles.dispatchCardHeader}>
+                            <Text style={[styles.dispatchCardBadge, { color: colors.brandOrange }]}>
+                              {idx === 0 ? 'INITIAL DISPATCH' : `REINFORCEMENT #${idx}`}
+                            </Text>
+                            {item.created_at ? (
+                              <Text style={styles.dispatchCardTime}>
+                                {formatIncidentDateTime(item.created_at)}
+                              </Text>
+                            ) : null}
+                          </View>
+                          <Text style={[styles.dispatchCardText, { color: colors.textPrimary }]}>
+                            {abbreviateNoteRanks(item.notes!.trim())}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={[styles.activeStepDesc, { color: colors.textSecondary }]}>
+                      {entry?.notes?.trim() ? abbreviateNoteRanks(entry.notes.trim()) : stage.defaultDescription}
+                    </Text>
+                  )}
 
-                  {timestamp ? (
+                  {timestamp && stageEntries.length <= 1 ? (
                     <Text style={styles.activeTimestamp}>
                       Updated {formatIncidentDateTime(timestamp)}
                     </Text>
+                  ) : null}
+
+                  {stage.key === 'dispatched' && onDeployAdditionalUnits ? (
+                    <Pressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                        onDeployAdditionalUnits();
+                      }}
+                      disabled={disabled}
+                      style={({ pressed }) => [
+                        styles.reinforceButton,
+                        {
+                          backgroundColor: isDark ? 'rgba(244, 98, 43, 0.12)' : 'rgba(244, 98, 43, 0.08)',
+                          borderColor: isDark ? 'rgba(244, 98, 43, 0.35)' : 'rgba(244, 98, 43, 0.25)',
+                          opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
+                          transform: [{ scale: pressed && !disabled ? 0.98 : 1 }],
+                        },
+                      ]}
+                    >
+                      <Truck size={14} color="#F4622B" strokeWidth={2.4} style={{ marginRight: 6 }} />
+                      <Text style={[styles.reinforceButtonText, { color: '#F4622B' }]}>
+                        Deploy Additional Units
+                      </Text>
+                      <Plus size={13} color="#F4622B" strokeWidth={2.6} style={{ marginLeft: 'auto' }} />
+                    </Pressable>
                   ) : null}
                 </View>
               ) : isDone ? (
@@ -249,16 +309,47 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
                     <Text style={[styles.compactStepTitle, { color: colors.textPrimary }]}>
                       {stage.label}
                     </Text>
-                    {timestamp ? (
+                    {timestamp && stageEntries.length <= 1 ? (
                       <Text style={styles.compactTimestamp}>
                         {formatIncidentDateTime(timestamp)}
                       </Text>
                     ) : null}
                   </View>
 
-                  <Text style={[styles.compactStepDesc, { color: colors.textSecondary }]}>
-                    {entry?.notes?.trim() ? abbreviateNoteRanks(entry.notes.trim()) : stage.defaultDescription}
-                  </Text>
+                  {stageEntries.length > 1 ? (
+                    <View style={styles.dispatchNotesContainer}>
+                      {stageEntries.map((item, idx) => (
+                        <View
+                          key={item.history_id || idx}
+                          style={[
+                            styles.dispatchCard,
+                            {
+                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
+                              borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#E2E8F0',
+                            },
+                          ]}
+                        >
+                          <View style={styles.dispatchCardHeader}>
+                            <Text style={[styles.dispatchCardBadge, { color: '#34C759' }]}>
+                              {idx === 0 ? 'INITIAL DISPATCH' : `REINFORCEMENT #${idx}`}
+                            </Text>
+                            {item.created_at ? (
+                              <Text style={styles.dispatchCardTime}>
+                                {formatIncidentDateTime(item.created_at)}
+                              </Text>
+                            ) : null}
+                          </View>
+                          <Text style={[styles.dispatchCardText, { color: colors.textSecondary }]}>
+                            {abbreviateNoteRanks(item.notes!.trim())}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={[styles.compactStepDesc, { color: colors.textSecondary }]}>
+                      {entry?.notes?.trim() ? abbreviateNoteRanks(entry.notes.trim()) : stage.defaultDescription}
+                    </Text>
+                  )}
                 </View>
               ) : isNext ? (
                 /* ── NEXT STAGE (WITH ADVANCE ACTION) ── */
@@ -420,6 +511,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#8E8E93',
   },
+  reinforceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 8,
+  },
+  reinforceButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.1,
+  },
 
   // Completed status
   compactContentBox: {
@@ -519,5 +624,38 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     width: '100%',
+  },
+
+  // Multiple Dispatches / Reinforcements Cards
+  dispatchNotesContainer: {
+    marginTop: 8,
+    gap: 8,
+    width: '100%',
+  },
+  dispatchCard: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+  },
+  dispatchCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  dispatchCardBadge: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  dispatchCardTime: {
+    fontSize: 10.5,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
+  dispatchCardText: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: '500',
   },
 });

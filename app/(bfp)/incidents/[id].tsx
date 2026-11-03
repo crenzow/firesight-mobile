@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -282,6 +282,7 @@ export default function IncidentDetailScreen() {
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
+  const [isReinforcement, setIsReinforcement] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
   const [causeOfFire, setCauseOfFire] = useState('');
   const [injuries, setInjuries] = useState('0');
@@ -308,6 +309,34 @@ export default function IncidentDetailScreen() {
   const [isNavigating, setIsNavigating] = useState(false);
   /** Route distance & duration metrics received from the map engine */
   const [routeMeta, setRouteMeta] = useState<{ distance: number; duration: number } | null>(null);
+
+  /** Set of fire trucks already deployed to this incident */
+  const alreadyDispatchedTrucks = useMemo(() => {
+    const set = new Set<string>();
+    if (incident?.dispatches && Array.isArray(incident.dispatches)) {
+      incident.dispatches.forEach((d) => {
+        if (Array.isArray(d.trucks)) {
+          d.trucks.forEach((t) => set.add(t));
+        }
+      });
+    }
+    return Array.from(set);
+  }, [incident?.dispatches]);
+
+  /** Set of personnel user_ids already deployed to this incident */
+  const alreadyDispatchedPersonnelIds = useMemo(() => {
+    const set = new Set<number>();
+    if (incident?.dispatches && Array.isArray(incident.dispatches)) {
+      incident.dispatches.forEach((d) => {
+        if (Array.isArray(d.personnel)) {
+          d.personnel.forEach((p) => {
+            if (p.user_id) set.add(p.user_id);
+          });
+        }
+      });
+    }
+    return Array.from(set);
+  }, [incident?.dispatches]);
 
   /** Imperative ref to the active navigation map for 60fps/120fps direct sensor bridge */
   const navMapRef = useRef<IncidentLocationMapRef | null>(null);
@@ -603,6 +632,7 @@ export default function IncidentDetailScreen() {
 
   const handleAdvanceStatus = (nextStatus: BFPIncidentStatus) => {
     if (nextStatus === 'dispatched') {
+      setIsReinforcement(false);
       setIsDispatchModalOpen(true);
       return;
     }
@@ -643,7 +673,9 @@ export default function IncidentDetailScreen() {
       if (userLocation != null) {
         setRouteOrigin('gps');
       }
-      handleOpenFullscreen();
+      if (!isReinforcement) {
+        handleOpenFullscreen();
+      }
     } catch {
       Alert.alert('Unable to dispatch', 'Please verify your connection and try again.');
     } finally {
@@ -1079,6 +1111,14 @@ export default function IncidentDetailScreen() {
                   history={history}
                   createdAt={incident.created_at}
                   onAdvance={handleAdvanceStatus}
+                  onDeployAdditionalUnits={
+                    incident.status === 'dispatched'
+                      ? () => {
+                          setIsReinforcement(true);
+                          setIsDispatchModalOpen(true);
+                        }
+                      : undefined
+                  }
                   disabled={isActing}
                 />
               </Card>
@@ -1823,6 +1863,9 @@ export default function IncidentDetailScreen() {
       <DispatchModal
         visible={isDispatchModalOpen}
         incidentTitle={incident?.barangay_name ? `Brgy. ${incident.barangay_name}` : 'Incident Response'}
+        isReinforcement={isReinforcement}
+        alreadyDispatchedTrucks={alreadyDispatchedTrucks}
+        alreadyDispatchedPersonnelIds={alreadyDispatchedPersonnelIds}
         onClose={() => setIsDispatchModalOpen(false)}
         onConfirm={handleConfirmDispatch}
         isSubmitting={isDispatching}

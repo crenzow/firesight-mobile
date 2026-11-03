@@ -26,6 +26,9 @@ export const ALL_FIRE_TRUCKS = [
 interface DispatchModalProps {
   visible: boolean;
   incidentTitle: string;
+  isReinforcement?: boolean;
+  alreadyDispatchedTrucks?: string[];
+  alreadyDispatchedPersonnelIds?: number[];
   onClose: () => void;
   onConfirm: (payload: { trucks: string[]; personnelIds: number[] }) => Promise<void>;
   isSubmitting?: boolean;
@@ -34,6 +37,9 @@ interface DispatchModalProps {
 export const DispatchModal: React.FC<DispatchModalProps> = ({
   visible,
   incidentTitle,
+  isReinforcement = false,
+  alreadyDispatchedTrucks = [],
+  alreadyDispatchedPersonnelIds = [],
   onClose,
   onConfirm,
   isSubmitting = false,
@@ -75,8 +81,8 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
       .then((res) => {
         const list = res || [];
         setPersonnelList(list);
-        // Sync logged-in user with official roster entry if found
-        if (user && user.role === 'bfp_personnel') {
+        // Sync logged-in user with official roster entry if found (only for initial dispatch)
+        if (!isReinforcement && user && user.role === 'bfp_personnel') {
           const match = list.find((p) => p.user_id === user.user_id);
           if (match) {
             setSelectedOfficers((prev) => {
@@ -94,18 +100,23 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
       .finally(() => {
         setIsLoadingPersonnel(false);
       });
-  }, [visible, user]);
+  }, [visible, user, isReinforcement]);
 
-  // Reset or initialize on reopen with current user pre-selected
+  // Reset or initialize on reopen: empty in reinforcement mode, default in initial dispatch
   useEffect(() => {
     if (visible) {
-      setSelectedOfficers(currentUserOfficer ? [currentUserOfficer] : []);
-      setSelectedTrucks(['Fire Truck 1']);
+      if (isReinforcement) {
+        setSelectedOfficers([]);
+        setSelectedTrucks([]);
+      } else {
+        setSelectedOfficers(currentUserOfficer ? [currentUserOfficer] : []);
+        setSelectedTrucks(['Fire Truck 1']);
+      }
       setShowOfficerPicker(false);
       setShowTruckPicker(false);
       setSearchQuery('');
     }
-  }, [visible]);
+  }, [visible, isReinforcement]);
 
   // Officer actions
   const handleAddOfficer = (officer: BFPPersonnelItem) => {
@@ -154,7 +165,9 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
     setSelectedTrucks((prev) => prev.filter((t) => t !== truckName));
   };
 
-  const canDispatch = selectedTrucks.length >= 1 && selectedOfficers.length >= 1 && !isSubmitting;
+  const canDispatch = isReinforcement
+    ? (selectedTrucks.length >= 1 || selectedOfficers.length >= 1) && !isSubmitting
+    : selectedTrucks.length >= 1 && selectedOfficers.length >= 1 && !isSubmitting;
 
   const handleConfirm = () => {
     if (!canDispatch) {
@@ -168,14 +181,39 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
     });
   };
 
-  // Available trucks not yet selected
-  const availableTrucks = ALL_FIRE_TRUCKS.filter((t) => !selectedTrucks.includes(t.name));
+  // Track remaining availability across station roster
+  const availableTrucksRemaining = ALL_FIRE_TRUCKS.filter(
+    (t) => !alreadyDispatchedTrucks.includes(t.name)
+  ).length;
 
-  // Filtered officers for the picker
-  const filteredPersonnel = personnelList.filter((p) => {
-    const query = searchQuery.trim().toLowerCase();
-    const isAlreadySelected = selectedOfficers.some((o) => o.user_id === p.user_id);
-    if (isAlreadySelected) return false;
+  const availablePersonnelRemaining = personnelList.filter(
+    (p) => !alreadyDispatchedPersonnelIds.includes(p.user_id)
+  ).length;
+
+  // Segregate selectable trucks vs already deployed trucks on scene
+  const selectableTrucks = ALL_FIRE_TRUCKS.filter(
+    (t) => !selectedTrucks.includes(t.name) && !alreadyDispatchedTrucks.includes(t.name)
+  );
+  const deployedTrucks = ALL_FIRE_TRUCKS.filter((t) => alreadyDispatchedTrucks.includes(t.name));
+
+  // Segregate selectable officers vs already deployed officers on scene
+  const query = searchQuery.trim().toLowerCase();
+
+  const selectablePersonnel = personnelList.filter((p) => {
+    const isSelected = selectedOfficers.some((o) => o.user_id === p.user_id);
+    const isDeployed = alreadyDispatchedPersonnelIds.includes(p.user_id);
+    if (isSelected || isDeployed) return false;
+    if (!query) return true;
+    return (
+      (p.name && p.name.toLowerCase().includes(query)) ||
+      (p.rank && p.rank.toLowerCase().includes(query)) ||
+      (p.full_title && p.full_title.toLowerCase().includes(query))
+    );
+  });
+
+  const deployedPersonnel = personnelList.filter((p) => {
+    const isDeployed = alreadyDispatchedPersonnelIds.includes(p.user_id);
+    if (!isDeployed) return false;
     if (!query) return true;
     return (
       (p.name && p.name.toLowerCase().includes(query)) ||
@@ -201,7 +239,7 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
           <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
             <View style={styles.headerTitleRow}>
               <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.size.base, flex: 1 }]}>
-                Dispatch Response Units
+                {isReinforcement ? 'Deploy Additional Units' : 'Dispatch Response Units'}
               </Text>
               <Pressable
                 onPress={onClose}
@@ -260,23 +298,53 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                 );
               })}
 
-              <Pressable
-                onPress={openOfficerPicker}
-                style={({ pressed }) => [
-                  styles.addSlotButton,
-                  {
-                    borderColor: pressed ? colors.brandOrange : colors.border,
-                    backgroundColor: pressed ? (isDark ? 'rgba(244, 98, 43, 0.1)' : '#FFF7ED') : 'transparent',
-                    borderRadius: radius.md,
-                  },
-                ]}
-              >
-                <Plus size={14} color={colors.brandOrange} strokeWidth={2.5} style={{ marginRight: 6 }} />
-                <Text style={[styles.addSlotText, { color: colors.brandOrange }]}>Add Officer</Text>
-              </Pressable>
+              {selectablePersonnel.length > 0 ? (
+                <Pressable
+                  onPress={openOfficerPicker}
+                  style={({ pressed }) => [
+                    styles.addSlotButton,
+                    {
+                      borderColor: pressed ? colors.brandOrange : colors.border,
+                      backgroundColor: pressed ? (isDark ? 'rgba(244, 98, 43, 0.1)' : '#FFF7ED') : 'transparent',
+                      borderRadius: radius.md,
+                    },
+                  ]}
+                >
+                  <Plus size={14} color={colors.brandOrange} strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  <Text style={[styles.addSlotText, { color: colors.brandOrange }]}>Add Officer</Text>
+                </Pressable>
+              ) : availablePersonnelRemaining === 0 ? (
+                <View
+                  style={[
+                    styles.noticeBox,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F1F5F9',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.noticeText, { color: colors.textMuted }]}>
+                    All station personnel are currently deployed on scene.
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.noticeBox,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F1F5F9',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.noticeText, { color: colors.textMuted }]}>
+                    All available officers have been added.
+                  </Text>
+                </View>
+              )}
             </View>
 
-            {selectedOfficers.length === 0 && (
+            {!isReinforcement && selectedOfficers.length === 0 && (
               <Text style={[styles.warningText, { color: colors.danger }]}>
                 Please select responding crew.
               </Text>
@@ -322,7 +390,7 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                 </View>
               ))}
 
-              {availableTrucks.length > 0 && (
+              {selectableTrucks.length > 0 ? (
                 <Pressable
                   onPress={() => {
                     Haptics.selectionAsync().catch(() => {});
@@ -340,10 +408,38 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                   <Plus size={14} color={colors.brandOrange} strokeWidth={2.5} style={{ marginRight: 6 }} />
                   <Text style={[styles.addSlotText, { color: colors.brandOrange }]}>Add Fire Truck</Text>
                 </Pressable>
+              ) : availableTrucksRemaining === 0 ? (
+                <View
+                  style={[
+                    styles.noticeBox,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F1F5F9',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.noticeText, { color: colors.textMuted }]}>
+                    All station fire trucks are currently deployed on scene.
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.noticeBox,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F1F5F9',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.noticeText, { color: colors.textMuted }]}>
+                    All available fire trucks have been added.
+                  </Text>
+                </View>
               )}
             </View>
 
-            {selectedTrucks.length === 0 && (
+            {!isReinforcement && selectedTrucks.length === 0 && (
               <Text style={[styles.warningText, { color: colors.danger }]}>
                 Please select fire truck.
               </Text>
@@ -382,7 +478,9 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.confirmButtonText}>Dispatch</Text>
+                  <Text style={styles.confirmButtonText}>
+                    {isReinforcement ? 'Deploy Additional Units' : 'Dispatch'}
+                  </Text>
                 )}
               </Pressable>
             </View>
@@ -390,17 +488,16 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
 
           {/* ── IN-MODAL OVERLAY: TRUCK PICKER (Eliminates Android nested modal conflict) ── */}
           {showTruckPicker && (
-            <View style={styles.subModalOverlay}>
-              <View
-                style={[
-                  styles.subModalContainer,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                    borderRadius: radius.xl,
-                  },
-                ]}
-              >
+            <View
+              style={[
+                styles.subModalOverlay,
+                {
+                  backgroundColor: colors.surface,
+                  borderRadius: radius.xl,
+                },
+              ]}
+            >
+              <View style={styles.subModalContainer}>
                 <View style={[styles.subModalHeader, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
                   <Text style={[styles.subModalTitle, { color: colors.textPrimary }]}>Select Fire Truck</Text>
                   <Pressable
@@ -415,8 +512,11 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                   </Pressable>
                 </View>
 
-                <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.xs }}>
-                  {availableTrucks.map((truck) => (
+                <ScrollView
+                  contentContainerStyle={{ padding: spacing.md, gap: 8 }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {selectableTrucks.map((truck) => (
                     <Pressable
                       key={truck.id}
                       onPress={() => handleAddTruck(truck.name)}
@@ -435,6 +535,45 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                       <Plus size={16} color={colors.brandOrange} strokeWidth={2.5} />
                     </Pressable>
                   ))}
+
+                  {selectableTrucks.length === 0 && (
+                    <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', paddingVertical: 12 }}>
+                      {deployedTrucks.length > 0
+                        ? 'All other trucks are already on scene or selected.'
+                        : 'No fire trucks available.'}
+                    </Text>
+                  )}
+
+                  {deployedTrucks.length > 0 && (
+                    <View style={{ marginTop: spacing.sm }}>
+                      <Text style={[styles.subModalSectionHeader, { color: colors.textMuted }]}>
+                        ALREADY DEPLOYED (ON SCENE)
+                      </Text>
+                      {deployedTrucks.map((truck) => (
+                        <View
+                          key={truck.id}
+                          style={[
+                            styles.pickerItem,
+                            styles.disabledPickerItem,
+                            {
+                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F1F5F9',
+                              borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#E2E8F0',
+                              borderRadius: radius.md,
+                            },
+                          ]}
+                        >
+                          <View style={{ flex: 1, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <Text style={[styles.pickerItemName, { color: colors.textMuted, flexShrink: 1 }]} numberOfLines={1}>
+                              {truck.name}
+                            </Text>
+                            <View style={[styles.onSceneBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' }]}>
+                              <Text style={[styles.onSceneBadgeText, { color: colors.textMuted }]}>On Scene</Text>
+                            </View>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </ScrollView>
               </View>
             </View>
@@ -442,18 +581,16 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
 
           {/* ── IN-MODAL OVERLAY: OFFICER PICKER ── */}
           {showOfficerPicker && (
-            <View style={styles.subModalOverlay}>
-              <View
-                style={[
-                  styles.subModalContainer,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                    borderRadius: radius.xl,
-                    maxHeight: '85%',
-                  },
-                ]}
-              >
+            <View
+              style={[
+                styles.subModalOverlay,
+                {
+                  backgroundColor: colors.surface,
+                  borderRadius: radius.xl,
+                },
+              ]}
+            >
+              <View style={styles.subModalContainer}>
                 <View style={[styles.subModalHeader, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
                   <Text style={[styles.subModalTitle, { color: colors.textPrimary }]}>Select Responding Officer</Text>
                   <Pressable
@@ -479,6 +616,11 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                     style={[styles.searchInput, { color: colors.textPrimary }]}
                     autoCapitalize="none"
                   />
+                  {searchQuery.length > 0 && (
+                    <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                      <X size={14} color={colors.textMuted} />
+                    </Pressable>
+                  )}
                 </View>
 
                 {isLoadingPersonnel ? (
@@ -487,11 +629,44 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                     <Text style={{ marginTop: 8, color: colors.textMuted, fontSize: 13 }}>Loading station crew...</Text>
                   </View>
                 ) : (
-                  <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.xs }}>
-                    {filteredPersonnel.length === 0 ? (
+                  <ScrollView
+                    contentContainerStyle={{
+                      paddingHorizontal: spacing.md,
+                      paddingTop: 4,
+                      paddingBottom: spacing.lg,
+                      gap: 8,
+                    }}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {selectablePersonnel.map((person) => {
+                      const officerTitle = formatOfficerWithRank(person.name, person.rank);
+                      return (
+                        <Pressable
+                          key={person.user_id}
+                          onPress={() => handleAddOfficer(person)}
+                          style={({ pressed }) => [
+                            styles.pickerItem,
+                            {
+                              backgroundColor: pressed ? 'rgba(244, 98, 43, 0.1)' : colors.surfaceElevated,
+                              borderColor: colors.border,
+                              borderRadius: radius.md,
+                            },
+                          ]}
+                        >
+                          <View style={{ flex: 1, paddingVertical: 4 }}>
+                            <Text style={[styles.pickerItemName, { color: colors.textPrimary }]}>
+                              {officerTitle}
+                            </Text>
+                          </View>
+                          <Plus size={16} color={colors.brandOrange} strokeWidth={2.5} />
+                        </Pressable>
+                      );
+                    })}
+
+                    {selectablePersonnel.length === 0 && deployedPersonnel.length === 0 && (
                       <View style={{ padding: 20, alignItems: 'center' }}>
                         <Text style={{ color: colors.textMuted, textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
-                          {searchQuery ? 'No matching officers found.' : 'No personnel loaded.'}
+                          {searchQuery ? 'No matching officers found.' : 'No available personnel found.'}
                         </Text>
                         <Pressable
                           onPress={openOfficerPicker}
@@ -507,31 +682,46 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                           <Text style={{ color: colors.brandOrange, fontSize: 12, fontWeight: '700' }}>Retry Loading</Text>
                         </Pressable>
                       </View>
-                    ) : (
-                      filteredPersonnel.map((person) => {
-                        const officerTitle = formatOfficerWithRank(person.name, person.rank);
-                        return (
-                          <Pressable
-                            key={person.user_id}
-                            onPress={() => handleAddOfficer(person)}
-                            style={({ pressed }) => [
-                              styles.pickerItem,
-                              {
-                                backgroundColor: pressed ? 'rgba(244, 98, 43, 0.1)' : colors.surfaceElevated,
-                                borderColor: colors.border,
-                                borderRadius: radius.md,
-                              },
-                            ]}
-                          >
-                            <View style={{ flex: 1, paddingVertical: 4 }}>
-                              <Text style={[styles.pickerItemName, { color: colors.textPrimary }]}>
-                                {officerTitle}
-                              </Text>
+                    )}
+
+                    {selectablePersonnel.length === 0 && deployedPersonnel.length > 0 && (
+                      <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', paddingVertical: 10 }}>
+                        {searchQuery ? 'No matching available officers.' : 'All other officers are already on scene or selected.'}
+                      </Text>
+                    )}
+
+                    {deployedPersonnel.length > 0 && (
+                      <View style={{ marginTop: spacing.sm }}>
+                        <Text style={[styles.subModalSectionHeader, { color: colors.textMuted }]}>
+                          ALREADY DEPLOYED (ON SCENE)
+                        </Text>
+                        {deployedPersonnel.map((person) => {
+                          const officerTitle = formatOfficerWithRank(person.name, person.rank);
+                          return (
+                            <View
+                              key={person.user_id}
+                              style={[
+                                styles.pickerItem,
+                                styles.disabledPickerItem,
+                                {
+                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F1F5F9',
+                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#E2E8F0',
+                                  borderRadius: radius.md,
+                                },
+                              ]}
+                            >
+                              <View style={{ flex: 1, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                <Text style={[styles.pickerItemName, { color: colors.textMuted, flexShrink: 1 }]} numberOfLines={1}>
+                                  {officerTitle}
+                                </Text>
+                                <View style={[styles.onSceneBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' }]}>
+                                  <Text style={[styles.onSceneBadgeText, { color: colors.textMuted }]}>On Scene</Text>
+                                </View>
+                              </View>
                             </View>
-                            <Plus size={16} color={colors.brandOrange} strokeWidth={2.5} />
-                          </Pressable>
-                        );
-                      })
+                          );
+                        })}
+                      </View>
                     )}
                   </ScrollView>
                 )}
@@ -686,16 +876,13 @@ const styles = StyleSheet.create({
   // Sub-modal overlay styles (anchored inside parent container)
   subModalOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
     zIndex: 9999,
+    overflow: 'hidden',
   },
   subModalContainer: {
+    flex: 1,
     width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
+    height: '100%',
     overflow: 'hidden',
   },
   subModalHeader: {
@@ -716,7 +903,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 16,
     marginTop: 12,
-    marginBottom: 4,
+    marginBottom: 8,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 8 : 4,
     borderWidth: 1,
@@ -733,14 +920,47 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    width: '100%',
+    alignSelf: 'stretch',
     minHeight: 44,
-    marginBottom: 4,
   },
   pickerItemName: {
     fontSize: 13.5,
     fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
+  },
+  subModalSectionHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  disabledPickerItem: {
+    opacity: 0.55,
+  },
+  onSceneBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  onSceneBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  noticeBox: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  noticeText: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 17,
   },
 });
