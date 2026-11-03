@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, BackHandle
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Bell, AlertTriangle, RefreshCw, Info, Clock } from 'lucide-react-native';
+import { Bell, AlertTriangle, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
 import { useNotifications } from '../../context/NotificationContext';
@@ -13,8 +13,6 @@ import { formatRelativeDate } from '../../utils/formatters';
 const ICONS: Record<string, any> = {
   incident_alert: AlertTriangle,
   status_update: RefreshCw,
-  system: Info,
-  reminder: Clock,
 };
 
 export default function NotificationsScreen() {
@@ -132,7 +130,7 @@ export default function NotificationsScreen() {
             />
           )}
           renderItem={({ item }) => {
-            const Icon = ICONS[item.notification_type] ?? Info;
+            const Icon = ICONS[item.notification_type] ?? Bell;
             const isAlert = item.notification_type === 'incident_alert';
             const iconColor = isAlert ? colors.danger : colors.brandOrange;
 

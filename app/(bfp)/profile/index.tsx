@@ -202,7 +202,6 @@ export default function BFPProfileScreen() {
                 </Text>
                 <View style={styles.heroBadgeRow}>
                   <View style={styles.heroBadge}>
-                    <ShieldCheck size={12} color="#FED7AA" />
                     <Text style={styles.heroBadgeText}>BFP Personnel</Text>
                   </View>
                 </View>

@@ -15,7 +15,25 @@ export const authService = {
     apiClient.post<AuthResponse>('/auth/google_login.php', { id_token: idToken }, false),
 
   requestPasswordReset: (email: string) =>
-    apiClient.post<{ message: string }>('/auth/forgot_password.php', { email }, false),
+    apiClient.post<{ message: string; email?: string; dev_otp?: string }>(
+      '/auth/forgot_password.php',
+      { email },
+      false
+    ),
+
+  verifyOtp: (email: string, otp: string) =>
+    apiClient.post<{ valid: boolean; message: string }>(
+      '/auth/verify_otp.php',
+      { email, otp },
+      false
+    ),
+
+  resetPasswordWithOtp: (email: string, otp: string, newPassword: string) =>
+    apiClient.post<{ message: string }>(
+      '/auth/reset_password.php',
+      { email, otp, new_password: newPassword },
+      false
+    ),
 
   resetPassword: (token: string, newPassword: string) =>
     apiClient.post<{ message: string }>(

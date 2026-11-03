@@ -1,3 +1,4 @@
+import '../utils/suppressWarnings';
 import React from 'react';
 import { LogBox } from 'react-native';
 import * as KeepAwake from 'expo-keep-awake';
@@ -9,8 +10,12 @@ import { ThemeProvider, useTheme } from '../theme/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import { NotificationProvider } from '../context/NotificationContext';
 
-// Suppress benign Android Activity keep-awake race condition on reload
-LogBox.ignoreLogs(['Unable to activate keep awake']);
+// Suppress benign warnings/notices on Expo Go
+LogBox.ignoreLogs([
+  'Unable to activate keep awake',
+  'expo-notifications: Android Push notifications',
+  '`expo-notifications` functionality is not fully supported in Expo Go',
+]);
 
 const origActivate = KeepAwake.activateKeepAwakeAsync;
 if (origActivate) {

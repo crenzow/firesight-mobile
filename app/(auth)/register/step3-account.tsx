@@ -13,8 +13,10 @@ import { Checkbox } from '../../../components/ui/Checkbox';
 import { Button } from '../../../components/ui/Button';
 import { StepProgress } from '../../../components/ui/StepProgress';
 import { validateRegisterStep3 } from '../../../utils/validators';
+import { getEmailSuggestion } from '../../../utils/emailSuggester';
 import { ApiError } from '../../../services/api/client';
 import { LegalModal, LegalDocType } from '../../../components/ui/LegalModal';
+import { EmailSuggestionPill } from '../../../components/ui/EmailSuggestionPill';
 
 export default function RegisterStep3() {
   const { colors, spacing, typography } = useTheme();
@@ -161,6 +163,14 @@ export default function RegisterStep3() {
           autoCorrect={false}
           error={errors.email}
           leftIcon={<Mail size={18} color={colors.textMuted} />}
+        />
+
+        <EmailSuggestionPill
+          suggestion={getEmailSuggestion(form.email)}
+          onApply={(fixedEmail) => {
+            updateForm({ email: fixedEmail });
+            if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
+          }}
         />
 
         <PasswordInput

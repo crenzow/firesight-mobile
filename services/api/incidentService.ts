@@ -5,22 +5,10 @@ import {
   CreateManualIncidentPayload,
   DashboardAnalytics,
   UpdateIncidentDetailsPayload,
+  BFPPersonnelItem,
 } from './bfpModels';
 import { BFPIncidentStatus } from '../../components/bfp/IncidentStatusBadge';
 
-/**
- * BFP Personnel incident management API.
- *
- * IMPORTANT: none of these endpoints exist on the backend yet — this phase
- * is frontend-only per your request. Each function below documents the
- * exact PHP endpoint it expects, following the same "frontend contract
- * first, backend to match later" approach used for the resident app.
- *
- * `list()` and `getDetail()`/`getStatusHistory()` are new, richer endpoints
- * (under /incidents/) rather than reusing /reports/list.php, because BFP
- * screens need fields (severity, incident type, cause, casualties) that
- * the resident-facing `reports/*.php` endpoints don't join in.
- */
 export const incidentService = {
   list: (filters?: { status?: BFPIncidentStatus; barangayId?: number; year?: number; search?: string }) => {
     const params = new URLSearchParams();
@@ -46,8 +34,28 @@ export const incidentService = {
     apiClient.post<BFPIncident>('/incidents/mark_invalid.php', { report_id: reportId, reason }),
 
   /** Advances status along Reported -> Accepted -> Dispatched -> Resolved. */
-  updateStatus: (reportId: number, status: BFPIncidentStatus, notes?: string) =>
-    apiClient.post<BFPIncident>('/incidents/update_status.php', { report_id: reportId, status, notes }),
+  updateStatus: (
+    reportId: number,
+    status: BFPIncidentStatus,
+    notes?: string,
+    options?: { trucks?: string[]; personnel_ids?: number[] }
+  ) =>
+    apiClient.post<BFPIncident>('/incidents/update_status.php', {
+      report_id: reportId,
+      status,
+      notes,
+      trucks: options?.trucks,
+      personnel_ids: options?.personnel_ids,
+    }),
+
+  /** Get active BFP personnel list for emergency crew dispatch picker. */
+  getBfpPersonnel: () =>
+    apiClient.get<any>('/incidents/personnel.php').then((res) => {
+      if (Array.isArray(res)) return res as BFPPersonnelItem[];
+      if (res && Array.isArray(res.personnel)) return res.personnel as BFPPersonnelItem[];
+      if (res && Array.isArray(res.data)) return res.data as BFPPersonnelItem[];
+      return [] as BFPPersonnelItem[];
+    }),
 
   /** Edits cause of fire, casualties, notes, severity on an existing incident. */
   updateDetails: (reportId: number, payload: UpdateIncidentDetailsPayload) =>

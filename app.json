@@ -52,7 +52,19 @@
           "locationAlwaysAndWhenInUsePermissionText": "FireSight needs your location to accurately geotag fire reports."
         }
       ],
-      "@react-native-community/datetimepicker"
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#E65100",
+          "sounds": [
+            "./assets/sounds/fire_siren.wav"
+          ]
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-audio",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

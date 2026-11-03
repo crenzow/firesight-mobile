@@ -16,7 +16,7 @@ interface AppHeaderProps {
 
 export const AppHeader: React.FC<AppHeaderProps> = ({ variant = 'dark' }) => {
   const { colors, spacing, typography } = useTheme();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, triggerEmergencyAlert } = useNotifications();
   const pathname = usePathname();
 
   const isDark = variant === 'dark';
@@ -45,6 +45,19 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ variant = 'dark' }) => {
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
             router.push({ pathname: notificationRoute, params: { from: currentTab } } as any);
+          }}
+          onLongPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            const isBfp = user?.role === 'bfp_personnel';
+            triggerEmergencyAlert({
+              reportId: 1,
+              title: isBfp ? 'Fire Report near Barangay Balibago' : 'Report Submitted',
+              message: isBfp
+                ? 'Immediate dispatch required. Image assessment confirmed fire detected with 98.2% confidence.'
+                : 'Your fire report (#1) has been received and is under review by BFP Lian.',
+              location: 'Barangay Balibago, Lian',
+              isEmergency: isBfp,
+            });
           }}
           hitSlop={10}
           style={({ pressed }) => [

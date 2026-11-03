@@ -43,8 +43,10 @@ import {
   Bell,
   Layers,
   Sparkles,
+  Truck,
 } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
+import { useNotifications } from '../../../context/NotificationContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { Card } from '../../../components/ui/Card';
 import { Skeleton } from '../../../components/ui/Skeleton';
@@ -63,6 +65,7 @@ import { formatFullDate, formatTime } from '../../../utils/formatters';
 import { FIRE_STATION } from '../../../constants/fireStation';
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
 import { MapTypeModal } from '../../../components/map/MapTypeModal';
+import { DispatchModal } from '../../../components/bfp/DispatchModal';
 
 const INCIDENT_TYPE_OPTIONS: { id: IncidentType; name: string }[] = [
   { id: 'residential_fire', name: 'Residential Fire' },
@@ -224,9 +227,25 @@ const FieldLabel: React.FC<{ text: string }> = ({ text }) => {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function IncidentDetailScreen() {
   const { colors, spacing, typography, radius, isDark } = useTheme();
+  const { markReportRead } = useNotifications();
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const reportId = Number(id);
-  const backRoute = from === 'dashboard' ? '/(bfp)/dashboard' : '/(bfp)/incidents';
+  const backRoute =
+    from && from.includes('notifications')
+      ? '/(bfp)/notifications'
+      : from && from.includes('map')
+      ? '/(bfp)/map'
+      : from && from.includes('profile')
+      ? '/(bfp)/profile'
+      : from && from.includes('incidents')
+      ? '/(bfp)/incidents'
+      : '/(bfp)/dashboard';
+
+  useEffect(() => {
+    if (reportId && !isNaN(reportId) && reportId > 0) {
+      markReportRead(reportId);
+    }
+  }, [reportId, markReportRead]);
 
   const [incident, setIncident] = useState<BFPIncident | null>(null);
   const [locationName, setLocationName] = useState<string>('Loading location…');
@@ -243,6 +262,8 @@ export default function IncidentDetailScreen() {
   } | null>(null);
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
+  const [isDispatching, setIsDispatching] = useState(false);
   const [causeOfFire, setCauseOfFire] = useState('');
   const [casualties, setCasualties] = useState('0');
   const [notes, setNotes] = useState('');
@@ -400,6 +421,10 @@ export default function IncidentDetailScreen() {
       setIsMapTypeModalOpen(false);
       return;
     }
+    if (isDispatchModalOpen) {
+      setIsDispatchModalOpen(false);
+      return;
+    }
     if (dialog) {
       setDialog(null);
       return;
@@ -413,7 +438,7 @@ export default function IncidentDetailScreen() {
       return;
     }
     router.navigate(backRoute as any);
-  }, [isMapTypeModalOpen, dialog, isNavigating, isMapFullscreen, backRoute]);
+  }, [isMapTypeModalOpen, isDispatchModalOpen, dialog, isNavigating, isMapFullscreen, backRoute]);
 
   useFocusEffect(
     useCallback(() => {
@@ -536,6 +561,10 @@ export default function IncidentDetailScreen() {
   };
 
   const handleAdvanceStatus = (nextStatus: BFPIncidentStatus) => {
+    if (nextStatus === 'dispatched') {
+      setIsDispatchModalOpen(true);
+      return;
+    }
     const statusLabel = nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1);
     setDialog({
       type: nextStatus === 'resolved' ? 'success' : 'confirm',
@@ -557,6 +586,28 @@ export default function IncidentDetailScreen() {
         } finally { setIsActing(false); }
       },
     });
+  };
+
+  const handleConfirmDispatch = async ({ trucks, personnelIds }: { trucks: string[]; personnelIds: number[] }) => {
+    setIsDispatching(true);
+    try {
+      const updated = await incidentService.updateStatus(reportId, 'dispatched', undefined, {
+        trucks,
+        personnel_ids: personnelIds,
+      });
+      setIncident(updated);
+      setIsDispatchModalOpen(false);
+      load();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      if (userLocation != null) {
+        setRouteOrigin('gps');
+      }
+      handleOpenFullscreen();
+    } catch {
+      Alert.alert('Unable to dispatch', 'Please verify your connection and try again.');
+    } finally {
+      setIsDispatching(false);
+    }
   };
 
   const handleCancelEditDetails = () => {
@@ -1531,6 +1582,14 @@ export default function IncidentDetailScreen() {
         loading={isActing}
         onConfirm={() => dialog?.onConfirm()}
         onCancel={() => setDialog(null)}
+      />
+
+      <DispatchModal
+        visible={isDispatchModalOpen}
+        incidentTitle={incident?.barangay_name ? `Brgy. ${incident.barangay_name}` : 'Incident Response'}
+        onClose={() => setIsDispatchModalOpen(false)}
+        onConfirm={handleConfirmDispatch}
+        isSubmitting={isDispatching}
       />
     </View>
   );

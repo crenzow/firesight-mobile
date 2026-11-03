@@ -47,7 +47,9 @@ export default function LoginScreen() {
       <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']} />
       
       <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xl }}>
-        <Text style={[styles.brand, { color: colors.brandOrange }]}>FIRESIGHT</Text>
+        <Text style={[styles.brand, { color: '#FFFFFF' }]}>
+          FIRE<Text style={{ color: colors.brandOrange }}>SIGHT</Text>
+        </Text>
         <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xxl }]}>
           Welcome back
         </Text>

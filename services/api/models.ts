@@ -89,7 +89,7 @@ export interface Notification {
   notification_id: number;
   title: string;
   message: string;
-  notification_type: 'incident_alert' | 'status_update' | 'system' | 'reminder';
+  notification_type: 'incident_alert' | 'status_update';
   is_read: boolean;
   created_at: string;
   report_id?: number | null;

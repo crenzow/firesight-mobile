@@ -25,6 +25,7 @@ import {
   Check,
 } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
+import { useNotifications } from '../../../context/NotificationContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { Card } from '../../../components/ui/Card';
 import { Skeleton } from '../../../components/ui/Skeleton';
@@ -82,6 +83,7 @@ const TIMELINE_STEPS: StepDefinition[] = [
 
 export default function ReportDetailScreen() {
   const { colors, spacing, typography, radius, shadow, isDark } = useTheme();
+  const { markReportRead } = useNotifications();
   const { id, from, listFrom } = useLocalSearchParams<{ id: string; from?: string; listFrom?: string }>();
   const [report, setReport] = useState<CommunityReport | null>(null);
   const [history, setHistory] = useState<ReportStatusHistoryEntry[]>([]);
@@ -90,7 +92,11 @@ export default function ReportDetailScreen() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const handleBack = useCallback(() => {
-    if (from === '/(resident)/reports' || from === 'reports' || from === 'reports/index' || (from && from.includes('reports'))) {
+    if (from && from.includes('notifications')) {
+      router.replace('/(resident)/notifications');
+    } else if (from && from.includes('map')) {
+      router.replace('/(resident)/map');
+    } else if (from === '/(resident)/reports' || from === 'reports' || from === 'reports/index' || (from && from.includes('reports'))) {
       router.replace({
         pathname: '/(resident)/reports',
         params: listFrom ? { from: listFrom } : undefined,
@@ -121,6 +127,9 @@ export default function ReportDetailScreen() {
   useEffect(() => {
     if (!id) return;
     const reportId = Number(id);
+    if (!isNaN(reportId) && reportId > 0) {
+      markReportRead(reportId);
+    }
     Promise.all([reportService.getReportById(reportId), reportService.getStatusHistory(reportId)])
       .then(([reportData, historyData]) => {
         setReport(reportData);
@@ -449,9 +458,9 @@ export default function ReportDetailScreen() {
                             <Text
                               style={[styles.activeStepDesc, { color: colors.textSecondary }]}
                             >
-                              {entry?.notes?.trim()
-                                ? entry.notes.trim()
-                                : step.defaultDescription}
+                              {step.key === 'dispatched'
+                                ? step.defaultDescription
+                                : entry?.notes?.trim() || step.defaultDescription}
                             </Text>
 
                             {timestamp ? (
@@ -478,9 +487,9 @@ export default function ReportDetailScreen() {
 
                             <Text
                               style={[styles.compactStepDesc, { color: colors.textSecondary }]}>
-                              {entry?.notes?.trim()
-                                ? entry.notes.trim()
-                                : step.defaultDescription}
+                              {step.key === 'dispatched'
+                                ? step.defaultDescription
+                                : entry?.notes?.trim() || step.defaultDescription}
                             </Text>
                           </View>
                         ) : (
