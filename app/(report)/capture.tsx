@@ -9,6 +9,7 @@ import { useReportDraft } from '../../context/ReportDraftContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation } from '../../hooks/useLocation';
 import { Button } from '../../components/ui/Button';
+import { findBarangayByCoordinates } from '../../utils/barangayLookup';
 
 export default function CaptureScreen() {
   const { colors, spacing, typography, radius } = useTheme();
@@ -38,10 +39,16 @@ export default function CaptureScreen() {
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
       if (photo?.uri) {
+        let initialBarangayId: number | null = null;
+        if (location?.latitude && location?.longitude) {
+          const match = findBarangayByCoordinates(location.latitude, location.longitude);
+          initialBarangayId = match ? match.id : null;
+        }
+
         updateDraft({
           photoUri: photo.uri,
           deviceLocation: location,
-          barangayId: user?.address?.barangay_id ?? null,
+          barangayId: initialBarangayId,
         });
         router.push('/(report)/preview');
       }

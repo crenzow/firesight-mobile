@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { BFPIncident } from '../../services/api/bfpModels';
 import { IncidentStatusBadge } from './IncidentStatusBadge';
+import { OutsideLianBadge } from '../ui/OutsideLianBadge';
 import { formatIncidentDateTime } from '../../utils/formatters';
 import { getStorageImageUrl } from '../../constants/config';
 import { reverseGeocode, getCachedGeocode } from '../../utils/geocoding';
@@ -98,9 +99,14 @@ const IncidentListItemComponent: React.FC<IncidentListItemProps> = ({ incident, 
 
           {/* Right Content */}
           <View style={styles.contentCol}>
-            {/* Zone 1: Status Badge + Clean Timestamp on the right */}
+            {/* Zone 1: Status Badge + Outside Lian badge if applicable */}
             <View style={styles.topRow}>
-              <IncidentStatusBadge status={incident.status} size="sm" />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <IncidentStatusBadge status={incident.status} size="sm" />
+                {!incident.barangay_id && (
+                  <OutsideLianBadge size="sm" variant="short" />
+                )}
+              </View>
               <Text style={[styles.timeText, { color: colors.textMuted }]}>
                 {formatIncidentDateTime(incident.created_at)}
               </Text>

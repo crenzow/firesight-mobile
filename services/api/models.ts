@@ -74,7 +74,7 @@ export interface CreateReportPayload {
   device_longitude?: number;
   location_accuracy_m?: number;
   location_name?: string;
-  barangay_id: number;
+  barangay_id?: number | null;
   photoUri: string;
 }
 

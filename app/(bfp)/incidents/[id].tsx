@@ -52,6 +52,7 @@ import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader'
 import { Card } from '../../../components/ui/Card';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { Button } from '../../../components/ui/Button';
+import { OutsideLianBadge } from '../../../components/ui/OutsideLianBadge';
 import { SelectField } from '../../../components/ui/SelectField';
 import { IncidentStatusBadge } from '../../../components/bfp/IncidentStatusBadge';
 import { AlarmLevel, ALARM_LEVEL_OPTIONS, ALARM_LEVEL_LABELS } from '../../../components/bfp/AlarmLevelBadge';
@@ -940,6 +941,9 @@ export default function IncidentDetailScreen() {
                 <Text style={[styles.briefingLocationText, { color: colors.textSecondary }]} numberOfLines={1}>
                   {locationName}
                 </Text>
+                {!incident.barangay_id ? (
+                  <OutsideLianBadge size="sm" variant="full" style={{ marginLeft: 6 }} />
+                ) : null}
               </View>
             ) : null}
 
@@ -1728,7 +1732,7 @@ export default function IncidentDetailScreen() {
                 </Text>
                 {!isNavigating ? (
                   <Text style={[styles.fsSub, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
-                    Destination · {incident.barangay_name ? `Brgy. ${incident.barangay_name}` : 'Incident Location'}
+                    Destination · {incident.barangay_name ? `Brgy. ${incident.barangay_name}` : 'Outside Lian Borders'}
                   </Text>
                 ) : null}
               </View>

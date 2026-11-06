@@ -11,6 +11,7 @@ import { LeafletPickerMap, PickerMapType } from '../../components/map/LeafletPic
 import { MapFloatingControls } from '../../components/map/MapFloatingControls';
 import { MapTypeModal } from '../../components/map/MapTypeModal';
 import { reverseGeocode } from '../../utils/geocoding';
+import { findBarangayByCoordinates } from '../../utils/barangayLookup';
 
 export default function LocationScreen() {
   const { colors, spacing, typography, shadow, isDark } = useTheme();
@@ -34,6 +35,8 @@ export default function LocationScreen() {
     if (!draft.deviceLocation) return;
     setCurrentLat(draft.deviceLocation.latitude);
     setCurrentLng(draft.deviceLocation.longitude);
+    const initialBgy = findBarangayByCoordinates(draft.deviceLocation.latitude, draft.deviceLocation.longitude);
+    updateDraft({ barangayId: initialBgy ? initialBgy.id : null });
     // Initial geocode
     setIsGeocodingLoading(true);
     setPlaceName('Locating…');
@@ -76,9 +79,11 @@ export default function LocationScreen() {
 
   const handleConfirm = () => {
     if (currentLat === null || currentLng === null) return;
+    const detectedBarangay = findBarangayByCoordinates(currentLat, currentLng);
     updateDraft({
       incidentLocation: { latitude: currentLat, longitude: currentLng },
       incidentPlaceName: placeName,
+      barangayId: detectedBarangay ? detectedBarangay.id : null,
     });
     router.push('/(report)/review');
   };

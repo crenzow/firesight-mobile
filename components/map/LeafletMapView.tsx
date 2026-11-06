@@ -964,15 +964,6 @@ function buildMapHtml({
           marker.openPopup();
         });
       });
-
-      // Auto-zoom to fit all incident markers
-      if (incidents.length > 0) {
-        var validPoints = incidents.filter(function(inc) { var lat = parseFloat(inc.lat); var lng = parseFloat(inc.lng); return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0; }).map(function(inc) { return [parseFloat(inc.lat), parseFloat(inc.lng)]; });
-        if (validPoints.length > 0) {
-          var bounds = L.latLngBounds(validPoints);
-          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
-        }
-      }
     }
 
     if (userLocation) {

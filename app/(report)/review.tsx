@@ -6,6 +6,7 @@ import { ChevronLeft, MapPin, AlertTriangle, RefreshCw, Maximize2, X } from 'luc
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
 import { Button } from '../../components/ui/Button';
+import { OutsideLianBadge } from '../../components/ui/OutsideLianBadge';
 import { ConfirmationDialog } from '../../components/ui/ConfirmationDialog';
 import { PhotoLightboxModal } from '../../components/ui/PhotoLightboxModal';
 import { reportService } from '../../services/api/reportService';
@@ -31,9 +32,9 @@ export default function ReviewScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!draft.photoUri || !draft.incidentLocation || !draft.barangayId) {
+    if (!draft.photoUri || !draft.incidentLocation) {
       setIsConfirmVisible(false);
-      setSubmitError('Missing photo, pinned location, or barangay information. Please retake the photo or location.');
+      setSubmitError('Missing photo or pinned location. Please retake the photo or location.');
       return;
     }
     setIsSubmitting(true);
@@ -138,9 +139,14 @@ export default function ReviewScreen() {
         ) : null}
 
         <View style={[styles.locationRow, { marginTop: spacing.lg }]}>
-          <MapPin size={16} color={colors.brandOrange} />
+          <MapPin size={16} color={draft.barangayId ? colors.brandOrange : '#D97706'} />
           <View style={{ marginLeft: spacing.sm, flex: 1 }}>
-            <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>Incident Location</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>Incident Location</Text>
+              {!draft.barangayId ? (
+                <OutsideLianBadge size="sm" variant="short" />
+              ) : null}
+            </View>
             <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, marginTop: 2 }}>
               {draft.incidentPlaceName ?? (draft.incidentLocation ? 'Location pinned on map' : 'Location not pinned')}
             </Text>

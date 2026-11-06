@@ -1,14 +1,15 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image, BackHandler, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { Camera, Lock, Phone, Save, ShieldCheck, UserCheck } from 'lucide-react-native';
+import { Camera, Save, UserCheck } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { useAuth } from '../../../context/AuthContext';
 import { Input } from '../../../components/ui/Input';
+import { PasswordInput } from '../../../components/ui/PasswordInput';
 import { Button } from '../../../components/ui/Button';
 import { profileService } from '../../../services/api/profileService';
 import { ApiError } from '../../../services/api/client';
@@ -25,6 +26,7 @@ export default function BFPEditProfileScreen() {
   const { user, updateUser } = useAuth();
 
   const [contactNumber, setContactNumber] = useState(user?.contact_number ?? '');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [localImage, setLocalImage] = useState<string | null>(null);
@@ -46,9 +48,21 @@ export default function BFPEditProfileScreen() {
   const handleSavePress = () => {
     setError(null);
 
-    if (password) {
+    if (password || currentPassword || confirmPassword) {
+      if (!currentPassword) {
+        setError('Please enter your original / current password.');
+        return;
+      }
+      if (!password) {
+        setError('Please enter a new password.');
+        return;
+      }
       if (password.length < 8) {
         setError('New password must be at least 8 characters long.');
+        return;
+      }
+      if (password === currentPassword) {
+        setError('New password must be different from your current password.');
         return;
       }
       if (password !== confirmPassword) {
@@ -66,11 +80,14 @@ export default function BFPEditProfileScreen() {
     try {
       const updatedUser = await profileService.update({
         contact_number: contactNumber.trim(),
-        ...(password.trim() ? { password: password.trim() } : {}),
+        ...(password.trim() ? { password: password.trim(), current_password: currentPassword.trim() } : {}),
         photoUri: localImage ?? undefined,
         remove_photo: removePhotoSelected,
       });
       await updateUser(updatedUser);
+      setCurrentPassword('');
+      setPassword('');
+      setConfirmPassword('');
       setShowSuccessModal(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Unable to save changes right now.');
@@ -138,107 +155,122 @@ export default function BFPEditProfileScreen() {
         title="Edit Profile" 
         onBack={handleBack} 
       />
-      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
-        <ScrollView contentContainerStyle={{ padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+          <ScrollView
+            contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl + 80 }}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+          >
 
-          {/* Profile Photo */}
-          <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                setShowPhotoOptions(true);
-              }}
-              style={({ pressed }) => [
-                styles.photoWrap,
-                {
-                  transform: [{ scale: pressed ? 0.94 : 1 }],
-                  opacity: pressed ? 0.88 : 1,
-                },
-              ]}
-            >
-              <View style={styles.photoClip}>
-                {profileImageUri ? (
-                  <Image source={{ uri: profileImageUri }} style={styles.photoImage} />
-                ) : (
-                  <View style={[styles.photoFallback, { backgroundColor: colors.brandOrange }]}>
-                    <Text style={styles.photoInitials}>{initials}</Text>
-                  </View>
-                )}
-              </View>
-              <View style={[styles.photoCameraBadge, { borderColor: colors.background }]}>
-                <Camera size={15} color="#FFFFFF" />
-              </View>
-            </Pressable>
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: spacing.sm }}>
-              Tap to change profile picture
-            </Text>
-          </View>
-
-          {/* Locked / Read-Only Personnel Summary Card */}
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginBottom: spacing.xs }}>
-            OFFICER IDENTIFICATION (LOCKED)
-          </Text>
-          <View style={{ marginBottom: spacing.lg }}>
-            <Card padding={spacing.md}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <UserCheck size={18} color={colors.brandOrange} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>
-                    {formatFullName(user?.first_name ?? '', user?.last_name ?? '', user?.middle_name, user?.suffix)}
-                  </Text>
-                  <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 1 }}>
-                    {user?.email} · Fire Officer II
-                  </Text>
+            {/* Profile Photo */}
+            <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setShowPhotoOptions(true);
+                }}
+                style={({ pressed }) => [
+                  styles.photoWrap,
+                  {
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                    opacity: pressed ? 0.88 : 1,
+                  },
+                ]}
+              >
+                <View style={styles.photoClip}>
+                  {profileImageUri ? (
+                    <Image source={{ uri: profileImageUri }} style={styles.photoImage} />
+                  ) : (
+                    <View style={[styles.photoFallback, { backgroundColor: colors.brandOrange }]}>
+                      <Text style={styles.photoInitials}>{initials}</Text>
+                    </View>
+                  )}
                 </View>
-                <ShieldCheck size={16} color={colors.success} />
-              </View>
-            </Card>
-          </View>
+                <View style={[styles.photoCameraBadge, { borderColor: colors.background }]}>
+                  <Camera size={15} color="#FFFFFF" />
+                </View>
+              </Pressable>
+              <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: spacing.sm }}>
+                Tap to change profile picture
+              </Text>
+            </View>
 
-          {/* Editable Fields */}
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginBottom: spacing.sm }}>
-            EDITABLE INFORMATION
-          </Text>
+            {/* Personnel Summary Card */}
+            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginBottom: spacing.xs }}>
+              OFFICER IDENTIFICATION
+            </Text>
+            <View style={{ marginBottom: spacing.lg }}>
+              <Card padding={spacing.md}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <UserCheck size={18} color={colors.brandOrange} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>
+                      {formatFullName(user?.first_name ?? '', user?.last_name ?? '', user?.middle_name, user?.suffix)}
+                    </Text>
+                    <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 1 }}>
+                      {user?.email} · Fire Officer II
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+            </View>
 
-          <Input
-            label="Mobile Contact Number"
-            value={contactNumber}
-            onChangeText={setContactNumber}
-            keyboardType="phone-pad"
-            placeholder="09171234567"
-          />
+            {/* Editable Fields */}
+            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginBottom: spacing.sm }}>
+              EDITABLE INFORMATION
+            </Text>
 
-          <View style={{ marginTop: spacing.md }}>
             <Input
-              label="New Password (optional)"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="Min 8 characters"
+              label="Mobile Contact Number"
+              value={contactNumber}
+              onChangeText={setContactNumber}
+              keyboardType="phone-pad"
+              placeholder="09171234567"
             />
-          </View>
 
-          <View style={{ marginTop: spacing.xs }}>
-            <Input
-              label="Confirm New Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              placeholder="Re-enter new password"
-            />
-          </View>
+            <View style={{ marginTop: spacing.md }}>
+              <PasswordInput
+                label="Current Password"
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="Enter current password"
+              />
+            </View>
 
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 2, marginBottom: spacing.lg }}>
-            Leave password blank if you do not wish to change it.
-          </Text>
+            <View style={{ marginTop: spacing.xs }}>
+              <PasswordInput
+                label="New Password"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Min 8 characters"
+              />
+            </View>
 
-          {error ? (
-            <Text style={{ color: colors.danger, fontSize: typography.size.sm, marginBottom: spacing.md }}>{error}</Text>
-          ) : null}
+            <View style={{ marginTop: spacing.xs }}>
+              <PasswordInput
+                label="Confirm New Password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Re-enter new password"
+              />
+            </View>
 
-          <Button label="Save Changes" onPress={handleSavePress} loading={isSaving} icon={<Save size={16} color="#FFFFFF" />} />
-        </ScrollView>
-      </SafeAreaView>
+            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 2, marginBottom: spacing.lg }}>
+              Leave password fields blank if you do not wish to change it.
+            </Text>
+
+            {error ? (
+              <Text style={{ color: colors.danger, fontSize: typography.size.sm, marginBottom: spacing.md }}>{error}</Text>
+            ) : null}
+
+            <Button label="Save Changes" onPress={handleSavePress} loading={isSaving} icon={<Save size={16} color="#FFFFFF" />} />
+          </ScrollView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
 
       {/* Confirmation Dialog */}
       <ConfirmationDialog

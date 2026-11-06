@@ -31,7 +31,9 @@ export const reportService = {
     if (payload.location_name) {
       formData.append('location_name', payload.location_name);
     }
-    formData.append('barangay_id', String(payload.barangay_id));
+    if (payload.barangay_id != null) {
+      formData.append('barangay_id', String(payload.barangay_id));
+    }
 
     const filename = payload.photoUri.split('/').pop() ?? 'report.jpg';
     const extMatch = /\.(\w+)$/.exec(filename);

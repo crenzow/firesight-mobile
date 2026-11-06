@@ -254,7 +254,7 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
             {/* ── 1. RESPONDING CREW SECTION (FIRST) ────────────────────────── */}
             <View style={styles.sectionHeaderRow}>
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
@@ -513,8 +513,9 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                 </View>
 
                 <ScrollView
-                  contentContainerStyle={{ padding: spacing.md, gap: 8 }}
-                  showsVerticalScrollIndicator={false}
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ padding: spacing.md, gap: 8, paddingBottom: spacing.xxl }}
+                  showsVerticalScrollIndicator={true}
                 >
                   {selectableTrucks.map((truck) => (
                     <Pressable
@@ -630,13 +631,14 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
                   </View>
                 ) : (
                   <ScrollView
+                    style={{ flex: 1 }}
                     contentContainerStyle={{
                       paddingHorizontal: spacing.md,
                       paddingTop: 4,
-                      paddingBottom: spacing.lg,
-                      gap: 8,
+                      paddingBottom: spacing.xxl,
+                      gap: 7,
                     }}
-                    showsVerticalScrollIndicator={false}
+                    showsVerticalScrollIndicator={true}
                   >
                     {selectablePersonnel.map((person) => {
                       const officerTitle = formatOfficerWithRank(person.name, person.rank);
@@ -740,15 +742,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
   },
   container: {
     width: '100%',
-    maxWidth: 440,
-    maxHeight: '85%',
+    maxWidth: 460,
+    height: '88%',
+    maxHeight: '92%',
     borderWidth: 1,
     overflow: 'hidden',
     position: 'relative',
+    flexDirection: 'column',
   },
   header: {
     paddingHorizontal: 18,
@@ -917,11 +922,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 13,
     borderWidth: 1,
     alignSelf: 'stretch',
-    minHeight: 44,
+    minHeight: 42,
   },
   pickerItemName: {
     fontSize: 13.5,
