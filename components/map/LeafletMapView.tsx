@@ -115,7 +115,13 @@ export const LeafletMapView = React.forwardRef<LeafletMapRef, LeafletMapViewProp
     [barangays]
   );
   const incidentsHash = useMemo(
-    () => incidents.map((i: any) => `${i.incident_id || i.id}:${i.latitude},${i.longitude}`).join(','),
+    () =>
+      incidents
+        .map(
+          (i: any) =>
+            `${i.incident_id || i.id}:${i.latitude},${i.longitude}:${i.alarm_level || i.alarm}:${i.status}:${i.incident_type || i.type}:${i.time_fire_started}:${i.time_fire_out}:${i.establishment_name}:${i.owner_name}:${i.occupant_name}:${i.cause_of_fire || i.cause}:${i.casualties}:${i.injuries}:${i.fatalities}:${i.estimated_damage}:${i.barangay_name || i.barangay}:${i.reporter_name || i.reporter}:${i.created_at || i.date}`
+        )
+        .join('|'),
     [incidents]
   );
 
@@ -253,9 +259,16 @@ function buildMapHtml({
       type: i.incident_type,
       alarm: i.alarm_level,
       date: (i as any).created_at ?? i.data_time,
+      time_fire_started: (i as any).time_fire_started ?? null,
+      time_fire_out: (i as any).time_fire_out ?? null,
+      establishment_name: (i as any).establishment_name ?? null,
+      owner_name: (i as any).owner_name ?? null,
+      occupant_name: (i as any).occupant_name ?? null,
       cause: i.cause_of_fire || null,
       casualties: i.casualties ?? null,
-      notes: i.notes || null,
+      injuries: (i as any).injuries ?? null,
+      fatalities: (i as any).fatalities ?? null,
+      estimated_damage: (i as any).estimated_damage ?? null,
       // BFP-only fields (present when isBFP=true)
       report_id: (i as any).report_id ?? null,
       status: (i as any).status ?? null,
@@ -317,8 +330,8 @@ function buildMapHtml({
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       line-height: 1.4;
-      min-width: 255px;
-      max-width: 290px;
+      min-width: 285px;
+      max-width: 335px;
     }
     .leaflet-popup-tip-container {
       width: 28px;
@@ -354,6 +367,9 @@ function buildMapHtml({
     /* Popup interior */
     .fs-pop-card {
       padding: 13px 15px 14px 15px;
+      max-height: 380px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .fs-pop-hero {
       padding-bottom: 9px;
@@ -400,12 +416,16 @@ function buildMapHtml({
     .fs-pop-lbl {
       color: #8992A6;
       font-weight: 600;
-      width: 33%;
+      width: 46%;
+      font-size: 11px;
+      padding-right: 4px;
     }
     .fs-pop-val {
       color: #101827;
       font-weight: 600;
       text-align: right;
+      font-size: 11.5px;
+      word-break: break-word;
     }
 
     .risk-dot { border-radius: 50%; border: 2px solid #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
@@ -810,42 +830,47 @@ function buildMapHtml({
         if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
 
         var alarmColors = {
-          '1st_alarm': '#34D399',
-          '2nd_alarm': '#10B981',
-          '3rd_alarm': '#FBBF24',
-          '4th_alarm': '#F59E0B',
-          '5th_alarm': '#F97316',
-          'task_force_alpha': '#EA580C',
-          'task_force_bravo': '#EF4444',
-          'task_force_charlie': '#DC2626',
-          'task_force_delta': '#B91C1C',
-          'task_force_echo': '#991B1B',
-          'task_force_hotel': '#BE123C',
-          'task_force_india': '#9F1239',
-          'general_alarm': '#881337'
+          'verification': '#a9b8d0',
+          '1st_alarm': '#4fa3e0',
+          '2nd_alarm': '#4caf50',
+          '3rd_alarm': '#f2c94c',
+          '4th_alarm': '#f2811d',
+          '5th_alarm': '#e02424',
+          'task_force_alpha': '#6c6fd9',
+          'task_force_bravo': '#2f5fb3',
+          'task_force_charlie': '#b0182e',
+          'task_force_delta': '#8c6d2c',
+          'task_force_echo': '#8c6d2c',
+          'task_force_hotel': '#8c6d2c',
+          'task_force_india': '#8c6d2c',
+          'general_alarm': '#1e2a5e'
         };
         var color = (i.alarm && alarmColors[i.alarm])
           ? alarmColors[i.alarm]
           : (i.alarm && i.alarm.indexOf('task_force') !== -1)
-            ? '#DC2626'
+            ? '#6c6fd9'
             : (i.alarm === 'general_alarm')
-              ? '#881337'
-              : '#34D399';
+              ? '#1e2a5e'
+              : (i.alarm === 'verification')
+                ? '#a9b8d0'
+                : '#4fa3e0';
+
+        var strokeColor = (i.alarm === 'verification') ? '#4a5a75' : '#FFFFFF';
 
         const marker = L.circleMarker([lat, lng], {
-          radius: 9,
-          color: '#FFFFFF',
-          weight: 2.5,
+          radius: 6.5,
+          color: strokeColor,
+          weight: 2,
           fillColor: color,
           fillOpacity: 0.95,
         }).addTo(map);
 
-        let dateLabel = 'Date not recorded';
-        if (i.date && typeof i.date === 'string' && i.date.trim() !== '') {
+        function formatDateTime(str) {
+          if (!str || typeof str !== 'string' || str.trim() === '') return null;
           try {
-            const d = new Date(i.date.replace(' ', 'T'));
+            var d = new Date(str.replace(' ', 'T'));
             if (!isNaN(d.getTime())) {
-              dateLabel = d.toLocaleString('en-US', {
+              return d.toLocaleString('en-US', {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
@@ -855,6 +880,44 @@ function buildMapHtml({
               });
             }
           } catch (e) {}
+          return str;
+        }
+
+        function formatType(t) {
+          if (!t) return null;
+          var map = {
+            'residential_fire': 'Residential Fire',
+            'commercial_fire': 'Commercial Fire',
+            'vehicular_fire': 'Vehicular Fire',
+            'storage_fire': 'Storage Fire',
+            'rubbish_fire': 'Rubbish Fire',
+            'others': 'Others'
+          };
+          return map[t] || t.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase(); });
+        }
+
+        var typeLabel = formatType(i.type);
+        var startedLabel = formatDateTime(i.time_fire_started);
+        var fireOutLabel = formatDateTime(i.time_fire_out);
+        var dateLabel = formatDateTime(i.date) || 'Date not recorded';
+
+        var casualtyText = null;
+        if (i.fatalities != null || i.injuries != null) {
+          var casParts = [];
+          if (i.fatalities != null && Number(i.fatalities) > 0) {
+            casParts.push(i.fatalities + (Number(i.fatalities) === 1 ? ' fatality' : ' fatalities'));
+          }
+          if (i.injuries != null && Number(i.injuries) > 0) {
+            casParts.push(i.injuries + (Number(i.injuries) === 1 ? ' injury' : ' injuries'));
+          }
+          casualtyText = casParts.length > 0 ? casParts.join(', ') : 'None';
+        } else if (i.casualties != null) {
+          casualtyText = Number(i.casualties) > 0 ? (i.casualties + ' reported') : 'None';
+        }
+
+        var damageLabel = null;
+        if (i.estimated_damage != null && !isNaN(Number(i.estimated_damage))) {
+          damageLabel = '₱' + Number(i.estimated_damage).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         const incidentStatus = (i.status || 'resolved').toUpperCase();
@@ -874,26 +937,41 @@ function buildMapHtml({
               '</div>' +
             '</div>' +
             '<table class="fs-pop-table">' +
-              '<tr><td class="fs-pop-lbl">Date/Time</td><td class="fs-pop-val">' + dateLabel + '</td></tr>' +
-              (i.cause ? '<tr><td class="fs-pop-lbl">Cause</td><td class="fs-pop-val">' + i.cause + '</td></tr>' : '') +
-              (i.casualties != null ? '<tr><td class="fs-pop-lbl">Casualties</td><td class="fs-pop-val" style="color:' + (Number(i.casualties) > 0 ? '#E14245' : '#101827') + '">' + i.casualties + ' reported</td></tr>' : '') +
-              (isBFP && i.reporter ? '<tr><td class="fs-pop-lbl">Reporter</td><td class="fs-pop-val">' + i.reporter + (i.contact ? ' &middot; ' + i.contact : '') + '</td></tr>' : '') +
+              (typeLabel ? '<tr><td class="fs-pop-lbl">Incident Type</td><td class="fs-pop-val font-semibold">' + typeLabel + '</td></tr>' : '') +
+              (startedLabel ? '<tr><td class="fs-pop-lbl">Time Fire Started</td><td class="fs-pop-val">' + startedLabel + '</td></tr>' : '') +
+              (fireOutLabel ? '<tr><td class="fs-pop-lbl">Time Fire Out</td><td class="fs-pop-val">' + fireOutLabel + '</td></tr>' : '') +
+              (!startedLabel && !fireOutLabel ? '<tr><td class="fs-pop-lbl">Date/Time</td><td class="fs-pop-val">' + dateLabel + '</td></tr>' : '') +
+              (i.establishment_name ? '<tr><td class="fs-pop-lbl">Name of Establishment</td><td class="fs-pop-val">' + i.establishment_name + '</td></tr>' : '') +
+              (i.owner_name ? '<tr><td class="fs-pop-lbl">Owner</td><td class="fs-pop-val">' + i.owner_name + '</td></tr>' : '') +
+              (i.occupant_name ? '<tr><td class="fs-pop-lbl">Occupant</td><td class="fs-pop-val">' + i.occupant_name + '</td></tr>' : '') +
+              (i.cause ? '<tr><td class="fs-pop-lbl">Cause of Fire</td><td class="fs-pop-val">' + i.cause + '</td></tr>' : '') +
+              (casualtyText ? '<tr><td class="fs-pop-lbl">Casualties</td><td class="fs-pop-val">' + casualtyText + '</td></tr>' : '') +
+              (damageLabel ? '<tr><td class="fs-pop-lbl">Estimated Damage</td><td class="fs-pop-val">' + damageLabel + '</td></tr>' : '') +
+              (isBFP && i.reporter ? '<tr><td class="fs-pop-lbl">Reporter</td><td class="fs-pop-val">' + i.reporter + '</td></tr>' : '') +
             '</table>' +
           '</div>';
 
         marker.bindPopup(popupHtml, {
-          offset: [0, -10],
+          offset: [0, -8],
           closeButton: true,
           autoPan: true,
           autoPanPaddingTopLeft: [20, 240],
           autoPanPaddingBottomRight: [20, 60],
         });
+
+        marker.on('click', function(e) {
+          L.DomEvent.stopPropagation(e);
+          marker.openPopup();
+        });
       });
 
       // Auto-zoom to fit all incident markers
       if (incidents.length > 0) {
-        var bounds = L.latLngBounds(incidents.map(function(inc) { return [inc.lat, inc.lng]; }));
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+        var validPoints = incidents.filter(function(inc) { var lat = parseFloat(inc.lat); var lng = parseFloat(inc.lng); return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0; }).map(function(inc) { return [parseFloat(inc.lat), parseFloat(inc.lng)]; });
+        if (validPoints.length > 0) {
+          var bounds = L.latLngBounds(validPoints);
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+        }
       }
     }
 

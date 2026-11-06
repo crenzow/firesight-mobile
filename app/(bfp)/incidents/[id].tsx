@@ -287,6 +287,7 @@ export default function IncidentDetailScreen() {
   const [causeOfFire, setCauseOfFire] = useState('');
   const [injuries, setInjuries] = useState('0');
   const [fatalities, setFatalities] = useState('0');
+  const [estimatedDamage, setEstimatedDamage] = useState('');
   const [establishmentName, setEstablishmentName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [occupantName, setOccupantName] = useState('');
@@ -299,6 +300,45 @@ export default function IncidentDetailScreen() {
   const [notes, setNotes] = useState('');
   const [alarmLevel, setAlarmLevel] = useState<AlarmLevel | null>(null);
   const [incidentType, setIncidentType] = useState<IncidentType | null>(null);
+
+  /** Whether the user has modified any field in the incident details assessment */
+  const hasDetailsChanges = useMemo(() => {
+    if (!incident) return false;
+    const initialStartedStr = incident.time_fire_started || incident.created_at || '';
+    const initialOutStr =
+      incident.time_fire_out ||
+      (history.find((h) => h.status === 'resolved')?.created_at ?? '');
+
+    return (
+      establishmentName !== (incident.establishment_name ?? '') ||
+      ownerName !== (incident.owner_name ?? '') ||
+      occupantName !== (incident.occupant_name ?? '') ||
+      timeFireStarted !== initialStartedStr ||
+      timeFireOut !== initialOutStr ||
+      incidentType !== (incident.incident_type ?? null) ||
+      alarmLevel !== ((incident.alarm_level as AlarmLevel) ?? null) ||
+      causeOfFire !== (incident.cause_of_fire ?? '') ||
+      injuries !== String(incident.injuries ?? 0) ||
+      fatalities !== String(incident.fatalities ?? 0) ||
+      estimatedDamage !== (incident.estimated_damage != null ? String(incident.estimated_damage) : '') ||
+      notes !== (incident.notes ?? '')
+    );
+  }, [
+    incident,
+    history,
+    establishmentName,
+    ownerName,
+    occupantName,
+    timeFireStarted,
+    timeFireOut,
+    incidentType,
+    alarmLevel,
+    causeOfFire,
+    injuries,
+    fatalities,
+    estimatedDamage,
+    notes,
+  ]);
 
   // Route / Map state
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -544,6 +584,7 @@ export default function IncidentDetailScreen() {
         setCauseOfFire(detail.cause_of_fire ?? '');
         setInjuries(String(detail.injuries ?? 0));
         setFatalities(String(detail.fatalities ?? 0));
+        setEstimatedDamage(detail.estimated_damage != null ? String(detail.estimated_damage) : '');
         setEstablishmentName(detail.establishment_name ?? '');
         setOwnerName(detail.owner_name ?? '');
         setOccupantName(detail.occupant_name ?? '');
@@ -689,6 +730,7 @@ export default function IncidentDetailScreen() {
       setCauseOfFire(incident.cause_of_fire ?? '');
       setInjuries(String(incident.injuries ?? 0));
       setFatalities(String(incident.fatalities ?? 0));
+      setEstimatedDamage(incident.estimated_damage != null ? String(incident.estimated_damage) : '');
       setEstablishmentName(incident.establishment_name ?? '');
       setOwnerName(incident.owner_name ?? '');
       setOccupantName(incident.occupant_name ?? '');
@@ -749,6 +791,7 @@ export default function IncidentDetailScreen() {
             cause_of_fire: causeOfFire ? causeOfFire.trim() : undefined,
             injuries: injuries !== '' ? Number(injuries) || 0 : 0,
             fatalities: fatalities !== '' ? Number(fatalities) || 0 : 0,
+            estimated_damage: estimatedDamage !== '' ? Number(estimatedDamage) || 0 : null,
             establishment_name: establishmentName ? establishmentName.trim() : undefined,
             owner_name: ownerName ? ownerName.trim() : undefined,
             occupant_name: occupantName ? occupantName.trim() : undefined,
@@ -1328,7 +1371,7 @@ export default function IncidentDetailScreen() {
 
             {isEditingDetails ? (
               <Card padding={spacing.md}>
-                <FieldLabel text="ESTABLISHMENT NAME" />
+                <FieldLabel text="NAME OF ESTABLISHMENT" />
                 <TextInput
                   value={establishmentName}
                   onChangeText={setEstablishmentName}
@@ -1516,6 +1559,24 @@ export default function IncidentDetailScreen() {
                   </View>
                 </View>
 
+                <FieldLabel text="ESTIMATED DAMAGE (₱)" />
+                <TextInput
+                  value={estimatedDamage}
+                  onChangeText={setEstimatedDamage}
+                  keyboardType="numeric"
+                  placeholder="0.00"
+                  placeholderTextColor={colors.textMuted}
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.textPrimary,
+                      borderColor: colors.border,
+                      borderRadius: radius.md,
+                      backgroundColor: colors.background,
+                    },
+                  ]}
+                />
+
                 <FieldLabel text="NOTES" />
                 <TextInput
                   value={notes}
@@ -1537,12 +1598,17 @@ export default function IncidentDetailScreen() {
                   ]}
                 />
                 <View style={{ marginTop: spacing.md }}>
-                  <Button label="Save Changes" onPress={handleSaveDetails} loading={isActing} />
+                  <Button
+                    label="Save Changes"
+                    onPress={handleSaveDetails}
+                    loading={isActing}
+                    disabled={!hasDetailsChanges}
+                  />
                 </View>
               </Card>
             ) : (
               <Card padding={0}>
-                <InfoRow label="Establishment" value={incident.establishment_name || 'None'} />
+                <InfoRow label="Name of Establishment" value={incident.establishment_name || 'None'} />
                 <InfoRow label="Owner" value={incident.owner_name || 'Unspecified'} />
                 <InfoRow label="Occupant" value={incident.occupant_name || 'Unspecified'} />
                 <InfoRow
@@ -1582,6 +1648,14 @@ export default function IncidentDetailScreen() {
                 <InfoRow
                   label="Fatalities"
                   value={String(incident.fatalities ?? 0)}
+                />
+                <InfoRow
+                  label="Estimated Damage"
+                  value={
+                    incident.estimated_damage != null
+                      ? `₱${Number(incident.estimated_damage).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : 'Unspecified'
+                  }
                 />
                 <InfoRow
                   label="Notes"

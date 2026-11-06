@@ -75,7 +75,7 @@ const TIMELINE_STEPS: StepDefinition[] = [
   {
     key: 'resolved',
     label: 'Resolved',
-    defaultDescription: 'Incident has been controlled and marked resolved by responding units.',
+    defaultDescription: 'Fire extinguished and incident marked as resolved.',
     Icon: CheckCircle2,
     color: '#059669',
   },
@@ -359,7 +359,9 @@ export default function ReportDetailScreen() {
                   const isFuture = index > currentStepIndex;
                   const isLast = index === TIMELINE_STEPS.length - 1;
                   const StepIcon = step.Icon;
-                  const entry = history.find((h) => h.status === step.key);
+                  const entry = step.key === 'resolved'
+                    ? (history.find((h) => h.status === 'resolved' && !h.notes?.toLowerCase().includes('updated')) || history.find((h) => h.status === 'resolved'))
+                    : history.find((h) => h.status === step.key);
                   const timestamp = entry?.created_at ?? (step.key === 'pending' ? report.created_at : null);
 
                   return (
@@ -465,7 +467,8 @@ export default function ReportDetailScreen() {
 
                             {timestamp ? (
                               <Text style={[styles.activeTimestamp, { color: colors.textMuted }]}>
-                                Updated {formatIncidentDateTime(timestamp)}
+                                {step.key === 'resolved' ? 'Resolved ' : 'Updated '}
+                                {formatIncidentDateTime(timestamp)}
                               </Text>
                             ) : null}
                           </View>

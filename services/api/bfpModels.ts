@@ -42,6 +42,7 @@ export interface BFPIncident {
   occupant_name?: string | null;
   time_fire_started?: string | null;
   time_fire_out?: string | null;
+  estimated_damage?: number | null;
   notes?: string | null;
   // Additional photos added by BFP personnel during investigation
   // (see migration_add_report_evidence.sql) — separate from report_image,
@@ -184,6 +185,7 @@ export interface UpdateIncidentDetailsPayload {
   occupant_name?: string | null;
   time_fire_started?: string | null;
   time_fire_out?: string | null;
+  estimated_damage?: number | null;
   notes?: string;
   alarm_level?: AlarmLevel | null;
 }

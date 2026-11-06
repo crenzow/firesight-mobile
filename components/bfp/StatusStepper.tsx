@@ -49,7 +49,7 @@ const STAGES: StageDefinition[] = [
   {
     key: 'resolved',
     label: 'Resolved',
-    defaultDescription: 'Incident controlled, contained, and marked resolved.',
+    defaultDescription: 'Fire extinguished and incident marked as resolved.',
     actionLabel: 'Mark as Resolved',
     Icon: CheckCircle2,
   },
@@ -129,8 +129,16 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
         const StepIcon = stage.Icon;
 
         // Find relevant history entries (supports multiple dispatches / reinforcements)
-        const stageEntries = safeHistory.filter((h) => h.status === stage.key && Boolean(h.notes?.trim()));
-        const entry = safeHistory.slice().reverse().find((h) => h.status === stage.key);
+        const stageEntries = stage.key === 'dispatched'
+          ? safeHistory.filter((h) => h.status === 'dispatched' && Boolean(h.notes?.trim()))
+          : [];
+
+        // For the resolved milestone, lock on the actual fire resolution event rather than subsequent assessment edits
+        const resolutionEntry = stage.key === 'resolved'
+          ? (safeHistory.find((h) => h.status === 'resolved' && !h.notes?.toLowerCase().includes('updated')) || safeHistory.find((h) => h.status === 'resolved'))
+          : safeHistory.slice().reverse().find((h) => h.status === stage.key);
+
+        const entry = resolutionEntry;
         const timestamp = entry?.created_at ?? (stage.key === 'pending' ? createdAt : null);
 
         return (
@@ -273,7 +281,8 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({
 
                   {timestamp && stageEntries.length <= 1 ? (
                     <Text style={styles.activeTimestamp}>
-                      Updated {formatIncidentDateTime(timestamp)}
+                      {stage.key === 'resolved' ? 'Resolved ' : 'Updated '}
+                      {formatIncidentDateTime(timestamp)}
                     </Text>
                   ) : null}
 

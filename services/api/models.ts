@@ -32,6 +32,14 @@ export interface BFPIncidentMarker extends IncidentMarker {
   description: string;
   status: 'accepted' | 'dispatched' | 'resolved';
   created_at: string;
+  time_fire_started?: string | null;
+  time_fire_out?: string | null;
+  establishment_name?: string | null;
+  owner_name?: string | null;
+  occupant_name?: string | null;
+  injuries?: number | null;
+  fatalities?: number | null;
+  estimated_damage?: number | null;
 }
 
 export type ReportStatus = 'pending' | 'accepted' | 'dispatched' | 'resolved' | 'invalid';

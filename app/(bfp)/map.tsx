@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, usePathname } from 'expo-router';
+import { router, useFocusEffect, usePathname } from 'expo-router';
 import {
   Bell,
   Search,
@@ -35,15 +35,31 @@ import { useNotifications } from '../../context/NotificationContext';
 // Lian, Batangas municipal centroid
 const LIAN_CENTER = { lat: 14.0065, lng: 120.6425 };
 
-const ALARM_LEGEND_ITEMS = [
-  { label: '1st Alarm', color: '#34D399' },
-  { label: '2nd Alarm', color: '#10B981' },
-  { label: '3rd Alarm', color: '#FBBF24' },
-  { label: '4th Alarm', color: '#F59E0B' },
-  { label: '5th Alarm', color: '#F97316' },
-  { label: 'Task Force', color: '#DC2626' },
-  { label: 'General Alarm', color: '#881337' },
+const ALL_ALARM_LEVELS = [
+  { key: 'verification', label: 'Verification', color: '#a9b8d0', stroke: '#4a5a75' },
+  { key: '1st_alarm', label: '1st Alarm', color: '#4fa3e0' },
+  { key: '2nd_alarm', label: '2nd Alarm', color: '#4caf50' },
+  { key: '3rd_alarm', label: '3rd Alarm', color: '#f2c94c' },
+  { key: '4th_alarm', label: '4th Alarm', color: '#f2811d' },
+  { key: '5th_alarm', label: '5th Alarm', color: '#e02424' },
+  { key: 'task_force_alpha', label: 'Task Force Alpha', color: '#6c6fd9' },
+  { key: 'task_force_bravo', label: 'Task Force Bravo', color: '#2f5fb3' },
+  { key: 'task_force_charlie', label: 'Task Force Charlie', color: '#b0182e' },
+  { key: 'task_force_delta', label: 'Task Force Delta', color: '#8c6d2c' },
+  { key: 'task_force_echo', label: 'Task Force Echo', color: '#8c6d2c' },
+  { key: 'task_force_hotel', label: 'Task Force Hotel', color: '#8c6d2c' },
+  { key: 'task_force_india', label: 'Task Force India', color: '#8c6d2c' },
+  { key: 'general_alarm', label: 'General Alarm', color: '#1e2a5e' },
 ];
+
+const FIXED_MUNICIPAL_ALARMS = new Set([
+  'verification',
+  '1st_alarm',
+  '2nd_alarm',
+  '3rd_alarm',
+  '4th_alarm',
+  '5th_alarm',
+]);
 
 export default function BFPMapScreen() {
   const { colors, spacing, radius, typography, isDark, shadow } = useTheme();
@@ -72,14 +88,22 @@ export default function BFPMapScreen() {
   const [isMapTypeModalOpen, setIsMapTypeModalOpen] = useState(false);
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
 
-  useEffect(() => {
-    setIsLoading(true);
-    Promise.allSettled([
-      mapService.getBarangayRisk(),
-      mapService.getBFPIncidents(),
-      incidentService.list(),
-    ]).then(([riskResult, bfpMapResult, listResult]) => {
-      if (riskResult.status === 'fulfilled') setBarangays(riskResult.value);
+  const isFirstLoad = useRef(true);
+
+  const fetchMapData = useCallback(async (showFullLoader = false) => {
+    if (showFullLoader) {
+      setIsLoading(true);
+    }
+    try {
+      const [riskResult, bfpMapResult, listResult] = await Promise.allSettled([
+        mapService.getBarangayRisk(),
+        mapService.getBFPIncidents(),
+        incidentService.list(),
+      ]);
+
+      if (riskResult.status === 'fulfilled') {
+        setBarangays(riskResult.value);
+      }
 
       let loaded: any[] = [];
       if (bfpMapResult.status === 'fulfilled' && Array.isArray(bfpMapResult.value) && bfpMapResult.value.length > 0) {
@@ -91,9 +115,23 @@ export default function BFPMapScreen() {
         );
       }
       setIncidents(loaded);
-      setIsLoading(false);
-    });
+    } catch {
+      // Non-fatal silent fallback
+    } finally {
+      if (showFullLoader) {
+        setIsLoading(false);
+      }
+    }
   }, []);
+
+  // Auto-refresh from DB whenever the Map tab is focused/tapped
+  useFocusEffect(
+    useCallback(() => {
+      const isInitial = isFirstLoad.current;
+      isFirstLoad.current = false;
+      fetchMapData(isInitial);
+    }, [fetchMapData])
+  );
 
   // Filtered barangays for Risk mode
   const filteredBarangays = useMemo(() => {
@@ -114,6 +152,21 @@ export default function BFPMapScreen() {
     });
     return { high, moderate, mild, total: barangays.length };
   }, [barangays]);
+
+  // Fixed municipal tiers (Verification to 5th Alarm) + any regional tiers present in active incidents
+  const visibleAlarmLegend = useMemo(() => {
+    const presentAlarms = new Set(
+      incidents
+        .map((i: any) => i.alarm_level || i.alarm)
+        .filter(Boolean)
+    );
+    return ALL_ALARM_LEVELS.filter((cfg) => {
+      if (FIXED_MUNICIPAL_ALARMS.has(cfg.key)) return true;
+      if (presentAlarms.has(cfg.key)) return true;
+      if (cfg.key === 'task_force_alpha' && presentAlarms.has('task_force')) return true;
+      return false;
+    });
+  }, [incidents]);
 
   const handleLocateMe = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -162,6 +215,7 @@ export default function BFPMapScreen() {
     Haptics.selectionAsync().catch(() => {});
     setMode(nextMode);
     setSelectedBarangay(null);
+    fetchMapData(false); // Silently pull latest database updates when toggling modes
   };
 
   return (
@@ -519,9 +573,18 @@ export default function BFPMapScreen() {
                     </Pressable>
                   </View>
 
-                  {ALARM_LEGEND_ITEMS.map((item) => (
-                    <View key={item.label} style={styles.legendRow}>
-                      <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                  {visibleAlarmLegend.map((item) => (
+                    <View key={item.key} style={styles.legendRow}>
+                      <View
+                        style={[
+                          styles.legendDot,
+                          {
+                            backgroundColor: item.color,
+                            borderWidth: (item as any).stroke ? 1 : 0,
+                            borderColor: (item as any).stroke || 'transparent',
+                          },
+                        ]}
+                      />
                       <Text style={{ color: colors.textSecondary, fontSize: typography.size.xs, marginLeft: 7, fontWeight: '600' }}>
                         {item.label}
                       </Text>
@@ -676,15 +739,15 @@ const styles = StyleSheet.create({
   },
   incidentLegendCard: {
     position: 'absolute',
-    borderRadius: 18,
-    paddingHorizontal: 14,
+    borderRadius: 16,
+    paddingHorizontal: 12,
     paddingVertical: 10,
   },
   legendHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   legendTitle: {
     fontWeight: '700',
@@ -697,11 +760,11 @@ const styles = StyleSheet.create({
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 5,
+    marginTop: 4.5,
   },
   legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
   },
 });
