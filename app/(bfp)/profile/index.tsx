@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, ActivityIndicator, BackHandler } from 'react-native';
 import { router, usePathname, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { ShieldCheck, Settings as SettingsIcon, LogOut, Phone, Building2, IdCard, Edit3, Camera } from 'lucide-react-native';
+import { Settings as SettingsIcon, LogOut, Phone, Building2, IdCard, Edit3, Camera } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
@@ -224,13 +224,6 @@ export default function BFPProfileScreen() {
               label="STATION"
               value={user.personnel_details?.station_assigned || 'BFP Lian Fire Station'}
             />
-            {user.personnel_details?.employee_number ? (
-              <InfoRow
-                icon={<ShieldCheck size={18} color="#FFFFFF" />}
-                label="BADGE #"
-                value={user.personnel_details.employee_number}
-              />
-            ) : null}
             <InfoRow icon={<Phone size={18} color="#FFFFFF" />} label="CONTACT" value={user.contact_number ?? 'Not set'} isLast />
           </Card>
         </View>

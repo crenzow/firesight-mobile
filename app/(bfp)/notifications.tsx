@@ -123,16 +123,20 @@ export default function BFPNotificationsScreen() {
               style={[
                 styles.divider,
                 {
-                  backgroundColor: colors.border,
-                  marginLeft: spacing.lg + 38 + spacing.md, // Inset divider aligned past icon
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
                 },
               ]}
             />
           )}
           renderItem={({ item }) => {
             const Icon = ICONS[item.notification_type] ?? Bell;
-            const isAlert = item.notification_type === 'incident_alert';
-            const iconColor = isAlert ? colors.danger : colors.brandOrange;
+            const isUnread = !item.is_read;
+
+            const unreadBg = isDark ? 'rgba(59, 130, 246, 0.18)' : '#DFEDFA';
+            const readBg = 'transparent';
+            const pressedBg = isDark
+              ? (isUnread ? 'rgba(59, 130, 246, 0.28)' : 'rgba(255, 255, 255, 0.06)')
+              : (isUnread ? '#D1E4F7' : '#EAECEF');
 
             return (
               <Pressable
@@ -145,12 +149,7 @@ export default function BFPNotificationsScreen() {
                   {
                     paddingHorizontal: spacing.lg,
                     paddingVertical: 14,
-                    backgroundColor: pressed
-                      ? (isDark ? '#221915' : '#F9FAFB')
-                      : 'transparent',
-                    borderColor: pressed ? colors.brandOrange : 'transparent',
-                    borderWidth: 1.5,
-                    opacity: item.is_read ? 0.72 : 1,
+                    backgroundColor: pressed ? pressedBg : (isUnread ? unreadBg : readBg),
                   },
                 ]}
               >
@@ -161,12 +160,21 @@ export default function BFPNotificationsScreen() {
                       style={[
                         styles.iconCircle,
                         {
-                          backgroundColor: pressed ? colors.brandOrange : `${iconColor}14`,
-                          borderColor: pressed ? colors.brandOrange : `${iconColor}25`,
+                          backgroundColor: pressed
+                            ? colors.brandOrange
+                            : isDark
+                            ? 'rgba(255, 255, 255, 0.08)'
+                            : '#F1F5F9',
+                          borderColor: isDark
+                            ? 'rgba(255, 255, 255, 0.12)'
+                            : '#E2E8F0',
                         },
                       ]}
                     >
-                      <Icon size={18} color={pressed ? '#FFFFFF' : iconColor} />
+                      <Icon
+                        size={18}
+                        color={pressed ? '#FFFFFF' : colors.textPrimary}
+                      />
                     </View>
 
                     {/* Content */}
@@ -177,23 +185,26 @@ export default function BFPNotificationsScreen() {
                             styles.title,
                             {
                               color: colors.textPrimary,
-                              fontSize: typography.size.sm,
-                              fontWeight: item.is_read ? '600' : '700',
+                              fontSize: 14.5,
+                              fontWeight: '700',
                             },
                           ]}
                           numberOfLines={1}
                         >
                           {item.title}
                         </Text>
-                        {!item.is_read && (
-                          <View style={[styles.dot, { backgroundColor: colors.brandOrange }]} />
-                        )}
                       </View>
 
                       <Text
                         style={[
                           styles.message,
-                          { color: colors.textSecondary, fontSize: typography.size.xs, marginTop: 3 },
+                          {
+                            color: colors.textSecondary,
+                            fontSize: 12.5,
+                            fontWeight: '400',
+                            lineHeight: 18,
+                            marginTop: 3,
+                          },
                         ]}
                       >
                         {item.message}
@@ -202,7 +213,12 @@ export default function BFPNotificationsScreen() {
                       <Text
                         style={[
                           styles.timeText,
-                          { color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4 },
+                          {
+                            color: colors.textMuted,
+                            fontSize: 11,
+                            fontWeight: '400',
+                            marginTop: 4,
+                          },
                         ]}
                       >
                         {formatRelativeDate(item.created_at)}
@@ -244,12 +260,6 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 8,
   },
   message: {
     lineHeight: 17,

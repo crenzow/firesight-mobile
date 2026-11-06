@@ -7,7 +7,6 @@ import { useTheme, ThemePreference } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { RadioOptionRow } from '../../../components/profile/RadioOptionRow';
 import { Card } from '../../../components/ui/Card';
-import { APP_CONFIG } from '../../../constants/config';
 
 const THEME_OPTIONS: { key: ThemePreference; title: string; subtitle: string; icon: React.ComponentType<{ size: number; color: string }>; gradient: [string, string] }[] = [
   { key: 'system', title: 'System Default', subtitle: 'Follows your device appearance', icon: Smartphone, gradient: ['#64748B', '#0F1C3F'] },
@@ -89,18 +88,6 @@ export default function SettingsScreen() {
             onValueChange={setAlertSounds}
           />
         </Card>
-
-        <View style={[styles.footerCard, { marginTop: spacing.xl }]}>
-          <Text style={{ color: colors.brandOrange, fontSize: typography.size.md, fontWeight: '800' }}>
-            FIRE<Text style={{ color: colors.textPrimary }}>SIGHT</Text>
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 4, textAlign: 'center' }}>
-            Municipal Fire Safety System{'\n'}Version {APP_CONFIG.APP_VERSION} · Build 2026.07
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginTop: 8, textAlign: 'center' }}>
-            Bureau of Fire Protection · {APP_CONFIG.DEFAULT_MUNICIPALITY}, {APP_CONFIG.DEFAULT_PROVINCE}
-          </Text>
-        </View>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -137,5 +124,4 @@ const styles = StyleSheet.create({
   toggleCard: { borderWidth: 1, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center' },
   divider: { height: StyleSheet.hairlineWidth },
-  footerCard: { alignItems: 'center' },
 });

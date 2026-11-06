@@ -157,32 +157,9 @@ const IncidentListItemComponent: React.FC<IncidentListItemProps> = ({ incident, 
                     : isNonFire
                     ? '#F0FDF4'
                     : '#F9FAFB',
-                  borderColor: isDark
-                    ? isFire
-                      ? 'rgba(239, 68, 68, 0.3)'
-                      : isNonFire
-                      ? 'rgba(34, 197, 94, 0.3)'
-                      : 'rgba(255, 255, 255, 0.08)'
-                    : isFire
-                    ? '#FECACA'
-                    : isNonFire
-                    ? '#BBF7D0'
-                    : '#E5E7EB',
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.aiDot,
-                  {
-                    backgroundColor: isFire
-                      ? '#DC2626'
-                      : isNonFire
-                      ? '#16A34A'
-                      : colors.textMuted,
-                  },
-                ]}
-              />
               <Text
                 style={[
                   styles.aiText,
@@ -273,14 +250,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 7,
-    borderWidth: 1,
     marginTop: 6,
-  },
-  aiDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginRight: 5,
   },
   aiText: {
     fontSize: 10.5,
