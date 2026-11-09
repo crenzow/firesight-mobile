@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Flame, MapPin } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { RiskLevel } from '../../services/api/models';
@@ -50,18 +49,11 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
         style={[
           styles.card,
           {
-            borderWidth: isDark ? 1 : 0,
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+            borderWidth: 1,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.08)',
           },
         ]}
       >
-        <LinearGradient
-          colors={['#0F1C3F', '#1B2A5A', 'rgba(244,98,43,0.4)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-
         {/* Section label & pilot indicator */}
         <View style={styles.eyebrowRow}>
           <Text style={styles.eyebrow}>{eyebrowText}</Text>
@@ -127,6 +119,7 @@ const styles = StyleSheet.create({
     }),
   },
   card: {
+    backgroundColor: '#0F1C3F',
     borderRadius: 18,
     paddingHorizontal: 22,
     paddingTop: 18,
