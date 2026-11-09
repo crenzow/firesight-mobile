@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { Flame, MapPin } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
+import { ColorTokens } from '../../theme/colors';
 import { RiskLevel } from '../../services/api/models';
 import { APP_CONFIG } from '../../constants/config';
 
@@ -14,12 +16,13 @@ interface AreaStatusCardProps {
   isExternal?: boolean;
   registeredLocation?: string;
   scopeLabel?: string;
+  onPress?: () => void;
 }
 
-const RISK_CONFIG: Record<RiskLevel, { label: string; color: string }> = {
-  mild:     { label: 'Mild Risk',     color: '#EAB308' },
-  moderate: { label: 'Moderate Risk', color: '#F4622B' },
-  high:     { label: 'High Risk',     color: '#EF4444' },
+const RISK_CONFIG: Record<RiskLevel, { label: string; colorToken: keyof ColorTokens }> = {
+  mild:     { label: 'Mild Risk',     colorToken: 'riskMild' },
+  moderate: { label: 'Moderate Risk', colorToken: 'riskModerate' },
+  high:     { label: 'High Risk',     colorToken: 'riskHigh' },
 };
 
 function normalizeRiskLevel(level?: string): RiskLevel {
@@ -37,14 +40,34 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
   isExternal = false,
   registeredLocation,
   scopeLabel,
+  onPress,
 }) => {
-  const { isDark, shadow } = useTheme();
-  const risk = RISK_CONFIG[normalizeRiskLevel(riskLevel)];
+  const { colors, isDark, shadow } = useTheme();
+  const riskConfig = RISK_CONFIG[normalizeRiskLevel(riskLevel)];
+  const riskColor = colors[riskConfig.colorToken];
   const locality = `${municipality ?? APP_CONFIG.DEFAULT_MUNICIPALITY}, ${province ?? APP_CONFIG.DEFAULT_PROVINCE}`;
   const eyebrowText = scopeLabel ?? (isExternal ? 'PILOT COVERAGE' : 'AREA STATUS');
 
   return (
-    <View style={[styles.shadow, !isDark && shadow.card]}>
+    <Pressable
+      onPress={
+        onPress
+          ? () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              onPress();
+            }
+          : undefined
+      }
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={`${riskConfig.label} in ${barangayName}. ${incidentsThisMonth} fire incidents this month.`}
+      accessibilityHint={onPress ? 'Opens the hazard risk map' : undefined}
+      style={({ pressed }) => [
+        styles.shadow,
+        !isDark && shadow.card,
+        { transform: [{ scale: pressed ? 0.985 : 1 }] },
+      ]}
+    >
       <View
         style={[
           styles.card,
@@ -67,8 +90,9 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
         {/* Body row: risk status left, location right */}
         <View style={styles.bodyRow}>
           <View style={styles.riskBlock}>
-            <Text style={[styles.riskLabel, { color: risk.color }]}>{risk.label}</Text>
+            <Text style={[styles.riskLabel, { color: riskColor }]}>{riskConfig.label}</Text>
           </View>
+
 
           <View style={styles.locationBlock}>
             <Text style={styles.barangayName}>{barangayName}</Text>
@@ -81,12 +105,12 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
 
         {/* Incidents stat */}
         <View style={styles.incidentRow}>
-          <Flame size={13} color="rgba(255,255,255,0.4)" />
+          <Flame size={13.5} color="rgba(255, 255, 255, 0.70)" />
           <Text style={styles.incidentText}>
             <Text style={styles.incidentCount}>{incidentsThisMonth}</Text>
             {isExternal
-              ? ` fire incident${incidentsThisMonth !== 1 ? 's' : ''} recorded across Lian this month`
-              : ` fire incident${incidentsThisMonth !== 1 ? 's' : ''} recorded in your barangay this month`}
+              ? ` fire${incidentsThisMonth !== 1 ? 's' : ''} across Lian this month`
+              : ` fire${incidentsThisMonth !== 1 ? 's' : ''} in this barangay this month`}
           </Text>
         </View>
 
@@ -100,7 +124,7 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
           </View>
         )}
       </View>
-    </View>
+    </Pressable>
   );
 };
 
@@ -137,7 +161,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1.4,
-    color: 'rgba(255,255,255,0.38)',
+    color: 'rgba(255, 255, 255, 0.55)',
   },
   pilotPill: {
     backgroundColor: 'rgba(244, 98, 43, 0.22)',
@@ -187,7 +211,7 @@ const styles = StyleSheet.create({
   locality: {
     fontSize: 11,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.38)',
+    color: 'rgba(255, 255, 255, 0.65)',
     marginTop: 3,
     textAlign: 'right',
   },
@@ -206,7 +230,7 @@ const styles = StyleSheet.create({
   incidentText: {
     flex: 1,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255, 255, 255, 0.70)',
     fontWeight: '500',
   },
   incidentCount: {

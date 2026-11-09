@@ -29,15 +29,17 @@ export const StatusBadge: React.FC<{ status: ReportStatus }> = ({ status }) => {
     <View
       style={[
         styles.badge,
-        { backgroundColor: `${color}22`, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 3 },
+        { backgroundColor: `${color}29`, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 3 },
       ]}
     >
+      <View style={[styles.dot, { backgroundColor: color }]} />
       <Text style={[styles.text, { color, fontSize: typography.size.xs }]}>{STATUS_LABEL[status] || status || 'Unknown'}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  badge: { alignSelf: 'flex-start' },
+  badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
   text: { fontWeight: '700' },
 });

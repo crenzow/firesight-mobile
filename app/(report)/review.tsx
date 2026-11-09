@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, Pressable, ScrollView, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useNavigation } from 'expo-router';
-import { ChevronLeft, MapPin, AlertTriangle, RefreshCw, Maximize2, X } from 'lucide-react-native';
+import { MapPin, AlertTriangle, RefreshCw, Maximize2 } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
+import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
 import { Button } from '../../components/ui/Button';
 import { OutsideLianBadge } from '../../components/ui/OutsideLianBadge';
 import { ConfirmationDialog } from '../../components/ui/ConfirmationDialog';
@@ -13,7 +15,7 @@ import { reportService } from '../../services/api/reportService';
 import { ApiError } from '../../services/api/client';
 
 export default function ReviewScreen() {
-  const { colors, spacing, typography, radius, shadow } = useTheme();
+  const { colors, spacing, shadow, isDark } = useTheme();
   const { draft, updateDraft, resetDraft } = useReportDraft();
   const navigation = useNavigation();
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
@@ -22,11 +24,12 @@ export default function ReviewScreen() {
   const [fullscreen, setFullscreen] = useState(false);
 
   const handleRetake = () => {
-    // Go all the way back to capture so the user retakes the photo
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     router.push('/(report)/capture');
   };
 
   const handleCancelReport = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     resetDraft();
     navigation.getParent()?.goBack();
   };
@@ -65,129 +68,179 @@ export default function ReviewScreen() {
     }
   };
 
+  const cardBg = isDark ? colors.surfaceElevated : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent';
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomColor: colors.border }]}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={8}
-          style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.90 : 1 }] }]}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2.5} />
-        </Pressable>
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: 20, fontWeight: '800' }]}>
-            Review Report
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, textAlign: 'center' }}>Confirm details before submitting</Text>
-        </View>
-        <Pressable
-          onPress={handleCancelReport}
-          hitSlop={8}
-          style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
-          accessibilityRole="button"
-        >
-          <Text style={{ color: colors.danger, fontWeight: '600', fontSize: typography.size.sm }}>Cancel</Text>
-        </Pressable>
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <SecondaryHeader
+        title="Review Report"
+        subtitle="Confirm details before submitting"
+        onBack={() => router.back()}
+        rightElement={
+          <Pressable
+            onPress={handleCancelReport}
+            hitSlop={10}
+            style={({ pressed }) => [
+              styles.cancelTextBtn,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel report"
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </Pressable>
+        }
+      />
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
-        {draft.photoUri ? (
-          <View>
-            <Pressable
-              onPress={() => setFullscreen(true)}
-              style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.985 : 1 }] }]}
-            >
-              <Image source={{ uri: draft.photoUri }} style={[styles.photo, { borderRadius: radius.lg }]} resizeMode="cover" />
-            </Pressable>
-            <Pressable
-              onPress={() => setFullscreen(true)}
-              style={({ pressed }) => [
-                styles.expandChip,
-                {
-                  backgroundColor: pressed ? colors.brandOrange : 'rgba(0,0,0,0.55)',
-                  borderRadius: radius.full,
-                  transform: [{ scale: pressed ? 0.90 : 1 }],
-                },
-              ]}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="View full size photo"
-            >
-              <Maximize2 size={12} color="#FFFFFF" />
-            </Pressable>
-            <Pressable
-              onPress={handleRetake}
-              style={({ pressed }) => [
-                styles.retakeChip,
-                {
-                  backgroundColor: pressed ? colors.brandOrange : 'rgba(0,0,0,0.55)',
-                  borderRadius: radius.full,
-                  transform: [{ scale: pressed ? 0.94 : 1 }],
-                },
-              ]}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Retake photo"
-            >
-              <RefreshCw size={12} color="#FFFFFF" />
-              <Text style={styles.retakeText}>Retake</Text>
-            </Pressable>
-          </View>
-        ) : null}
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.md,
+            paddingBottom: 40,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Attached Photo Card */}
+          {draft.photoUri ? (
+            <View style={[styles.photoCard, { backgroundColor: cardBg }, !isDark && shadow.card]}>
+              <Pressable
+                onPress={() => setFullscreen(true)}
+                style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.99 : 1 }] }]}
+                accessibilityRole="button"
+                accessibilityLabel="View full photo"
+              >
+                <Image source={{ uri: draft.photoUri }} style={styles.photo} resizeMode="cover" />
+              </Pressable>
 
-        <View style={[styles.locationRow, { marginTop: spacing.lg }]}>
-          <MapPin size={16} color={draft.barangayId ? colors.brandOrange : '#D97706'} />
-          <View style={{ marginLeft: spacing.sm, flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: colors.textPrimary, fontSize: typography.size.sm, fontWeight: '700' }}>Incident Location</Text>
-              {!draft.barangayId ? (
-                <OutsideLianBadge size="sm" variant="short" />
-              ) : null}
+              {/* Floating action pills */}
+              <View style={styles.photoActionsRow}>
+                <Pressable
+                  onPress={handleRetake}
+                  style={({ pressed }) => [
+                    styles.chipBtn,
+                    {
+                      backgroundColor: pressed ? colors.brandOrange : 'rgba(15, 28, 63, 0.82)',
+                      transform: [{ scale: pressed ? 0.94 : 1 }],
+                    },
+                  ]}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retake photo"
+                >
+                  <RefreshCw size={12} color="#FFFFFF" strokeWidth={2.2} />
+                  <Text style={styles.chipText}>Retake</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setFullscreen(true)}
+                  style={({ pressed }) => [
+                    styles.chipIconBtn,
+                    {
+                      backgroundColor: pressed ? colors.brandOrange : 'rgba(15, 28, 63, 0.82)',
+                      transform: [{ scale: pressed ? 0.92 : 1 }],
+                    },
+                  ]}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Fullscreen photo"
+                >
+                  <Maximize2 size={13} color="#FFFFFF" strokeWidth={2.2} />
+                </Pressable>
+              </View>
             </View>
-            <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, marginTop: 2 }}>
-              {draft.incidentPlaceName ?? (draft.incidentLocation ? 'Location pinned on map' : 'Location not pinned')}
-            </Text>
+          ) : null}
+
+          {/* Incident Location Card */}
+          <View
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: cardBg,
+                borderColor: cardBorder,
+                borderWidth: isDark ? 1 : 0,
+                marginTop: spacing.md,
+              },
+              !isDark && shadow.card,
+            ]}
+          >
+            <View style={styles.cardHeaderRow}>
+              <Text style={[styles.cardKicker, { color: colors.textMuted }]}>INCIDENT LOCATION</Text>
+              {!draft.barangayId && <OutsideLianBadge size="sm" variant="short" />}
+            </View>
+
+            <View style={styles.locationBody}>
+              <View style={[styles.iconWrap, { backgroundColor: `${colors.brandOrange}1A` }]}>
+                <MapPin size={18} color={colors.brandOrange} strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[styles.locationPrimary, { color: colors.textPrimary }]} numberOfLines={2}>
+                  {draft.incidentPlaceName ?? (draft.incidentLocation ? 'Pinned on map' : 'Location not pinned')}
+                </Text>
+                <Text style={[styles.locationSecondary, { color: colors.textSecondary }]}>
+                  {draft.barangayId ? 'Lian, Batangas' : 'Outside Lian Municipality'}
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
 
-        <Text
-          style={[
-            styles.fieldLabel,
-            { color: colors.textSecondary, fontSize: typography.size.sm, marginTop: spacing.lg, marginBottom: spacing.xs },
-          ]}
-        >
-          Description (optional)
-        </Text>
-        <TextInput
-          value={draft.description}
-          onChangeText={(t) => updateDraft({ description: t })}
-          placeholder="Briefly describe what you see."
-          placeholderTextColor={colors.textMuted}
-          multiline
-          numberOfLines={4}
-          style={[
-            styles.textArea,
-            {
-              color: colors.textPrimary,
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radius.md,
-              fontSize: typography.size.sm,
-            },
-          ]}
-        />
+          {/* Description Card */}
+          <View
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: cardBg,
+                borderColor: cardBorder,
+                borderWidth: isDark ? 1 : 0,
+                marginTop: spacing.md,
+              },
+              !isDark && shadow.card,
+            ]}
+          >
+            <View style={styles.cardHeaderRow}>
+              <Text style={[styles.cardKicker, { color: colors.textMuted }]}>DESCRIPTION</Text>
+              <Text style={[styles.optionalTag, { color: colors.textMuted }]}>Optional</Text>
+            </View>
 
-        {submitError ? (
-          <Text style={{ color: colors.danger, fontSize: typography.size.sm, marginTop: spacing.md }}>{submitError}</Text>
-        ) : null}
+            <TextInput
+              value={draft.description}
+              onChangeText={(t) => updateDraft({ description: t })}
+              placeholder="Describe smoke color, flame intensity, structures at risk, etc."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={4}
+              style={[
+                styles.textArea,
+                {
+                  color: colors.textPrimary,
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F9FAFB',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border,
+                },
+              ]}
+            />
+          </View>
 
-        <View style={{ marginTop: spacing.xl }}>
-          <Button label="Submit Fire Report" onPress={() => setIsConfirmVisible(true)} />
-        </View>
-      </ScrollView>
+          {/* Error notice */}
+          {submitError ? (
+            <View style={[styles.errorBox, { backgroundColor: `${colors.danger}18` }]}>
+              <AlertTriangle size={15} color={colors.danger} />
+              <Text style={[styles.errorText, { color: colors.danger }]}>{submitError}</Text>
+            </View>
+          ) : null}
+
+          {/* Submit Action */}
+          <View style={{ marginTop: spacing.xl }}>
+            <Button
+              label="Submit Fire Report"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                setIsConfirmVisible(true);
+              }}
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
 
       <ConfirmationDialog
         visible={isConfirmVisible}
@@ -212,38 +265,124 @@ export default function ReviewScreen() {
           onClose={() => setFullscreen(false)}
         />
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth },
-  headerTitle: { fontWeight: '700', textAlign: 'center' },
-  photo: { width: '100%', height: 220 },
-  expandChip: {
+  cancelTextBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelText: {
+    color: '#F87171',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  photoCard: {
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  photo: {
+    width: '100%',
+    height: 220,
+  },
+  photoActionsRow: {
     position: 'absolute',
     top: 12,
     right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: 30,
-    height: 30,
+    gap: 8,
   },
-  retakeChip: {
-    position: 'absolute',
-    top: 12,
-    right: 50,
+  chipBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    gap: 5,
+    paddingHorizontal: 11,
     paddingVertical: 6,
-    height: 30,
-    gap: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
   },
-  retakeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-  locationRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  fieldLabel: { fontWeight: '600' },
-  textArea: { borderWidth: 1.5, padding: 12, minHeight: 90, textAlignVertical: 'top' },
-  warningCard: { flexDirection: 'row', padding: 12, borderWidth: 1 },
+  chipText: {
+    color: '#FFFFFF',
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  chipIconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  sectionCard: {
+    borderRadius: 18,
+    padding: 16,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  cardKicker: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+  },
+  optionalTag: {
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  locationBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationPrimary: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+  locationSecondary: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 85,
+    textAlignVertical: 'top',
+    fontSize: 13.5,
+    lineHeight: 18,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 14,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
 });

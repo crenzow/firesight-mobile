@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, usePathname } from 'expo-router';
+import { router, usePathname, useLocalSearchParams } from 'expo-router';
 import {
   Bell,
   Search,
@@ -39,8 +39,10 @@ export default function MapScreen() {
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const pathname = usePathname();
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
 
   const mapRef = useRef<LeafletMapRef>(null);
+  const focusRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [mapType, setMapType] = useState<MapType>('standard');
   const [barangays, setBarangays] = useState<BarangayRiskFeature[]>([]);
@@ -66,6 +68,30 @@ export default function MapScreen() {
       .catch(() => {
         setIsLoading(false);
       });
+  }, []);
+
+  // Focus a barangay when opened from the Home "Area Status" card (?focus=<barangay name>)
+  useEffect(() => {
+    if (!focus || !barangays.length) return;
+
+    const focusName = focus.trim().toLowerCase();
+    const found = barangays.find((b) => b.barangay_name.toLowerCase() === focusName);
+    if (found) {
+      setSelectedBarangay(found);
+      mapRef.current?.focusBarangay(found.barangay_name);
+      // Retry once in case the map WebView was still initializing on first open
+      if (focusRetryTimer.current) clearTimeout(focusRetryTimer.current);
+      focusRetryTimer.current = setTimeout(() => mapRef.current?.focusBarangay(found.barangay_name), 900);
+    }
+
+    // Consume the param so returning to the tab later doesn't re-trigger focus
+    router.setParams({ focus: undefined });
+  }, [focus, barangays]);
+
+  useEffect(() => {
+    return () => {
+      if (focusRetryTimer.current) clearTimeout(focusRetryTimer.current);
+    };
   }, []);
 
   const filteredBarangays = useMemo(() => {

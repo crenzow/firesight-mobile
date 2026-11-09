@@ -1,13 +1,16 @@
-import React, { useCallback, useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import { Phone, BookOpen, Megaphone, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { Skeleton } from '../ui/Skeleton';
-import { announcementService } from '../../services/api';
+import { SectionHeader } from '../ui/SectionHeader';
 import { Announcement } from '../../services/api/models';
 import { formatRelativeDate } from '../../utils/formatters';
+
+/** Posts newer than this are flagged with a "NEW" tag. */
+const NEW_ANNOUNCEMENT_WINDOW_MS = 48 * 60 * 60 * 1000;
 
 const TILES = [
   {
@@ -22,37 +25,28 @@ const TILES = [
     icon: BookOpen,
     route: '/(resident)/learn',
   },
-] as const;
+] as const satisfies readonly {
+  key: string;
+  label: string;
+  icon: typeof Phone;
+  route: string;
+}[];
 
-export const QuickActionsRow: React.FC = () => {
+interface QuickActionsRowProps {
+  latestAnnouncement: Announcement | null;
+  isLoading: boolean;
+}
+
+function isRecentAnnouncement(createdAt: string): boolean {
+  const createdTime = new Date(createdAt).getTime();
+  if (Number.isNaN(createdTime)) {
+    return false;
+  }
+  return Date.now() - createdTime < NEW_ANNOUNCEMENT_WINDOW_MS;
+}
+
+export const QuickActionsRow: React.FC<QuickActionsRowProps> = ({ latestAnnouncement, isLoading }) => {
   const { colors, shadow, isDark } = useTheme();
-  const [latest, setLatest] = useState<Announcement | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // Refresh the latest advisory every time Home regains focus
-  useFocusEffect(
-    useCallback(() => {
-      let isMounted = true;
-      announcementService
-        .list()
-        .then((items) => {
-          if (!isMounted) return;
-          const newest = [...(items ?? [])].sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          )[0];
-          setLatest(newest ?? null);
-        })
-        .catch(() => {
-          // Non-fatal: card falls back to the empty state
-        })
-        .finally(() => {
-          if (isMounted) setIsLoaded(true);
-        });
-      return () => {
-        isMounted = false;
-      };
-    }, [])
-  );
 
   // Universal card design standard matching BFP:
   // Elevated surface, constant 1.5px border, squircle 18px radius, ambient shadow, and 0.985 tactile depression.
@@ -61,9 +55,18 @@ export const QuickActionsRow: React.FC = () => {
   const normalBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'transparent';
   const pressedBorder = colors.brandOrange;
 
+  /** Uniform icon chip: brand navy tint in light, subtle white tint in dark. */
+  const chipBg = isDark ? 'rgba(255, 255, 255, 0.08)' : '#EEF2F8';
+  const chipIcon = isDark ? '#FFFFFF' : colors.brandNavy;
+
+  /** Soft tinted chip background for announcement accent. */
+  const chipBackground = (accent: string) => `${accent}${isDark ? '2E' : '1A'}`;
+
+  const showNewTag = !!latestAnnouncement && isRecentAnnouncement(latestAnnouncement.created_at);
+
   return (
     <View>
-      <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>QUICK ACTIONS</Text>
+      <SectionHeader title="Quick Actions" />
 
       {/* Top row: two equal compact tiles */}
       <View style={styles.tileRow}>
@@ -93,20 +96,10 @@ export const QuickActionsRow: React.FC = () => {
                 <View
                   style={[
                     styles.iconWrap,
-                    {
-                      backgroundColor: pressed
-                        ? colors.brandOrange
-                        : isDark
-                        ? 'rgba(255, 255, 255, 0.08)'
-                        : '#EEF2F8',
-                    },
+                    { backgroundColor: pressed ? colors.brandOrange : chipBg },
                   ]}
                 >
-                  <Icon
-                    size={19}
-                    color={pressed ? '#FFFFFF' : isDark ? '#FFFFFF' : colors.brandNavy}
-                    strokeWidth={2}
-                  />
+                  <Icon size={19} color={pressed ? '#FFFFFF' : chipIcon} strokeWidth={2} />
                 </View>
                 <Text style={[styles.tileLabel, { color: colors.textPrimary }]} numberOfLines={2}>
                   {label}
@@ -135,7 +128,9 @@ export const QuickActionsRow: React.FC = () => {
           !isDark && shadow.card,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={latest ? `Announcements. Latest: ${latest.title}` : 'Announcements'}
+        accessibilityLabel={
+          latestAnnouncement ? `Announcements. Latest: ${latestAnnouncement.title}` : 'Announcements'
+        }
       >
         {({ pressed }) => (
           <>
@@ -144,28 +139,14 @@ export const QuickActionsRow: React.FC = () => {
               <View
                 style={[
                   styles.iconWrap,
-                  {
-                    backgroundColor: pressed
-                      ? colors.brandOrange
-                      : isDark
-                      ? 'rgba(255, 255, 255, 0.08)'
-                      : '#EEF2F8',
-                  },
+                  { backgroundColor: pressed ? colors.brandOrange : chipBg },
                 ]}
               >
-                <Megaphone
-                  size={18}
-                  color={pressed ? '#FFFFFF' : isDark ? '#FFFFFF' : colors.brandNavy}
-                  strokeWidth={2}
-                />
+                <Megaphone size={18} color={pressed ? '#FFFFFF' : chipIcon} strokeWidth={2} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[styles.advisoryHeading, { color: colors.textPrimary }]}>
-                  Announcements
-                </Text>
-                <Text style={[styles.meta, { color: colors.textMuted }]}>
-                  BFP Lian Fire Station
-                </Text>
+                <Text style={[styles.advisoryHeading, { color: colors.textPrimary }]}>Announcements</Text>
+                <Text style={[styles.meta, { color: colors.textMuted }]}>BFP Lian Fire Station</Text>
               </View>
               <View style={styles.viewAll}>
                 <Text style={[styles.viewAllText, { color: colors.brandOrange }]}>View all</Text>
@@ -175,40 +156,35 @@ export const QuickActionsRow: React.FC = () => {
 
             {/* Latest post preview */}
             <View style={[styles.latestBox, { borderTopColor: colors.border }]}>
-              {latest ? (
+              {latestAnnouncement ? (
                 <>
                   <View style={styles.latestMetaRow}>
-                    <View style={[styles.dot, { backgroundColor: colors.brandOrange }]} />
-                    <Text style={[styles.kicker, { color: colors.brandOrange }]}>LATEST</Text>
+                    {showNewTag && (
+                      <View style={[styles.newTag, { backgroundColor: chipBackground(colors.brandOrange) }]}>
+                        <Text style={[styles.newTagText, { color: colors.brandOrange }]}>NEW</Text>
+                      </View>
+                    )}
                     <Text style={[styles.latestTime, { color: colors.textMuted }]}>
-                      · {formatRelativeDate(latest.created_at)}
+                      {formatRelativeDate(latestAnnouncement.created_at)}
                     </Text>
                   </View>
-                  <Text
-                    style={[styles.advisoryTitle, { color: colors.textPrimary }]}
-                    numberOfLines={1}
-                  >
-                    {latest.title}
+                  <Text style={[styles.advisoryTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {latestAnnouncement.title}
                   </Text>
-                  <Text
-                    style={[styles.advisoryBody, { color: colors.textSecondary }]}
-                    numberOfLines={2}
-                  >
-                    {latest.content}
+                  <Text style={[styles.advisoryBody, { color: colors.textSecondary }]} numberOfLines={2}>
+                    {latestAnnouncement.content}
                   </Text>
                 </>
-              ) : isLoaded ? (
-                <Text
-                  style={[styles.advisoryBody, { color: colors.textSecondary, marginTop: 0 }]}
-                >
-                  No active advisories right now.
-                </Text>
-              ) : (
+              ) : isLoading ? (
                 <View style={{ gap: 6, marginTop: 2 }}>
                   <Skeleton width={110} height={12} borderRadius={4} />
                   <Skeleton width="90%" height={15} borderRadius={4} />
                   <Skeleton width="60%" height={12} borderRadius={4} />
                 </View>
+              ) : (
+                <Text style={[styles.advisoryBody, { color: colors.textSecondary, marginTop: 0 }]}>
+                  No active advisories right now.
+                </Text>
               )}
             </View>
           </>
@@ -219,14 +195,6 @@ export const QuickActionsRow: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  sectionHeader: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
   card: {
     borderRadius: 18,
     overflow: 'hidden',
@@ -289,22 +257,21 @@ const styles = StyleSheet.create({
   latestMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
+  newTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  kicker: {
-    fontSize: 10.5,
+  newTagText: {
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.9,
+    letterSpacing: 0.8,
   },
   latestTime: {
     fontSize: 12,
     fontWeight: '500',
-    marginLeft: 4,
   },
   advisoryTitle: {
     fontSize: 15,

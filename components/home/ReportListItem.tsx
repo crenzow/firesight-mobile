@@ -7,7 +7,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { CommunityReport } from '../../services/api/models';
 import { StatusBadge } from './StatusBadge';
 import { formatIncidentDateTime } from '../../utils/formatters';
-import { APP_CONFIG, getStorageImageUrl } from '../../constants/config';
+import { getStorageImageUrl } from '../../constants/config';
 import { reverseGeocode, getCachedGeocode } from '../../utils/geocoding';
 
 interface ReportListItemProps {
@@ -27,7 +27,7 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
   from,
   listFrom,
 }) => {
-  const { colors, spacing, typography, radius, isDark } = useTheme();
+  const { colors, spacing, isDark } = useTheme();
   const [imageError, setImageError] = useState(false);
   const cached = getCachedGeocode(report.latitude, report.longitude);
   const [locationName, setLocationName] = useState<string>(
@@ -108,15 +108,13 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
                 styles.iconFallback,
                 {
                   borderRadius: 14,
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#EEF2F8',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB',
-                  borderWidth: 1,
+                  backgroundColor: `${colors.brandOrange}${isDark ? '2E' : '1A'}`,
                 },
               ]}
             >
               <Flame
                 size={24}
-                color={pressed ? colors.brandOrange : (isDark ? 'rgba(255,255,255,0.4)' : colors.brandNavy)}
+                color={colors.brandOrange}
                 strokeWidth={2}
               />
             </View>
@@ -177,7 +175,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
   topRow: {
     flexDirection: 'row',
