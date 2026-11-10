@@ -46,7 +46,7 @@ export default function RegisterStep2() {
             { color: 'rgba(255,255,255,0.7)', fontSize: typography.size.sm },
           ]}
         >
-          Step 2 of 3 — Address Info
+          Step 2 of 3
         </Text>
       </View>
 
@@ -72,10 +72,10 @@ export default function RegisterStep2() {
         </Text>
 
         <Input
-          label="House No. / Street"
+          label="House No. / Street / Purok"
           value={form.houseNoStreet}
           onChangeText={(t) => updateForm({ houseNoStreet: t })}
-          placeholder="123 Rizal Street"
+          placeholder="House No., Street, or Purok"
         />
 
         <SelectField

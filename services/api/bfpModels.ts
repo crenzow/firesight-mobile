@@ -32,6 +32,7 @@ export interface BFPIncident {
   ai_fire_confidence?: number | null;
   // Present only once an incident_record exists (i.e. status is at least 'accepted')
   incident_type?: IncidentType;
+  incident_datetime?: string | null;
   alarm_level?: AlarmLevel | null;
   cause_of_fire?: string | null;
   casualties?: number | null;

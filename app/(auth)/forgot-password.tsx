@@ -213,7 +213,7 @@ export default function ForgotPasswordScreen() {
                 if (error) setError(null);
                 if (bfpNotice) setBfpNotice(null);
               }}
-              placeholder="name@example.com"
+              placeholder="Enter your registered email"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}

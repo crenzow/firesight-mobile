@@ -17,6 +17,7 @@ export interface RegistrationFormState {
   password: string;
   confirmPassword: string;
   agreedToTerms: boolean;
+  googleId?: string;
 }
 
 const initialState: RegistrationFormState = {
@@ -33,6 +34,7 @@ const initialState: RegistrationFormState = {
   password: '',
   confirmPassword: '',
   agreedToTerms: false,
+  googleId: undefined,
 };
 
 interface RegistrationContextValue {

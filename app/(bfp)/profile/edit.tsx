@@ -246,7 +246,7 @@ export default function BFPEditProfileScreen() {
                 label="New Password"
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Min 8 characters"
+                placeholder="At least 8 characters"
               />
             </View>
 

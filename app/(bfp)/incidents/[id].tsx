@@ -947,24 +947,31 @@ export default function IncidentDetailScreen() {
               </View>
             ) : null}
 
-            {/* Subtle Apple Intelligence Vision Pill */}
-            {incident.ai_fire_label ? (
-              <View style={[styles.briefingAiRow, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
-                <Sparkles size={12} color={colors.brandOrange} strokeWidth={2} />
-                <Text style={[styles.briefingAiText, { color: colors.textSecondary }]}>
-                  {incident.ai_fire_label === 'fire'
-                    ? 'AI Vision Verified: Fire pattern detected'
-                    : incident.ai_fire_label === 'non_fire'
-                      ? 'AI Vision: No fire pattern detected'
-                      : 'AI Vision analysis unavailable'}
+            {/* Subtle AI Scan Row */}
+            <View style={[styles.briefingAiRow, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
+              <Sparkles
+                size={12}
+                color={incident.ai_fire_label ? colors.brandOrange : colors.textMuted}
+                strokeWidth={2}
+              />
+              <Text
+                style={[
+                  styles.briefingAiText,
+                  { color: incident.ai_fire_label ? colors.textSecondary : colors.textMuted },
+                ]}
+              >
+                {incident.ai_fire_label === 'fire'
+                  ? 'AI Scan: Fire pattern detected'
+                  : incident.ai_fire_label === 'non_fire'
+                    ? 'AI Scan: No fire pattern detected'
+                    : 'AI Scan unavailable'}
+              </Text>
+              {incident.ai_fire_confidence !== null && incident.ai_fire_confidence !== undefined ? (
+                <Text style={[styles.briefingAiConfidence, { color: colors.brandOrange }]}>
+                  · {(incident.ai_fire_confidence * 100).toFixed(0)}% Match
                 </Text>
-                {incident.ai_fire_confidence !== null && incident.ai_fire_confidence !== undefined ? (
-                  <Text style={[styles.briefingAiConfidence, { color: colors.brandOrange }]}>
-                    · {(incident.ai_fire_confidence * 100).toFixed(0)}% Match
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
+              ) : null}
+            </View>
           </Card>
         </View>
 
@@ -1126,7 +1133,6 @@ export default function IncidentDetailScreen() {
                   },
                 ]}
               >
-                <ShieldX size={15} color="#DC2626" strokeWidth={2.4} style={{ marginRight: 6 }} />
                 <Text style={[styles.inPageActionBtnText, { color: '#DC2626' }]}>Mark False</Text>
               </Pressable>
 
@@ -1142,7 +1148,6 @@ export default function IncidentDetailScreen() {
                   },
                 ]}
               >
-                <ShieldCheck size={15} color="#FFFFFF" strokeWidth={2.4} style={{ marginRight: 6 }} />
                 <Text style={styles.inPageActionBtnText}>Verify Incident</Text>
               </Pressable>
             </View>

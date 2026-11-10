@@ -37,15 +37,33 @@ export interface RegisterPayload {
   municipality: string;
   province: string;
   email: string;
-  password: string;
+  password?: string;
+  google_id?: string;
 }
 
 export interface LoginPayload {
   email: string;
-  password: string;
+  password?: string;
+  google_id?: string;
 }
 
 export interface AuthResponse {
   token: string;
   user: AppUser;
+}
+
+export interface GoogleAuthResponse {
+  is_new_user: boolean;
+  requires_completion?: boolean;
+  token?: string;
+  user?: AppUser;
+  google_user?: {
+    user_id?: number;
+    google_id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    contact_number?: string | null;
+    profile_image?: string | null;
+  };
 }

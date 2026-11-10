@@ -59,6 +59,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({ segments, va
                 fontSize: typography.size.xs,
                 fontWeight: isActive ? '700' : '600',
               }}
+              numberOfLines={1}
             >
               {segment.label}
             </Text>

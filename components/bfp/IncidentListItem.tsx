@@ -182,7 +182,7 @@ const IncidentListItemComponent: React.FC<IncidentListItemProps> = ({ incident, 
                   ? `AI Verified Fire${confidencePercent !== null ? ` (${confidencePercent}%)` : ''}`
                   : isNonFire
                   ? `No Fire Detected${confidencePercent !== null ? ` (${confidencePercent}%)` : ''}`
-                  : 'AI Scan Pending'}
+                  : 'AI Scan Unavailable'}
               </Text>
             </View>
           </View>

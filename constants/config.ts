@@ -17,6 +17,7 @@ if (__DEV__ && !envApiUrl) {
 
 export const APP_CONFIG = {
   API_BASE_URL: envApiUrl ?? '',
+  GOOGLE_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '1022652066523-tim9290mc5oor1eb59il6b1peoej2nh2.apps.googleusercontent.com',
   APP_NAME: 'FireSight',
   APP_VERSION: '1.0.0',
   DEFAULT_MUNICIPALITY: 'Lian',

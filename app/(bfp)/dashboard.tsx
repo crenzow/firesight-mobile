@@ -87,6 +87,7 @@ export default function DashboardScreen() {
                 label="Active incidents"
                 accentColor={colors.danger}
                 isLoading={isLoading}
+                onPress={() => router.push({ pathname: '/(bfp)/incidents', params: { filter: 'active' } })}
               />
               <StatTile
                 icon={<ClipboardList size={20} color={colors.warning} strokeWidth={2.2} />}
@@ -94,6 +95,7 @@ export default function DashboardScreen() {
                 label="Pending verification"
                 accentColor={colors.warning}
                 isLoading={isLoading}
+                onPress={() => router.push({ pathname: '/(bfp)/incidents', params: { filter: 'pending' } })}
               />
             </Animated.View>
             <Animated.View entering={enter(1)} style={[styles.kpiRow, { gap: spacing.sm }]}>
@@ -103,6 +105,7 @@ export default function DashboardScreen() {
                 label="Resolved today"
                 accentColor={colors.success}
                 isLoading={isLoading}
+                onPress={() => router.push({ pathname: '/(bfp)/incidents', params: { filter: 'resolved', datePreset: 'today' } })}
               />
               <StatTile
                 icon={<CalendarDays size={20} color={colors.info} strokeWidth={2.2} />}
@@ -110,6 +113,7 @@ export default function DashboardScreen() {
                 label="Resolved this month"
                 accentColor={colors.info}
                 isLoading={isLoading}
+                onPress={() => router.push({ pathname: '/(bfp)/incidents', params: { filter: 'resolved', datePreset: 'month' } })}
               />
             </Animated.View>
           </View>

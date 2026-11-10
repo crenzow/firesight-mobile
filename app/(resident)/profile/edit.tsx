@@ -154,7 +154,7 @@ export default function EditProfileScreen() {
           <Input label="Last Name" value={lastName} onChangeText={setLastName} />
           <Input label="Suffix (optional)" value={suffix} onChangeText={setSuffix} placeholder="e.g. Jr., III" />
           <Input label="Mobile Number" value={contactNumber} onChangeText={setContactNumber} keyboardType="phone-pad" />
-          <Input label="House No. / Street" value={houseNoStreet} onChangeText={setHouseNoStreet} />
+          <Input label="House No. / Street / Purok" value={houseNoStreet} onChangeText={setHouseNoStreet} placeholder="House No., Street, or Purok" />
           <SelectField label="Barangay" value={barangayId} options={LIAN_BARANGAYS} onSelect={(id) => setBarangayId(typeof id === 'number' ? id : Number(id))} />
 
           {error ? <Text style={{ color: colors.danger, fontSize: typography.size.sm, marginBottom: spacing.md }}>{error}</Text> : null}

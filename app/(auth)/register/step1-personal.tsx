@@ -44,7 +44,7 @@ export default function RegisterStep1() {
             { color: 'rgba(255,255,255,0.7)', fontSize: typography.size.sm },
           ]}
         >
-          Step 1 of 3 — Personal Info
+          Step 1 of 3
         </Text>
       </View>
 

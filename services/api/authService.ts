@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { AuthResponse, LoginPayload, RegisterPayload } from './types';
+import { AuthResponse, GoogleAuthResponse, LoginPayload, RegisterPayload } from './types';
 
 /**
  * All auth-related REST calls live here so screens only ever call
@@ -11,8 +11,8 @@ export const authService = {
 
   register: (payload: RegisterPayload) => apiClient.post<AuthResponse>('/auth/register.php', payload, false),
 
-  loginWithGoogle: (idToken: string) =>
-    apiClient.post<AuthResponse>('/auth/google_login.php', { id_token: idToken }, false),
+  loginWithGoogle: (payload: { id_token?: string; access_token?: string; token?: string; google_id?: string; email?: string; first_name?: string; last_name?: string; profile_image?: string }) =>
+    apiClient.post<GoogleAuthResponse>('/auth/google_login.php', payload, false),
 
   requestPasswordReset: (email: string) =>
     apiClient.post<{ message: string; email?: string; dev_otp?: string }>(

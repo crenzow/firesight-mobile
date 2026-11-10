@@ -124,7 +124,7 @@ export default function RegisterStep3() {
             { color: 'rgba(255,255,255,0.7)', fontSize: typography.size.sm },
           ]}
         >
-          Step 3 of 3 — Account Info
+          Step 3 of 3
         </Text>
       </View>
 
@@ -181,7 +181,7 @@ export default function RegisterStep3() {
             updateForm({ password: t });
             if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
           }}
-          placeholder="Create password (min. 8)"
+          placeholder="At least 8 characters"
           error={errors.password}
         />
         <PasswordStrengthMeter password={form.password} />

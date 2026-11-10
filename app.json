@@ -4,19 +4,28 @@
     "slug": "firesight-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/firesight-app-icon.png",
     "scheme": "firesightmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/firesight-adaptive-foreground.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F1C3F"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.firesight",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#0F1C3F",
+        "foregroundImage": "./assets/images/firesight-adaptive-foreground.png"
+      },
+      "splash": {
+        "image": "./assets/images/firesight-adaptive-foreground.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0F1C3F"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -31,7 +40,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/firesight-logo.png",
+          "image": "./assets/images/firesight-adaptive-foreground.png",
           "imageWidth": 240,
           "resizeMode": "contain",
           "backgroundColor": "#0F1C3F",

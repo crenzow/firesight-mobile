@@ -10,7 +10,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'neutral';
 
 interface ButtonProps {
   label: string;
@@ -64,6 +64,8 @@ export const Button: React.FC<ButtonProps> = ({
         return pressed ? '#168048' : colors.success;
       case 'outline':
         return pressed ? colors.brandOrange : 'transparent';
+      case 'neutral':
+        return pressed ? (isDark ? '#1E293B' : '#F1F5F9') : colors.surface;
       case 'ghost':
         return pressed ? (isDark ? '#221915' : '#FFF7F2') : 'transparent';
       default:
@@ -73,6 +75,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   const getTextColor = (pressed: boolean) => {
     if (disabled) return colors.textMuted;
+    if (variant === 'neutral') return colors.textPrimary;
     if (variant === 'outline') return pressed ? '#FFFFFF' : colors.brandOrange;
     if (variant === 'ghost') return pressed ? colors.brandOrange : colors.textPrimary;
     return colors.textInverse;
@@ -83,6 +86,12 @@ export const Button: React.FC<ButtonProps> = ({
       return {
         borderWidth: 1.5,
         borderColor: colors.brandOrange,
+      };
+    }
+    if (variant === 'neutral') {
+      return {
+        borderWidth: 1.5,
+        borderColor: colors.border,
       };
     }
     return {};

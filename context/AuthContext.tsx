@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { authService } from '../services/api/authService';
 import { secureStorage } from '../services/storage/secureStorage';
 import { ApiError } from '../services/api/client';
-import { AppUser, LoginPayload, RegisterPayload } from '../services/api/types';
+import { AppUser, GoogleAuthResponse, LoginPayload, RegisterPayload } from '../services/api/types';
 
 import { profileService } from '../services/api/profileService';
 
@@ -14,6 +14,16 @@ interface AuthContextValue {
   error: string | null;
   login: (payload: LoginPayload) => Promise<AppUser>;
   register: (payload: RegisterPayload) => Promise<void>;
+  loginWithGoogle: (payload: {
+    id_token?: string;
+    access_token?: string;
+    token?: string;
+    google_id?: string;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+    profile_image?: string;
+  }) => Promise<GoogleAuthResponse>;
   logout: () => Promise<void>;
   updateUser: (updatedUser: AppUser) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -106,6 +116,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const loginWithGoogle = useCallback(
+    async (payload: {
+      id_token?: string;
+      access_token?: string;
+      token?: string;
+      google_id?: string;
+      email?: string;
+      first_name?: string;
+      last_name?: string;
+      profile_image?: string;
+    }): Promise<GoogleAuthResponse> => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const response = await authService.loginWithGoogle(payload);
+        if (!response.is_new_user && response.token && response.user) {
+          await secureStorage.setToken(response.token);
+          await secureStorage.setUser(response.user);
+          setUser(response.user);
+        }
+        return response;
+      } catch (err) {
+        const msg = err instanceof ApiError ? err.message : 'Google sign in failed. Please try again.';
+        setError(msg);
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    []
+  );
+
   const logout = useCallback(async () => {
     try {
       await authService.logout();
@@ -125,6 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     error,
     login,
     register,
+    loginWithGoogle,
     logout,
     updateUser,
     refreshUser,

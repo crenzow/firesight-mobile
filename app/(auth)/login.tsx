@@ -3,22 +3,65 @@ import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Pl
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Mail } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useRegistration } from '../../context/RegistrationContext';
 import { Input } from '../../components/ui/Input';
 import { PasswordInput } from '../../components/ui/PasswordInput';
 import { Button } from '../../components/ui/Button';
+import { GoogleIcon } from '../../components/ui/GoogleIcon';
 import { validateLogin } from '../../utils/validators';
 import { ApiError } from '../../services/api/client';
+import { APP_CONFIG } from '../../constants/config';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const { colors, spacing, typography, radius } = useTheme();
-  const { login, isSubmitting } = useAuth();
+  const { login, loginWithGoogle, isSubmitting } = useAuth();
+  const { updateForm } = useRegistration();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const processGoogleLogin = async (idToken?: string, accessToken?: string) => {
+    setGoogleLoading(true);
+    setFormError(null);
+    try {
+      const res = await loginWithGoogle({
+        id_token: idToken,
+        access_token: accessToken,
+      });
+
+      if (!res.is_new_user && res.user) {
+        if (res.user.role === 'bfp_personnel') {
+          router.replace('/(bfp)/dashboard');
+        } else {
+          router.replace('/(resident)/home');
+        }
+      } else if (res.requires_completion || res.is_new_user) {
+        if (res.google_user) {
+          updateForm({
+            firstName: res.google_user.first_name || '',
+            lastName: res.google_user.last_name || '',
+            email: res.google_user.email || '',
+            googleId: res.google_user.google_id || '',
+            mobileNumber: res.google_user.contact_number || '',
+          });
+        }
+        router.push('/(auth)/register/complete-google');
+      }
+    } catch (err: any) {
+      setFormError(err instanceof ApiError ? err.message : 'Google sign-in failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSignIn = async () => {
     const validationErrors = validateLogin({ email, password });
@@ -28,7 +71,6 @@ export default function LoginScreen() {
 
     try {
       const loggedInUser = await login({ email: email.trim(), password });
-      // Route to the correct home screen based on the user's role
       if (loggedInUser && loggedInUser.role === 'bfp_personnel') {
         router.replace('/(bfp)/dashboard');
       } else {
@@ -36,6 +78,59 @@ export default function LoginScreen() {
       }
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Unable to sign in. Please try again.');
+    }
+  };
+
+  const handleGooglePress = async () => {
+    try {
+      setFormError(null);
+      setGoogleLoading(true);
+
+      const clientId = APP_CONFIG.GOOGLE_CLIENT_ID;
+      const redirectUri = 'https://auth.expo.io/@anonymous/firesight-mobile';
+      const returnUrl = Linking.createURL('');
+
+      // Build Google OAuth authorization URL
+      const googleAuthUrl =
+        'https://accounts.google.com/o/oauth2/v2/auth?' +
+        new URLSearchParams({
+          client_id: clientId,
+          redirect_uri: redirectUri,
+          response_type: 'id_token',
+          scope: 'openid email profile',
+          nonce: Math.random().toString(36).substring(2),
+          prompt: 'select_account',
+        }).toString();
+
+      // Wrap with Expo Auth proxy /start so auth.expo.io knows what returnUrl to bounce back to
+      const proxyStartUrl =
+        `${redirectUri}/start?` +
+        new URLSearchParams({
+          authUrl: googleAuthUrl,
+          returnUrl: returnUrl,
+        }).toString();
+
+      const result = await WebBrowser.openAuthSessionAsync(proxyStartUrl, returnUrl);
+
+      if (result.type === 'success' && result.url) {
+        const fragment = result.url.includes('#') ? result.url.split('#')[1] : '';
+        const query = result.url.includes('?') ? result.url.split('?')[1] : '';
+        const searchParams = new URLSearchParams(fragment || query);
+        const idToken = searchParams.get('id_token') || undefined;
+        const accessToken = searchParams.get('access_token') || undefined;
+
+        if (idToken || accessToken) {
+          await processGoogleLogin(idToken, accessToken);
+        } else {
+          setFormError('No Google credential returned. Please try again.');
+        }
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        // User closed the browser
+      }
+    } catch (err: any) {
+      setFormError(err instanceof ApiError ? err.message : 'Google sign-in encountered an error.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -123,12 +218,12 @@ export default function LoginScreen() {
 
           <Button
             label="Continue with Google"
-            variant="outline"
-            onPress={() => {
-              // Google auth requires additional native configuration
-              // (expo-auth-session + Google OAuth client IDs). Wired here so
-              // the flow is ready to enable once those credentials exist.
-            }}
+            variant="neutral"
+            icon={<GoogleIcon size={18} />}
+            iconPosition="left"
+            onPress={handleGooglePress}
+            loading={googleLoading}
+            disabled={googleLoading}
           />
 
           <View style={[styles.footerRow, { marginTop: spacing.xxl }]}>
