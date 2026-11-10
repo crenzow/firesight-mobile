@@ -11,6 +11,8 @@ export interface AppUser {
   email: string;
   profile_image?: string | null;
   is_accepted: boolean;
+  is_verified?: boolean;
+  email_verified_at?: string | null;
   address?: {
     house_no_street?: string | null;
     barangay_id?: number | null;
@@ -48,8 +50,12 @@ export interface LoginPayload {
 }
 
 export interface AuthResponse {
-  token: string;
-  user: AppUser;
+  token?: string;
+  user?: AppUser;
+  pending?: boolean;
+  requires_verification?: boolean;
+  message?: string;
+  email?: string;
 }
 
 export interface GoogleAuthResponse {

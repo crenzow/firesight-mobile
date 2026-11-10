@@ -136,7 +136,7 @@ export default function CompleteGoogleProfileScreen() {
         </Pressable>
 
         <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xl }]}>
-          Complete Registration
+          Complete Your Profile
         </Text>
         <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: typography.size.sm, marginTop: 4 }}>
           Emergency Contact & Address Details
@@ -280,7 +280,7 @@ export default function CompleteGoogleProfileScreen() {
 
         <View style={{ marginTop: spacing.xl }}>
           <Button
-            label="Complete Registration"
+            label="Complete Profile"
             onPress={handleComplete}
             loading={isSubmitting}
           />

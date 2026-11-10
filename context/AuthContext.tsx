@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { authService } from '../services/api/authService';
 import { secureStorage } from '../services/storage/secureStorage';
 import { ApiError } from '../services/api/client';
-import { AppUser, GoogleAuthResponse, LoginPayload, RegisterPayload } from '../services/api/types';
+import { AppUser, AuthResponse, GoogleAuthResponse, LoginPayload, RegisterPayload } from '../services/api/types';
 
 import { profileService } from '../services/api/profileService';
 
@@ -13,7 +13,7 @@ interface AuthContextValue {
   isSubmitting: boolean;
   error: string | null;
   login: (payload: LoginPayload) => Promise<AppUser>;
-  register: (payload: RegisterPayload) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<AuthResponse>;
   loginWithGoogle: (payload: {
     id_token?: string;
     access_token?: string;
@@ -88,10 +88,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     try {
       const response = await authService.login(payload);
-      await secureStorage.setToken(response.token);
-      await secureStorage.setUser(response.user);
-      setUser(response.user);
-      return response.user;
+      if (response.token && response.user) {
+        await secureStorage.setToken(response.token);
+        await secureStorage.setUser(response.user);
+        setUser(response.user);
+        return response.user;
+      }
+      throw new Error('Authentication succeeded without a user profile.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Unable to sign in right now. Please try again.');
       throw err;
@@ -100,14 +103,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const register = useCallback(async (payload: RegisterPayload) => {
+  const register = useCallback(async (payload: RegisterPayload): Promise<AuthResponse> => {
     setIsSubmitting(true);
     setError(null);
     try {
       const response = await authService.register(payload);
-      await secureStorage.setToken(response.token);
-      await secureStorage.setUser(response.user);
-      setUser(response.user);
+      // For immediate accounts (e.g. Google or instant activation)
+      if (response.token && response.user) {
+        await secureStorage.setToken(response.token);
+        await secureStorage.setUser(response.user);
+        setUser(response.user);
+      }
+      // For cache-first pending email verification accounts, response.pending is true
+      // and token/user are deliberately not persisted until email verification link is clicked.
+      return response;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Unable to create your account right now. Please try again.');
       throw err;

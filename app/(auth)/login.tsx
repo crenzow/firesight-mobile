@@ -27,6 +27,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [signInLoading, setSignInLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const processGoogleLogin = async (idToken?: string, accessToken?: string) => {
@@ -69,6 +70,7 @@ export default function LoginScreen() {
     setFormError(null);
     if (Object.keys(validationErrors).length > 0) return;
 
+    setSignInLoading(true);
     try {
       const loggedInUser = await login({ email: email.trim(), password });
       if (loggedInUser && loggedInUser.role === 'bfp_personnel') {
@@ -76,8 +78,18 @@ export default function LoginScreen() {
       } else {
         router.replace('/(resident)/home');
       }
-    } catch (err) {
+    } catch (err: any) {
+      const errorBody = err instanceof ApiError ? (err.body as any) : null;
+      if (errorBody?.requires_verification) {
+        router.push({
+          pathname: '/(auth)/register/verify-email',
+          params: { email: errorBody.email || email.trim() },
+        });
+        return;
+      }
       setFormError(err instanceof ApiError ? err.message : 'Unable to sign in. Please try again.');
+    } finally {
+      setSignInLoading(false);
     }
   };
 
@@ -141,15 +153,9 @@ export default function LoginScreen() {
     >
       <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']} />
       
-      <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xl }}>
-        <Text style={[styles.brand, { color: '#FFFFFF' }]}>
-          FIRE<Text style={{ color: colors.brandOrange }}>SIGHT</Text>
-        </Text>
+      <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl }}>
         <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xxl }]}>
-          Welcome back
-        </Text>
-        <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: typography.size.base, marginTop: 4 }}>
-          Sign in to access fire safety services
+          Sign in to FireSight
         </Text>
       </View>
 
@@ -166,7 +172,7 @@ export default function LoginScreen() {
               setEmail(t);
               if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
             }}
-            placeholder="Email or mobile number"
+            placeholder="Enter email or mobile number"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -205,7 +211,12 @@ export default function LoginScreen() {
 
           {/* Action Buttons Section */}
           <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
-            <Button label="Sign In" onPress={handleSignIn} loading={isSubmitting} />
+            <Button
+              label="Sign In"
+              onPress={handleSignIn}
+              loading={signInLoading}
+              disabled={signInLoading || googleLoading}
+            />
           </View>
 
           <View style={[styles.dividerRow, { marginVertical: spacing.xl }]}>
@@ -223,7 +234,7 @@ export default function LoginScreen() {
             iconPosition="left"
             onPress={handleGooglePress}
             loading={googleLoading}
-            disabled={googleLoading}
+            disabled={signInLoading || googleLoading}
           />
 
           <View style={[styles.footerRow, { marginTop: spacing.xxl }]}>

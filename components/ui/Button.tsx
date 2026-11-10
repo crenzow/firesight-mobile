@@ -52,7 +52,6 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const getBackgroundColor = (pressed: boolean) => {
-    if (disabled) return colors.disabled;
     switch (variant) {
       case 'primary':
         return pressed ? colors.brandOrangeDeep : colors.brandOrange;
@@ -74,7 +73,6 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const getTextColor = (pressed: boolean) => {
-    if (disabled) return colors.textMuted;
     if (variant === 'neutral') return colors.textPrimary;
     if (variant === 'outline') return pressed ? '#FFFFFF' : colors.brandOrange;
     if (variant === 'ghost') return pressed ? colors.brandOrange : colors.textPrimary;
@@ -111,6 +109,7 @@ export const Button: React.FC<ButtonProps> = ({
           paddingHorizontal: spacing.md,
           borderRadius: radius.md,
           width: fullWidth ? '100%' : undefined,
+          opacity: loading ? 0.9 : disabled ? 0.55 : 1,
           transform: [{ scale: pressed && !disabled && !loading ? 0.975 : 1 }],
           ...getBorder(pressed),
         },
@@ -118,25 +117,31 @@ export const Button: React.FC<ButtonProps> = ({
       ]}
     >
       {({ pressed }) => (
-        loading ? (
-          <ActivityIndicator color={getTextColor(pressed)} />
-        ) : (
-          <View style={styles.content}>
-            {icon && iconPosition === 'left' ? <View style={{ marginRight: spacing.sm }}>{icon}</View> : null}
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.85}
-              style={[
-                styles.label,
-                { color: getTextColor(pressed), fontSize: typography.size.sm + 1, fontWeight: typography.weight.semibold },
-              ]}
-            >
-              {label}
-            </Text>
-            {icon && iconPosition === 'right' ? <View style={{ marginLeft: spacing.sm }}>{icon}</View> : null}
-          </View>
-        )
+        <View style={styles.content}>
+          {loading ? (
+            <ActivityIndicator
+              size="small"
+              color={getTextColor(pressed)}
+              style={{ marginRight: spacing.sm }}
+            />
+          ) : (
+            icon && iconPosition === 'left' ? <View style={{ marginRight: spacing.sm }}>{icon}</View> : null
+          )}
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+            style={[
+              styles.label,
+              { color: getTextColor(pressed), fontSize: typography.size.sm + 1, fontWeight: typography.weight.semibold },
+            ]}
+          >
+            {label}
+          </Text>
+          {!loading && icon && iconPosition === 'right' ? (
+            <View style={{ marginLeft: spacing.sm }}>{icon}</View>
+          ) : null}
+        </View>
       )}
     </Pressable>
   );
@@ -146,6 +151,7 @@ const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 48,
   },
   content: {
     flexDirection: 'row',

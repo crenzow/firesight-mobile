@@ -46,6 +46,7 @@ export default function RegisterStep3() {
     if (Object.keys(validationErrors).length > 0) return;
 
     try {
+      const targetEmail = form.email.trim();
       await register({
         first_name: form.firstName,
         middle_name: form.middleName || undefined,
@@ -56,11 +57,14 @@ export default function RegisterStep3() {
         barangay_id: form.barangayId as number,
         municipality: form.municipality,
         province: form.province,
-        email: form.email.trim(),
+        email: targetEmail,
         password: form.password,
       });
       resetForm();
-      router.replace('/(resident)/home');
+      router.replace({
+        pathname: '/(auth)/register/verify-email',
+        params: { email: targetEmail },
+      });
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Unable to create your account. Please try again.');
     }

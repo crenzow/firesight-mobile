@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { AuthResponse, GoogleAuthResponse, LoginPayload, RegisterPayload } from './types';
+import { AppUser, AuthResponse, GoogleAuthResponse, LoginPayload, RegisterPayload } from './types';
 
 /**
  * All auth-related REST calls live here so screens only ever call
@@ -39,6 +39,25 @@ export const authService = {
     apiClient.post<{ message: string }>(
       '/auth/reset_password.php',
       { token, new_password: newPassword },
+      false
+    ),
+
+  resendVerification: (email?: string) =>
+    apiClient.post<{ message: string; already_verified?: boolean }>(
+      '/auth/resend_verification.php',
+      { email },
+      false
+    ),
+
+  checkVerificationStatus: (email?: string) =>
+    apiClient.get<{ is_verified: boolean; email_verified_at?: string | null; user?: AppUser }>(
+      email ? `/auth/verification_status.php?email=${encodeURIComponent(email)}` : '/auth/verification_status.php'
+    ),
+
+  cancelRegistration: (email: string) =>
+    apiClient.post<{ message: string }>(
+      '/auth/cancel_registration.php',
+      { email },
       false
     ),
 
