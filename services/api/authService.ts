@@ -61,5 +61,12 @@ export const authService = {
       false
     ),
 
+  checkMobile: (mobileNumber: string) =>
+    apiClient.post<{ available: boolean; mobile_number?: string }>(
+      '/auth/check_mobile.php',
+      { mobile_number: mobileNumber },
+      false
+    ),
+
   logout: () => apiClient.post<{ message: string }>('/auth/logout.php', {}),
 };

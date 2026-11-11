@@ -8,6 +8,7 @@ import {
   Image,
   Modal,
   BackHandler,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -83,11 +84,12 @@ const TIMELINE_STEPS: StepDefinition[] = [
 
 export default function ReportDetailScreen() {
   const { colors, spacing, typography, radius, shadow, isDark } = useTheme();
-  const { markReportRead } = useNotifications();
+  const { markReportRead, notifications } = useNotifications();
   const { id, from, listFrom } = useLocalSearchParams<{ id: string; from?: string; listFrom?: string }>();
   const [report, setReport] = useState<CommunityReport | null>(null);
   const [history, setHistory] = useState<ReportStatusHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [locationName, setLocationName] = useState('Loading location…');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
@@ -108,8 +110,30 @@ export default function ReportDetailScreen() {
     }
   }, [from, listFrom]);
 
+  const load = useCallback((silent = false) => {
+    if (!id) return;
+    const reportId = Number(id);
+    if (isNaN(reportId) || reportId <= 0) return;
+    if (!silent) setIsLoading(true);
+    markReportRead(reportId);
+    Promise.all([reportService.getReportById(reportId), reportService.getStatusHistory(reportId)])
+      .then(([reportData, historyData]) => {
+        setReport(reportData);
+        setHistory(historyData);
+      })
+      .catch(() => {
+        // Fallback handled by UI
+      })
+      .finally(() => {
+        if (!silent) setIsLoading(false);
+        setIsRefreshing(false);
+      });
+  }, [id, markReportRead]);
+
   useFocusEffect(
     useCallback(() => {
+      load(true);
+
       const onBackPress = () => {
         if (isPreviewOpen) {
           setIsPreviewOpen(false);
@@ -121,25 +145,36 @@ export default function ReportDetailScreen() {
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [isPreviewOpen, handleBack])
+    }, [isPreviewOpen, handleBack, load])
   );
 
+  // Live auto-refresh: Poll every 10s while report is active (pending, accepted, dispatched)
   useEffect(() => {
-    if (!id) return;
+    const isOngoing = report?.status && ['pending', 'accepted', 'dispatched'].includes(report.status);
+    if (!isOngoing) return;
+
+    const timer = setInterval(() => {
+      load(true);
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, [report?.status, load]);
+
+  // Instant refresh when a notification arrives for this report
+  useEffect(() => {
+    if (!id || !notifications.length) return;
     const reportId = Number(id);
-    if (!isNaN(reportId) && reportId > 0) {
-      markReportRead(reportId);
+    const hasMatchingNotif = notifications.some(
+      (n) => Number(n.report_id) === reportId && !n.is_read
+    );
+    if (hasMatchingNotif) {
+      load(true);
     }
-    Promise.all([reportService.getReportById(reportId), reportService.getStatusHistory(reportId)])
-      .then(([reportData, historyData]) => {
-        setReport(reportData);
-        setHistory(historyData);
-      })
-      .catch(() => {
-        // Fallback handled by UI
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
+  }, [notifications, id, load]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   useEffect(() => {
     if (!report) return;
@@ -218,6 +253,16 @@ export default function ReportDetailScreen() {
           <ScrollView
             contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={() => {
+                  setIsRefreshing(true);
+                  load(true);
+                }}
+                tintColor={colors.brandOrange}
+              />
+            }
           >
             {/* ── 1. Photo Card (Top of Report) ── */}
             {photoUri ? (

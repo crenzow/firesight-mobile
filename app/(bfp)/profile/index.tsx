@@ -239,7 +239,7 @@ export default function BFPProfileScreen() {
               icon={<SettingsIcon size={18} color="#FFFFFF" />}
               gradient={['#64748B', '#0F1C3F']}
               label="App Settings"
-              subtitle="Theme, notifications, preferences"
+              subtitle="Theme and display preferences"
               onPress={() => router.push('/(bfp)/profile/settings?from=profile')}
             />
           </Card>
@@ -255,10 +255,6 @@ export default function BFPProfileScreen() {
             style={{ borderColor: colors.danger }}
           />
         </View>
-
-        <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, textAlign: 'center', marginTop: spacing.lg }}>
-          FIRESIGHT · BFP Lian Fire Station{'\n'}Version 1.0.0
-        </Text>
       </ScrollView>
 
       <ConfirmationDialog

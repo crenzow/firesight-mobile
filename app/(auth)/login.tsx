@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Mail } from 'lucide-react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform, Animated, Easing } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Mail, CheckCircle2 } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { useTheme } from '../../theme/ThemeContext';
@@ -23,12 +24,63 @@ export default function LoginScreen() {
   const { login, loginWithGoogle, isSubmitting } = useAuth();
   const { updateForm } = useRegistration();
 
-  const [email, setEmail] = useState('');
+  const { email: paramEmail, verified: paramVerified } = useLocalSearchParams<{ email?: string; verified?: string }>();
+  const insets = useSafeAreaInsets();
+
+  const [email, setEmail] = useState(paramEmail ? decodeURIComponent(paramEmail) : '');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [signInLoading, setSignInLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Floating transient toast for verified status
+  const [showToast, setShowToast] = useState(false);
+  const toastY = useRef(new Animated.Value(-60)).current;
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (paramEmail) {
+      setEmail(decodeURIComponent(paramEmail));
+    }
+
+    if (paramVerified === '1') {
+      setShowToast(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+
+      Animated.parallel([
+        Animated.spring(toastY, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 80,
+          friction: 9,
+        }),
+        Animated.timing(toastOpacity, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      const timer = setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(toastY, {
+            toValue: -40,
+            duration: 250,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(toastOpacity, {
+            toValue: 0,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+        ]).start(() => setShowToast(false));
+      }, 3200);
+
+      return () => clearTimeout(timer);
+    }
+  }, [paramEmail, paramVerified, toastY, toastOpacity]);
 
   const processGoogleLogin = async (idToken?: string, accessToken?: string) => {
     setGoogleLoading(true);
@@ -152,6 +204,28 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']} />
+
+      {/* Floating Dynamic Island Style Toast */}
+      {showToast ? (
+        <Animated.View
+          style={[
+            styles.floatingToast,
+            {
+              top: insets.top + 12,
+              opacity: toastOpacity,
+              transform: [{ translateY: toastY }],
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <View style={styles.toastInner}>
+            <View style={styles.toastIconWrap}>
+              <CheckCircle2 size={15} color="#FFFFFF" strokeWidth={2.5} />
+            </View>
+            <Text style={styles.toastText}>Email verified successfully</Text>
+          </View>
+        </Animated.View>
+      ) : null}
       
       <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl }}>
         <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xxl }]}>
@@ -166,7 +240,6 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xxxl, flexGrow: 1 }} keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background, flex: 1 }}>
         <Input
             label="Email or Mobile Number"
-            required
             value={email}
             onChangeText={(t) => {
               setEmail(t);
@@ -182,7 +255,6 @@ export default function LoginScreen() {
 
           <PasswordInput
             label="Password"
-            required
             value={password}
             onChangeText={(t) => {
               setPassword(t);
@@ -221,8 +293,17 @@ export default function LoginScreen() {
 
           <View style={[styles.dividerRow, { marginVertical: spacing.xl }]}>
             <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, marginHorizontal: spacing.md }}>
-              or continue with
+            <Text
+              style={{
+                color: colors.textMuted,
+                fontSize: 11,
+                fontWeight: '600',
+                letterSpacing: 1.2,
+                marginHorizontal: spacing.md,
+                textTransform: 'uppercase',
+              }}
+            >
+              OR
             </Text>
             <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           </View>
@@ -265,6 +346,43 @@ const styles = StyleSheet.create({
   subtitle: {},
   errorBanner: {
     padding: 12,
+  },
+  floatingToast: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    zIndex: 9999,
+    alignItems: 'center',
+  },
+  toastInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F1C3F',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.45)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  toastIconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  toastText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   dividerRow: {
     flexDirection: 'row',

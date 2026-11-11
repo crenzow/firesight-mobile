@@ -89,7 +89,7 @@ const OriginSelector: React.FC<{
   onChange: (o: RouteOrigin) => void;
   gpsAvailable: boolean;
 }> = ({ value, onChange, gpsAvailable }) => {
-  const { isDark } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const opts: {
     key: RouteOrigin;
@@ -130,7 +130,13 @@ const OriginSelector: React.FC<{
             }}
             style={({ pressed }) => [
               styles.iosSegmentBtn,
-              active && styles.iosSegmentBtnActive,
+              active && [
+                styles.iosSegmentBtnActive,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : '#FFFFFF',
+                  borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)',
+                },
+              ],
               {
                 opacity: disabled ? 0.35 : pressed && !active ? 0.75 : 1,
                 transform: [{ scale: pressed && !disabled ? 0.96 : 1 }],
@@ -139,7 +145,7 @@ const OriginSelector: React.FC<{
           >
             <IconComp
               size={14}
-              color={active ? '#1C1C1E' : '#8E8E93'}
+              color={active ? (isDark ? colors.textPrimary : '#1C1C1E') : colors.textMuted}
               strokeWidth={active ? 2.5 : 2}
             />
             <Text
@@ -147,7 +153,7 @@ const OriginSelector: React.FC<{
               style={[
                 styles.iosSegmentText,
                 {
-                  color: active ? '#1C1C1E' : '#8E8E93',
+                  color: active ? (isDark ? colors.textPrimary : '#1C1C1E') : colors.textMuted,
                   fontWeight: active ? '700' : '500',
                 },
               ]}
@@ -247,7 +253,7 @@ const formatToDbDateTime = (date: Date): string => {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function IncidentDetailScreen() {
   const { colors, spacing, typography, radius, isDark } = useTheme();
-  const { markReportRead } = useNotifications();
+  const { markReportRead, notifications } = useNotifications();
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const reportId = Number(id);
   const backRoute =
@@ -282,6 +288,8 @@ export default function IncidentDetailScreen() {
   } | null>(null);
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const isEditingDetailsRef = useRef(false);
+  isEditingDetailsRef.current = isEditingDetails;
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [isReinforcement, setIsReinforcement] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
@@ -539,8 +547,49 @@ export default function IncidentDetailScreen() {
     router.navigate(backRoute as any);
   }, [isMapTypeModalOpen, isDispatchModalOpen, dialog, isNavigating, isMapFullscreen, backRoute]);
 
+  const load = useCallback((silent = false) => {
+    if (!reportId) return;
+    if (!silent) setIsLoading(true);
+    Promise.all([incidentService.getDetail(reportId), incidentService.getStatusHistory(reportId)])
+      .then(([detail, historyData]) => {
+        setIncident(detail);
+        const resolvedHistory: BFPIncidentStatusHistoryEntry[] = Array.isArray(historyData)
+          ? historyData
+          : Array.isArray((historyData as any)?.history)
+          ? (historyData as any).history
+          : [];
+        setHistory(resolvedHistory);
+        if (!isEditingDetailsRef.current) {
+          setCauseOfFire(detail.cause_of_fire ?? '');
+          setInjuries(String(detail.injuries ?? 0));
+          setFatalities(String(detail.fatalities ?? 0));
+          setEstimatedDamage(detail.estimated_damage != null ? String(detail.estimated_damage) : '');
+          setEstablishmentName(detail.establishment_name ?? '');
+          setOwnerName(detail.owner_name ?? '');
+          setOccupantName(detail.occupant_name ?? '');
+          const startedStr = detail.time_fire_started || detail.created_at || '';
+          const outStr =
+            detail.time_fire_out ||
+            (resolvedHistory.find((h) => h.status === 'resolved')?.created_at ?? '');
+          setTimeFireStarted(startedStr);
+          setFireStartedDate(parseDateSafe(startedStr));
+          setTimeFireOut(outStr);
+          setFireOutDate(parseDateSafe(outStr));
+          setNotes(detail.notes ?? '');
+          setAlarmLevel((detail.alarm_level as AlarmLevel) ?? null);
+          setIncidentType(detail.incident_type ?? null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!silent) setIsLoading(false);
+      });
+  }, [reportId]);
+
   useFocusEffect(
     useCallback(() => {
+      load(true);
+
       const onBackPress = () => {
         handleBack();
         return true;
@@ -548,8 +597,31 @@ export default function IncidentDetailScreen() {
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [handleBack])
+    }, [handleBack, load])
   );
+
+  // Live auto-refresh: Poll every 10s while incident is active (pending, accepted, dispatched)
+  useEffect(() => {
+    const isOngoing = incident?.status && ['pending', 'accepted', 'dispatched'].includes(incident.status);
+    if (!isOngoing || isEditingDetails || isNavigating) return;
+
+    const timer = setInterval(() => {
+      load(true);
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, [incident?.status, isEditingDetails, isNavigating, load]);
+
+  // Instant refresh when an in-app notification arrives for this report
+  useEffect(() => {
+    if (!reportId || !notifications.length) return;
+    const hasMatchingNotif = notifications.some(
+      (n) => Number(n.report_id) === reportId && !n.is_read
+    );
+    if (hasMatchingNotif) {
+      load(true);
+    }
+  }, [notifications, reportId, load]);
 
   // Fast initial GPS acquisition: last known location immediately (0ms), then fresh
   useEffect(() => {
@@ -570,40 +642,6 @@ export default function IncidentDetailScreen() {
       }
     })();
   }, []);
-
-  const load = useCallback(() => {
-    if (!reportId) return;
-    Promise.all([incidentService.getDetail(reportId), incidentService.getStatusHistory(reportId)])
-      .then(([detail, historyData]) => {
-        setIncident(detail);
-        const resolvedHistory: BFPIncidentStatusHistoryEntry[] = Array.isArray(historyData)
-          ? historyData
-          : Array.isArray((historyData as any)?.history)
-          ? (historyData as any).history
-          : [];
-        setHistory(resolvedHistory);
-        setCauseOfFire(detail.cause_of_fire ?? '');
-        setInjuries(String(detail.injuries ?? 0));
-        setFatalities(String(detail.fatalities ?? 0));
-        setEstimatedDamage(detail.estimated_damage != null ? String(detail.estimated_damage) : '');
-        setEstablishmentName(detail.establishment_name ?? '');
-        setOwnerName(detail.owner_name ?? '');
-        setOccupantName(detail.occupant_name ?? '');
-        const startedStr = detail.time_fire_started || detail.created_at || '';
-        const outStr =
-          detail.time_fire_out ||
-          (resolvedHistory.find((h) => h.status === 'resolved')?.created_at ?? '');
-        setTimeFireStarted(startedStr);
-        setFireStartedDate(parseDateSafe(startedStr));
-        setTimeFireOut(outStr);
-        setFireOutDate(parseDateSafe(outStr));
-        setNotes(detail.notes ?? '');
-        setAlarmLevel((detail.alarm_level as AlarmLevel) ?? null);
-        setIncidentType(detail.incident_type ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, [reportId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1220,13 +1258,21 @@ export default function IncidentDetailScreen() {
                         </View>
 
                         {/* Floating origin indicator pill (top-left) */}
-                        <View style={styles.previewOriginBadge}>
+                        <View
+                          style={[
+                            styles.previewOriginBadge,
+                            {
+                              backgroundColor: isDark ? 'rgba(21, 26, 48, 0.94)' : 'rgba(255, 255, 255, 0.94)',
+                              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                            },
+                          ]}
+                        >
                           {routeOrigin === 'station' ? (
-                            <Building2 size={11} color="#1C1C1E" strokeWidth={2.2} />
+                            <Building2 size={11} color={isDark ? '#FFFFFF' : '#1C1C1E'} strokeWidth={2.2} />
                           ) : (
-                            <Crosshair size={11} color="#1C1C1E" strokeWidth={2.2} />
+                            <Crosshair size={11} color={isDark ? '#FFFFFF' : '#1C1C1E'} strokeWidth={2.2} />
                           )}
-                          <Text style={styles.previewOriginText}>
+                          <Text style={[styles.previewOriginText, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
                             {routeOrigin === 'station' ? 'Station Route' : 'GPS Route'}
                           </Text>
                         </View>
@@ -1236,13 +1282,21 @@ export default function IncidentDetailScreen() {
                           style={[
                             styles.expandAffordanceBadge,
                             {
-                              backgroundColor: pressed ? colors.brandOrange : 'rgba(255, 255, 255, 0.94)',
-                              borderColor: pressed ? colors.brandOrange : 'rgba(0, 0, 0, 0.12)',
+                              backgroundColor: pressed
+                                ? colors.brandOrange
+                                : isDark
+                                  ? 'rgba(21, 26, 48, 0.94)'
+                                  : 'rgba(255, 255, 255, 0.94)',
+                              borderColor: pressed
+                                ? colors.brandOrange
+                                : isDark
+                                  ? 'rgba(255, 255, 255, 0.15)'
+                                  : 'rgba(0, 0, 0, 0.12)',
                             },
                           ]}
                         >
-                          <Maximize2 size={11} color={pressed ? '#FFFFFF' : '#1C1C1E'} strokeWidth={2.4} />
-                          <Text style={[styles.expandAffordanceText, { color: pressed ? '#FFFFFF' : '#1C1C1E' }]}>Expand</Text>
+                          <Maximize2 size={11} color={pressed ? '#FFFFFF' : (isDark ? '#FFFFFF' : '#1C1C1E')} strokeWidth={2.4} />
+                          <Text style={[styles.expandAffordanceText, { color: pressed ? '#FFFFFF' : (isDark ? '#FFFFFF' : '#1C1C1E') }]}>Expand</Text>
                         </View>
                       </>
                     )}
@@ -1314,9 +1368,24 @@ export default function IncidentDetailScreen() {
 
               {/* Station info pill */}
               {routeOrigin === 'station' ? (
-                <View style={[styles.stationInfoPill, { backgroundColor: '#FFFFFF', borderColor: 'rgba(0, 0, 0, 0.06)' }]}>
-                  <View style={styles.stationInfoIconBox}>
-                    <Building2 size={16} color="#8E8E93" strokeWidth={2} />
+                <View
+                  style={[
+                    styles.stationInfoPill,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.stationInfoIconBox,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F2F2F7',
+                      },
+                    ]}
+                  >
+                    <Building2 size={16} color={colors.textSecondary} strokeWidth={2} />
                   </View>
                   <View style={{ flex: 1, marginLeft: 11 }}>
                     <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '700' }}>
@@ -1328,9 +1397,24 @@ export default function IncidentDetailScreen() {
                   </View>
                 </View>
               ) : (
-                <View style={[styles.stationInfoPill, { backgroundColor: '#FFFFFF', borderColor: 'rgba(0, 0, 0, 0.06)' }]}>
-                  <View style={styles.stationInfoIconBox}>
-                    <Crosshair size={16} color="#8E8E93" strokeWidth={2} />
+                <View
+                  style={[
+                    styles.stationInfoPill,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.stationInfoIconBox,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F2F2F7',
+                      },
+                    ]}
+                  >
+                    <Crosshair size={16} color={colors.textSecondary} strokeWidth={2} />
                   </View>
                   <View style={{ flex: 1, marginLeft: 11 }}>
                     <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '700' }}>
@@ -2168,9 +2252,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   stationInfoIconBox: {
     width: 34,

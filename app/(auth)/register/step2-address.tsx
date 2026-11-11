@@ -72,7 +72,7 @@ export default function RegisterStep2() {
         </Text>
 
         <Input
-          label="House No. / Street / Purok"
+          label="House No. / Street / Purok (optional)"
           value={form.houseNoStreet}
           onChangeText={(t) => updateForm({ houseNoStreet: t })}
           placeholder="House No., Street, or Purok"
@@ -80,7 +80,6 @@ export default function RegisterStep2() {
 
         <SelectField
           label="Barangay"
-          required
           value={form.barangayId}
           options={LIAN_BARANGAYS}
           onSelect={(id) => {
@@ -93,7 +92,6 @@ export default function RegisterStep2() {
 
         <Input
           label="Municipality / City"
-          required
           value={form.municipality}
           onChangeText={(t) => updateForm({ municipality: t })}
           error={errors.municipality}
@@ -101,7 +99,6 @@ export default function RegisterStep2() {
 
         <Input
           label="Province"
-          required
           value={form.province}
           onChangeText={(t) => updateForm({ province: t })}
           error={errors.province}

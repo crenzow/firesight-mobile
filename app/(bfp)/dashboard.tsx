@@ -53,6 +53,13 @@ export default function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
+
+      // Live background poll every 15s so dashboard tiles and recent incidents stay updated
+      const timer = setInterval(() => {
+        load();
+      }, 15000);
+
+      return () => clearInterval(timer);
     }, [load])
   );
 

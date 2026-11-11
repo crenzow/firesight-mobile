@@ -304,7 +304,7 @@ export default function ProfileScreen() {
                 icon={<SettingsIcon size={18} color="#FFFFFF" />}
                 gradient={['#64748B', '#0F1C3F']}
                 label="App Settings"
-                subtitle="Theme, notifications, preferences"
+                subtitle="Theme and display preferences"
                 onPress={() => router.push({ pathname: '/(resident)/profile/settings', params: { from: '/(resident)/profile' } } as any)}
               />
             </Card>
@@ -320,18 +320,6 @@ export default function ProfileScreen() {
               style={{ borderColor: colors.danger }}
             />
           </View>
-
-          <Text
-            style={{
-              color: colors.textMuted,
-              fontSize: typography.size.xs,
-              textAlign: 'center',
-              marginTop: spacing.lg,
-              marginBottom: spacing.sm,
-            }}
-          >
-            FIRESIGHT · Lian, Batangas{'\n'}Version {APP_VERSION}
-          </Text>
         </ScrollView>
       </SafeAreaView>
 
@@ -427,8 +415,6 @@ function InfoRow({
     </View>
   );
 }
-
-const APP_VERSION = '1.0.0 · Build 2026.07';
 
 const styles = StyleSheet.create({
   // Hero card

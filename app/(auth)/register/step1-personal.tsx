@@ -9,13 +9,16 @@ import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { StepProgress } from '../../../components/ui/StepProgress';
 import { validateRegisterStep1 } from '../../../utils/validators';
+import { authService } from '../../../services/api/authService';
+import { ApiError } from '../../../services/api/client';
 
 export default function RegisterStep1() {
   const { colors, spacing, typography } = useTheme();
   const { form, updateForm } = useRegistration();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [checkingMobile, setCheckingMobile] = useState(false);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const validationErrors = validateRegisterStep1({
       firstName: form.firstName,
       lastName: form.lastName,
@@ -23,7 +26,20 @@ export default function RegisterStep1() {
     });
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
-    router.push('/(auth)/register/step2-address');
+
+    // Check with the backend early before proceeding to next steps
+    setCheckingMobile(true);
+    try {
+      await authService.checkMobile(form.mobileNumber);
+      router.push('/(auth)/register/step2-address');
+    } catch (err: any) {
+      setErrors((prev) => ({
+        ...prev,
+        mobileNumber: err instanceof ApiError ? err.message : 'This mobile number is already in use.',
+      }));
+    } finally {
+      setCheckingMobile(false);
+    }
   };
 
   return (
@@ -75,7 +91,6 @@ export default function RegisterStep1() {
           <View style={styles.half}>
             <Input
               label="First Name"
-              required
               value={form.firstName}
               onChangeText={(t) => {
                 updateForm({ firstName: t });
@@ -88,7 +103,6 @@ export default function RegisterStep1() {
           <View style={styles.half}>
             <Input
               label="Last Name"
-              required
               value={form.lastName}
               onChangeText={(t) => {
                 updateForm({ lastName: t });
@@ -110,7 +124,7 @@ export default function RegisterStep1() {
         <View style={styles.row}>
           <View style={styles.half}>
             <Input
-              label="Suffix (opt.)"
+              label="Suffix (optional)"
               value={form.suffix}
               onChangeText={(t) => updateForm({ suffix: t })}
               placeholder="Jr."
@@ -118,8 +132,7 @@ export default function RegisterStep1() {
           </View>
           <View style={styles.half}>
             <Input
-              label="Mobile No."
-              required
+              label="Mobile Number"
               value={form.mobileNumber}
               onChangeText={(t) => {
                 updateForm({ mobileNumber: t });
@@ -133,7 +146,7 @@ export default function RegisterStep1() {
         </View>
 
         <View style={{ marginTop: spacing.lg }}>
-          <Button label="Next" onPress={handleNext} />
+          <Button label="Next" onPress={handleNext} loading={checkingMobile} disabled={checkingMobile} />
         </View>
       </ScrollView>
     </View>

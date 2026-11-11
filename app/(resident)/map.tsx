@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, usePathname, useLocalSearchParams } from 'expo-router';
+import { router, usePathname, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import {
   Bell,
   Search,
@@ -58,17 +58,25 @@ export default function MapScreen() {
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState<'all' | RiskLevel>('all');
 
-  useEffect(() => {
-    mapService
-      .getBarangayRisk()
-      .then((data) => {
-        setBarangays(data);
-        setIsLoading(false);
-      })
-      .catch(() => {
-        setIsLoading(false);
-      });
-  }, []);
+  const isFirstLoad = useRef(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      const showLoader = isFirstLoad.current;
+      isFirstLoad.current = false;
+      if (showLoader) setIsLoading(true);
+
+      mapService
+        .getBarangayRisk()
+        .then((data) => {
+          setBarangays(data);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (showLoader) setIsLoading(false);
+        });
+    }, [])
+  );
 
   // Focus a barangay when opened from the Home "Area Status" card (?focus=<barangay name>)
   useEffect(() => {

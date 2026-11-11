@@ -8,7 +8,6 @@ import { useRegistration } from '../../../context/RegistrationContext';
 import { useAuth } from '../../../context/AuthContext';
 import { Input } from '../../../components/ui/Input';
 import { PasswordInput } from '../../../components/ui/PasswordInput';
-import { PasswordStrengthMeter } from '../../../components/ui/PasswordStrengthMeter';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { Button } from '../../../components/ui/Button';
 import { StepProgress } from '../../../components/ui/StepProgress';
@@ -155,7 +154,6 @@ export default function RegisterStep3() {
 
         <Input
           label="Email Address"
-          required
           value={form.email}
           onChangeText={(t) => {
             updateForm({ email: t });
@@ -179,7 +177,6 @@ export default function RegisterStep3() {
 
         <PasswordInput
           label="Password"
-          required
           value={form.password}
           onChangeText={(t) => {
             updateForm({ password: t });
@@ -188,11 +185,9 @@ export default function RegisterStep3() {
           placeholder="At least 8 characters"
           error={errors.password}
         />
-        <PasswordStrengthMeter password={form.password} />
 
         <PasswordInput
           label="Confirm Password"
-          required
           value={form.confirmPassword}
           onChangeText={(t) => {
             updateForm({ confirmPassword: t });

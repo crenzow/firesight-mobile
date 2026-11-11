@@ -171,13 +171,13 @@ export const CompactNotificationBanner: React.FC<CompactNotificationBannerProps>
 
       // Operational Cadence:
       // 1. Emergency Fire Alerts (BFP Incident Reported / Pending):
-      //    Must NEVER be rushed or cut off. They play their full 12s siren cycle uninterrupted.
+      //    Must NEVER be rushed or cut off. They play their full 14s siren cycle uninterrupted.
       // 2. Rapid Soc-Med Style Cascade for Routine Notifications:
       //    When multiple routine notifications arrive, each drops in quickly over the previous one (650ms),
       //    cutting off the previous chime immediately (ding-ding-ding).
       // 3. The final routine banner rests for 5.0s so the user has time to read and interact.
       const displayDuration = data.isEmergency
-        ? 12000
+        ? 14000
         : hasMoreInQueue
           ? 650
           : 5000;

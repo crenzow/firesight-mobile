@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Mail, CheckCircle2, AlertCircle, RefreshCw, LogOut } from 'lucide-react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Linking, Platform, AppState, AppStateStatus, BackHandler, Animated, Easing } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { Mail, CheckCircle2, AlertCircle, ExternalLink, ChevronLeft } from 'lucide-react-native';
+import * as IntentLauncher from 'expo-intent-launcher';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { Button } from '../../../components/ui/Button';
@@ -13,13 +15,61 @@ export default function VerifyEmailScreen() {
   const { colors, spacing, typography, radius } = useTheme();
   const { user, refreshUser, logout } = useAuth();
   const { email: paramEmail } = useLocalSearchParams<{ email?: string }>();
+  const insets = useSafeAreaInsets();
 
   const activeEmail = user?.email || paramEmail || '';
 
-  const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [notice, setNotice] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+
+  // Floating transient toast (Dynamic Island style)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const toastY = useRef(new Animated.Value(-60)).current;
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showFloatingToast = useCallback((type: 'success' | 'error', message: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ type, message });
+
+    Haptics.notificationAsync(
+      type === 'success'
+        ? Haptics.NotificationFeedbackType.Success
+        : Haptics.NotificationFeedbackType.Warning
+    ).catch(() => {});
+
+    Animated.parallel([
+      Animated.spring(toastY, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 9,
+      }),
+      Animated.timing(toastOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    toastTimerRef.current = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(toastY, {
+          toValue: -40,
+          duration: 250,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(toastOpacity, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setToast(null));
+    }, 3200);
+  }, [toastY, toastOpacity]);
+
+  const isNavigatingRef = useRef(false);
 
   // Cooldown countdown timer
   useEffect(() => {
@@ -30,73 +80,134 @@ export default function VerifyEmailScreen() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  // Handle checking verification status
-  const handleCheckVerification = async () => {
-    setChecking(true);
-    setNotice(null);
+  // Navigate to login after successful verification (Option A)
+  const onVerificationSuccess = useCallback(async () => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+
+    showFloatingToast('success', 'Email verified! Redirecting to sign in...');
+
+    setTimeout(() => {
+      if (user) {
+        refreshUser().catch(() => {});
+      }
+      router.replace({
+        pathname: '/(auth)/login',
+        params: { email: activeEmail, verified: '1' },
+      });
+    }, 1200);
+  }, [activeEmail, user, refreshUser, showFloatingToast]);
+
+  // Handle checking verification status silently
+  const handleCheckVerification = useCallback(async () => {
+    if (!activeEmail || isNavigatingRef.current) return;
     try {
       const res = await authService.checkVerificationStatus(activeEmail);
       if (res.is_verified) {
-        if (user) {
-          await refreshUser();
-          setNotice({ type: 'success', text: 'Email verified successfully! Redirecting...' });
-          setTimeout(() => {
-            router.replace('/(resident)/home');
-          }, 1200);
-        } else {
-          setNotice({ type: 'success', text: 'Email verified successfully! You can now sign in.' });
-          setTimeout(() => {
-            router.replace('/(auth)/login');
-          }, 1400);
-        }
-      } else {
-        setNotice({
-          type: 'error',
-          text: "Your email hasn't been verified yet. Please check your inbox and click the verification link first.",
-        });
+        await onVerificationSuccess();
       }
-    } catch (err: any) {
-      setNotice({
-        type: 'error',
-        text: err instanceof ApiError ? err.message : 'Unable to check verification status. Please try again.',
-      });
-    } finally {
-      setChecking(false);
+    } catch {
+      // Ignore background poll errors
+    }
+  }, [activeEmail, onVerificationSuccess]);
+
+  // Handle navigation back to login
+  const handleBackToLogin = useCallback(() => {
+    router.replace('/(auth)/login');
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBackToLogin();
+        return true;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => sub.remove();
+    }, [handleBackToLogin])
+  );
+
+  // Auto-detect when user returns from email app or browser
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        handleCheckVerification();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [handleCheckVerification]);
+
+  // Launch external mail client directly to the Inbox (outside Expo task)
+  const handleOpenEmailApp = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        try {
+          // Launch external email app in its own separate task (FLAG_ACTIVITY_NEW_TASK = 268435456)
+          await IntentLauncher.startActivityAsync('android.intent.action.MAIN', {
+            category: 'android.intent.category.APP_EMAIL',
+            flags: 268435456,
+          });
+          return;
+        } catch {
+          try {
+            await IntentLauncher.openApplication('com.google.android.gm');
+            return;
+          } catch {
+            // Standard mailto: which Android handles by opening external email apps outside Expo
+            await Linking.openURL('mailto:');
+            return;
+          }
+        }
+      }
+
+      if (Platform.OS === 'ios') {
+        const canOpenMail = await Linking.canOpenURL('message://');
+        if (canOpenMail) {
+          await Linking.openURL('message://');
+          return;
+        }
+        const canOpenGmail = await Linking.canOpenURL('googlegmail://');
+        if (canOpenGmail) {
+          await Linking.openURL('googlegmail://');
+          return;
+        }
+        await Linking.openURL('mailto:');
+        return;
+      }
+
+      await Linking.openURL('mailto:');
+    } catch {
+      Alert.alert(
+        'Open Email App',
+        'Could not open your email inbox automatically. Please switch to your email app to verify.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
   // Handle resending verification email
   const handleResend = async () => {
-    if (cooldown > 0 || resending) return;
+    if (cooldown > 0 || resending || isNavigatingRef.current) return;
 
     setResending(true);
-    setNotice(null);
     try {
       const res = await authService.resendVerification(activeEmail);
       if (res.already_verified) {
-        if (user) {
-          await refreshUser();
-          router.replace('/(resident)/home');
-        } else {
-          router.replace('/(auth)/login');
-        }
+        await onVerificationSuccess();
         return;
       }
       setCooldown(60);
-      setNotice({
-        type: 'success',
-        text: 'A new verification link has been sent to your email. Please check your inbox.',
-      });
+      showFloatingToast('success', 'Verification link sent to your inbox');
     } catch (err: any) {
-      setNotice({
-        type: 'error',
-        text: err instanceof ApiError ? err.message : 'Failed to resend verification link. Please try again later.',
-      });
+      showFloatingToast('error', err instanceof ApiError ? err.message : 'Failed to resend verification link.');
     } finally {
       setResending(false);
     }
   };
 
+  // Cancel pending registration
   const handleCancelRegistration = async () => {
     Alert.alert(
       'Cancel Registration',
@@ -129,46 +240,96 @@ export default function VerifyEmailScreen() {
     <View style={{ flex: 1, backgroundColor: colors.brandNavy }}>
       <SafeAreaView style={{ backgroundColor: colors.brandNavy }} edges={['top']} />
 
+      {/* Floating Dynamic Island Style Toast */}
+      {toast ? (
+        <Animated.View
+          style={[
+            styles.floatingToast,
+            {
+              top: insets.top + 12,
+              opacity: toastOpacity,
+              transform: [{ translateY: toastY }],
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <View
+            style={[
+              styles.toastInner,
+              {
+                borderColor: toast.type === 'success' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(239, 68, 68, 0.45)',
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.toastIconWrap,
+                {
+                  backgroundColor: toast.type === 'success' ? '#10B981' : '#EF4444',
+                },
+              ]}
+            >
+              {toast.type === 'success' ? (
+                <CheckCircle2 size={14} color="#FFFFFF" strokeWidth={2.5} />
+              ) : (
+                <AlertCircle size={14} color="#FFFFFF" strokeWidth={2.5} />
+              )}
+            </View>
+            <Text style={styles.toastText}>{toast.message}</Text>
+          </View>
+        </Animated.View>
+      ) : null}
+
       {/* Navy Header Section */}
       <View
         style={{
           backgroundColor: colors.brandNavy,
           paddingHorizontal: spacing.xl,
-          paddingTop: spacing.xl,
+          paddingTop: spacing.lg,
           paddingBottom: spacing.xxl,
-          alignItems: 'center',
         }}
       >
-        <View
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: 36,
-            backgroundColor: `${colors.brandOrange}20`,
-            borderWidth: 2,
-            borderColor: `${colors.brandOrange}40`,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: spacing.lg,
-          }}
+        <Pressable
+          onPress={handleBackToLogin}
+          hitSlop={8}
+          style={{ alignSelf: 'flex-start', marginBottom: spacing.md }}
+          accessibilityRole="button"
+          accessibilityLabel="Back to sign in"
         >
-          <Mail size={36} color={colors.brandOrange} strokeWidth={2} />
-        </View>
+          <ChevronLeft size={24} color={colors.textInverse} strokeWidth={2.5} />
+        </Pressable>
 
-        <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xxl }]}>
-          Verify Your Email
-        </Text>
-        <Text
-          style={{
-            color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: typography.size.sm,
-            textAlign: 'center',
-            marginTop: 6,
-            lineHeight: 20,
-          }}
-        >
-          We sent a verification link to activate your account.
-        </Text>
+        <View style={{ alignItems: 'center' }}>
+          <View
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 36,
+              backgroundColor: `${colors.brandOrange}20`,
+              borderWidth: 2,
+              borderColor: `${colors.brandOrange}40`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: spacing.lg,
+            }}
+          >
+            <Mail size={36} color={colors.brandOrange} strokeWidth={2} />
+          </View>
+
+          <Text style={[styles.title, { color: colors.textInverse, fontSize: typography.size.xxl }]}>
+            Verify Your Email
+          </Text>
+          <Text
+            style={{
+              color: 'rgba(255, 255, 255, 0.75)',
+              fontSize: typography.size.sm,
+              textAlign: 'center',
+              marginTop: 6,
+            }}
+          >
+            Tap below to open your email app and activate your account.
+          </Text>
+        </View>
       </View>
 
       {/* Curved Container Transition */}
@@ -187,138 +348,42 @@ export default function VerifyEmailScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: spacing.xl,
-          paddingTop: spacing.md,
+          paddingTop: spacing.lg,
           paddingBottom: spacing.xxxl,
           flexGrow: 1,
         }}
         style={{ backgroundColor: colors.background, flex: 1 }}
       >
-        {/* Email Pill Badge */}
-        <View
-          style={[
-            styles.emailBadge,
-            {
-              backgroundColor: `${colors.brandNavy}0A`,
-              borderColor: colors.border,
-              borderRadius: radius.md,
-              padding: spacing.md,
-            },
-          ]}
-        >
-          <Mail size={16} color={colors.brandOrange} style={{ marginRight: 8 }} />
-          <Text
-            style={{
-              color: colors.textPrimary,
-              fontSize: typography.size.sm,
-              fontWeight: '700',
-              flexShrink: 1,
-            }}
-            numberOfLines={1}
-          >
-            {activeEmail || 'your registered email'}
-          </Text>
+        {/* Primary Action Button */}
+        <View style={{ marginTop: spacing.md }}>
+          <Button
+            label="Open Email App"
+            onPress={handleOpenEmailApp}
+            icon={<ExternalLink size={18} color="#FFFFFF" />}
+          />
         </View>
 
-        {/* Status Notice Banner */}
-        {notice ? (
-          <View
-            style={[
-              styles.noticeCard,
-              {
-                backgroundColor: notice.type === 'success' ? '#ecfdf5' : '#fef2f2',
-                borderColor: notice.type === 'success' ? '#10b981' : '#ef4444',
-                borderRadius: radius.md,
-                marginTop: spacing.md,
-              },
-            ]}
+        {/* Minimal Secondary Text Links */}
+        <View style={{ marginTop: spacing.xl, alignItems: 'center', gap: spacing.md }}>
+          <Pressable
+            onPress={handleResend}
+            disabled={cooldown > 0 || resending}
+            hitSlop={8}
           >
-            {notice.type === 'success' ? (
-              <CheckCircle2 size={18} color="#10b981" style={{ marginRight: 8 }} />
-            ) : (
-              <AlertCircle size={18} color="#ef4444" style={{ marginRight: 8 }} />
-            )}
             <Text
               style={{
-                color: notice.type === 'success' ? '#065f46' : '#991b1b',
+                color: cooldown > 0 ? colors.textMuted : colors.brandOrange,
                 fontSize: typography.size.sm,
-                flex: 1,
-                lineHeight: 20,
+                fontWeight: '600',
               }}
             >
-              {notice.text}
+              {cooldown > 0 ? `Resend link in ${cooldown}s` : "Didn't receive the email? Resend"}
             </Text>
-          </View>
-        ) : null}
+          </Pressable>
 
-        {/* Step Guide Card */}
-        <View
-          style={[
-            styles.guideCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radius.lg,
-              padding: spacing.lg,
-              marginTop: spacing.lg,
-            },
-          ]}
-        >
-          <Text style={{ color: colors.textPrimary, fontSize: typography.size.base, fontWeight: '700', marginBottom: spacing.md }}>
-            Quick instructions:
-          </Text>
-
-          <View style={styles.stepRow}>
-            <View style={[styles.stepNum, { backgroundColor: `${colors.brandOrange}1A` }]}>
-              <Text style={{ color: colors.brandOrange, fontWeight: '700', fontSize: 12 }}>1</Text>
-            </View>
-            <Text style={[styles.stepText, { color: colors.textSecondary }]}>
-              Check your inbox for an email from <Text style={{ fontWeight: '700', color: colors.textPrimary }}>FireSight</Text>.
-            </Text>
-          </View>
-
-          <View style={styles.stepRow}>
-            <View style={[styles.stepNum, { backgroundColor: `${colors.brandOrange}1A` }]}>
-              <Text style={{ color: colors.brandOrange, fontWeight: '700', fontSize: 12 }}>2</Text>
-            </View>
-            <Text style={[styles.stepText, { color: colors.textSecondary }]}>
-              Tap the <Text style={{ fontWeight: '700', color: colors.brandOrange }}>"Verify Email Address"</Text> button in the message.
-            </Text>
-          </View>
-
-          <View style={styles.stepRow}>
-            <View style={[styles.stepNum, { backgroundColor: `${colors.brandOrange}1A` }]}>
-              <Text style={{ color: colors.brandOrange, fontWeight: '700', fontSize: 12 }}>3</Text>
-            </View>
-            <Text style={[styles.stepText, { color: colors.textSecondary }]}>
-              Return to this screen and tap the button below.
-            </Text>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
-          <Button
-            label="I've Verified My Email"
-            onPress={handleCheckVerification}
-            loading={checking}
-            disabled={checking}
-          />
-
-          <Button
-            label={cooldown > 0 ? `Resend Link in ${cooldown}s` : 'Resend Verification Link'}
-            variant="neutral"
-            onPress={handleResend}
-            loading={resending}
-            disabled={cooldown > 0 || resending || checking}
-          />
-        </View>
-
-        {/* Cancel / Wrong Email Option */}
-        <View style={{ marginTop: spacing.xxl, alignItems: 'center' }}>
-          <Pressable onPress={handleCancelRegistration} style={styles.signOutBtn} hitSlop={8}>
-            <LogOut size={16} color={colors.textMuted} style={{ marginRight: 6 }} />
-            <Text style={{ color: colors.textMuted, fontSize: typography.size.sm, fontWeight: '600' }}>
-              Wrong email or want to cancel? Cancel registration
+          <Pressable onPress={handleCancelRegistration} hitSlop={8}>
+            <Text style={{ color: colors.textMuted, fontSize: typography.size.xs }}>
+              Cancel registration
             </Text>
           </Pressable>
         </View>
@@ -332,44 +397,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  emailBadge: {
+  floatingToast: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    zIndex: 9999,
+    alignItems: 'center',
+  },
+  toastInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#0F1C3F',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
     borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
   },
-  noticeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderWidth: 1,
-  },
-  guideCard: {
-    borderWidth: 1,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  stepNum: {
+  toastIconWrap: {
     width: 22,
     height: 22,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
-    marginTop: 1,
+    marginRight: 8,
   },
-  stepText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  signOutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+  toastText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });

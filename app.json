@@ -67,7 +67,7 @@
           "icon": "./assets/images/icon.png",
           "color": "#E65100",
           "sounds": [
-            "./assets/sounds/fire_siren.wav"
+            "./assets/sounds/fire_siren.mp3"
           ]
         }
       ],

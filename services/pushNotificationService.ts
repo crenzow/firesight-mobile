@@ -43,7 +43,7 @@ export async function playEmergencySiren(): Promise<void> {
     });
 
     if (!sirenPlayer) {
-      sirenPlayer = createAudioPlayer(require('../assets/sounds/fire_siren.wav'));
+      sirenPlayer = createAudioPlayer(require('../assets/sounds/fire_siren.mp3'));
     }
 
     sirenPlayer.volume = 1.0;
@@ -56,21 +56,22 @@ export async function playEmergencySiren(): Promise<void> {
 }
 
 /**
- * Immediately stops any playing siren audio.
+ * Immediately stops any playing siren audio and vibration.
  */
 export function stopEmergencySiren(): void {
   try {
     if (sirenPlayer && sirenPlayer.playing) {
       sirenPlayer.pause();
     }
+    Vibration.cancel();
   } catch {
     // Ignore cleanup errors
   }
 }
 
 /**
- * Triggers the tactical 12.0s Fire Station dispatch vibration cadence:
- * 3 sharp staccato attack pulses, 2 heavy station horn pulses, followed by 4 deep mechanical wails.
+ * Triggers the tactical 14.0s Fire Station dispatch vibration cadence:
+ * 3 sharp staccato attack pulses, 2 heavy station horn pulses, followed by 5 deep mechanical wails.
  */
 export function triggerUrgentVibration(): void {
   if (Platform.OS === 'web') return;
@@ -80,7 +81,7 @@ export function triggerUrgentVibration(): void {
       0,
       220, 80, 220, 80, 220, 180, // 3 Staccato Attack Bursts (1.0s)
       1100, 80, 1100, 100,         // 2 Muscular Station Horn Pulses (2.2s)
-      2000, 100, 2000, 100, 2000, 100, 2000 // 4 Heavy Mechanical Wails (~8.4s)
+      2000, 100, 2000, 100, 2000, 100, 2000, 100, 2000 // 5 Heavy Mechanical Wails (~10.5s) -> Total ~13.8s ≈ 14s
     ]);
   } catch {
     // Ignore vibration failure
