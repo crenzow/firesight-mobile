@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Info, ArrowRight } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface EmailSuggestionPillProps {
@@ -18,7 +17,6 @@ export const EmailSuggestionPill: React.FC<EmailSuggestionPillProps> = ({
   if (!suggestion) return null;
 
   const handlePress = () => {
-    Haptics.selectionAsync().catch(() => {});
     onApply(suggestion);
   };
 

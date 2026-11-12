@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Layers, Filter, LocateFixed, Info } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface MapFloatingControlsProps {
@@ -41,10 +40,7 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
     >
       {/* Map Type / Layers Button */}
       <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-          onOpenMapType();
-        }}
+        onPress={onOpenMapType}
         hitSlop={4}
         style={({ pressed }) => [
           styles.button,
@@ -72,10 +68,7 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
         <>
           <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]} />
           <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              onLocateUser();
-            }}
+            onPress={onLocateUser}
             hitSlop={4}
             disabled={isLocating}
             style={({ pressed }) => [
@@ -112,10 +105,7 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
         <>
           <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]} />
           <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              onOpenFilter();
-            }}
+            onPress={onOpenFilter}
             hitSlop={4}
             style={({ pressed }) => [
               styles.button,
@@ -152,10 +142,7 @@ export const MapFloatingControls: React.FC<MapFloatingControlsProps> = ({
         <>
           <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]} />
           <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              onToggleLegend();
-            }}
+            onPress={onToggleLegend}
             hitSlop={4}
             style={({ pressed }) => [
               styles.button,

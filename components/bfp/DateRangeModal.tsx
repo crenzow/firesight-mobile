@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Calendar, X, ArrowRight, Check } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { Button } from '../ui/Button';
 
@@ -56,7 +55,6 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
       setPickingTarget(null);
     }
     if (event.type === 'set' && selectedDate) {
-      Haptics.selectionAsync().catch(() => {});
       if (pickingTarget === 'start') {
         const s = new Date(selectedDate);
         s.setHours(0, 0, 0, 0);
@@ -82,7 +80,6 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
   };
 
   const handleConfirm = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (tempStart && !tempEnd) {
       const e = new Date(tempStart);
       e.setHours(23, 59, 59);
@@ -182,7 +179,6 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
           <View style={styles.footerRow}>
             <Pressable
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 onClear();
                 onClose();
               }}

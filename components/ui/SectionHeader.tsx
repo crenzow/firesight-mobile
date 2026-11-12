@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface SectionHeaderProps {
@@ -25,10 +24,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, actionLabel
 
       {actionLabel && onAction && (
         <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            onAction();
-          }}
+          onPress={onAction}
           style={({ pressed }) => [
             styles.action,
             {

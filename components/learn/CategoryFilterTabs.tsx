@@ -1,7 +1,6 @@
 import React from 'react';
 import { ScrollView, Pressable, Text, StyleSheet, View, Platform } from 'react-native';
 import { Bookmark } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 export type LearnCategory = 'all' | 'prevention' | 'emergency_response' | 'awareness' | 'saved';
@@ -38,10 +37,7 @@ export const CategoryFilterTabs: React.FC<CategoryFilterTabsProps> = ({
         return (
           <Pressable
             key={key}
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => {});
-              onChange(key);
-            }}
+            onPress={() => onChange(key)}
             style={({ pressed }) => [
               styles.chip,
               {

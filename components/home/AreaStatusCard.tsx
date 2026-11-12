@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { Flame, MapPin } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { ColorTokens } from '../../theme/colors';
 import { RiskLevel } from '../../services/api/models';
@@ -50,14 +49,7 @@ export const AreaStatusCard: React.FC<AreaStatusCardProps> = ({
 
   return (
     <Pressable
-      onPress={
-        onPress
-          ? () => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              onPress();
-            }
-          : undefined
-      }
+      onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${riskConfig.label} in ${barangayName}. ${incidentsThisMonth} fire incidents this month.`}

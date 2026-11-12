@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Flame, ClipboardList, CheckCircle2, CalendarDays, MapPinned, ChevronRight, ShieldCheck } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
@@ -129,7 +128,6 @@ export default function DashboardScreen() {
           <Animated.View entering={enter(2)} style={{ marginTop: spacing.xl }}>
             <Pressable
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 router.push('/(bfp)/map');
               }}
               style={({ pressed }) => [
@@ -173,7 +171,6 @@ export default function DashboardScreen() {
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Incidents</Text>
               <Pressable
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   goToIncidents();
                 }}
                 style={({ pressed }) => [

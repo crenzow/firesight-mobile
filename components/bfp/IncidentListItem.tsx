@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { MapPin, Flame, ChevronRight } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { BFPIncident } from '../../services/api/bfpModels';
 import { IncidentStatusBadge } from './IncidentStatusBadge';
@@ -55,7 +54,6 @@ const IncidentListItemComponent: React.FC<IncidentListItemProps> = ({ incident, 
   return (
     <Pressable
       onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         router.push({ pathname: '/(bfp)/incidents/[id]', params: { id: incident.report_id, from } });
       }}
       style={({ pressed }) => [

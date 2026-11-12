@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform, Animated, Easing, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Mail, CheckCircle2 } from 'lucide-react-native';
+import { Mail, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
@@ -19,10 +19,31 @@ import { APP_CONFIG } from '../../constants/config';
 
 WebBrowser.maybeCompleteAuthSession();
 
+const isExpoGo =
+  Constants.appOwnership === 'expo' ||
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+let GoogleSignin: any = null;
+let statusCodes: any = {};
+
+if (!isExpoGo) {
+  try {
+    const gSignin = require('@react-native-google-signin/google-signin');
+    GoogleSignin = gSignin.GoogleSignin;
+    statusCodes = gSignin.statusCodes;
+    GoogleSignin.configure({
+      webClientId: APP_CONFIG.GOOGLE_CLIENT_ID,
+      iosClientId: APP_CONFIG.GOOGLE_IOS_CLIENT_ID || undefined,
+    });
+  } catch {
+    // Best-effort initialization in native runtime
+  }
+}
+
 export default function LoginScreen() {
   const { colors, spacing, typography, radius } = useTheme();
   const { login, loginWithGoogle, isSubmitting } = useAuth();
-  const { updateForm } = useRegistration();
+  const { updateForm, resetForm } = useRegistration();
 
   const { email: paramEmail, verified: paramVerified } = useLocalSearchParams<{ email?: string; verified?: string }>();
   const insets = useSafeAreaInsets();
@@ -38,6 +59,55 @@ export default function LoginScreen() {
   const [showToast, setShowToast] = useState(false);
   const toastY = useRef(new Animated.Value(-60)).current;
   const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  // Centered translucent HUD toast for all authentication & server error messages
+  const [hudMessage, setHudMessage] = useState<string | null>(null);
+  const hudOpacity = useRef(new Animated.Value(0)).current;
+  const hudScale = useRef(new Animated.Value(0.85)).current;
+  const hudTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerErrorHud = (message: string) => {
+    if (hudTimer.current) clearTimeout(hudTimer.current);
+    setHudMessage(message);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+
+    Animated.parallel([
+      Animated.timing(hudOpacity, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.spring(hudScale, {
+        toValue: 1,
+        friction: 6,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    hudTimer.current = setTimeout(() => {
+      Animated.timing(hudOpacity, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => setHudMessage(null));
+    }, 2800);
+  };
+
+  useEffect(() => {
+    if (formError) {
+      triggerErrorHud(formError);
+      setFormError(null);
+    }
+  }, [formError]);
+
+  useEffect(() => {
+    return () => {
+      if (hudTimer.current) clearTimeout(hudTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (paramEmail) {
@@ -98,6 +168,7 @@ export default function LoginScreen() {
           router.replace('/(resident)/home');
         }
       } else if (res.requires_completion || res.is_new_user) {
+        resetForm();
         if (res.google_user) {
           updateForm({
             firstName: res.google_user.first_name || '',
@@ -146,53 +217,44 @@ export default function LoginScreen() {
   };
 
   const handleGooglePress = async () => {
+    if (isExpoGo) {
+      Alert.alert(
+        'Standalone Build Feature',
+        'Native Google Sign-In requires the built APK because Google Play Services cannot run inside the Expo Go sandbox.\n\nPlease test with Email & Password in Expo Go, or test Google Sign-In on the built APK.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       setFormError(null);
       setGoogleLoading(true);
 
-      const clientId = APP_CONFIG.GOOGLE_CLIENT_ID;
-      const redirectUri = 'https://auth.expo.io/@anonymous/firesight-mobile';
-      const returnUrl = Linking.createURL('');
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const signInResult = await GoogleSignin.signIn();
 
-      // Build Google OAuth authorization URL
-      const googleAuthUrl =
-        'https://accounts.google.com/o/oauth2/v2/auth?' +
-        new URLSearchParams({
-          client_id: clientId,
-          redirect_uri: redirectUri,
-          response_type: 'id_token',
-          scope: 'openid email profile',
-          nonce: Math.random().toString(36).substring(2),
-          prompt: 'select_account',
-        }).toString();
-
-      // Wrap with Expo Auth proxy /start so auth.expo.io knows what returnUrl to bounce back to
-      const proxyStartUrl =
-        `${redirectUri}/start?` +
-        new URLSearchParams({
-          authUrl: googleAuthUrl,
-          returnUrl: returnUrl,
-        }).toString();
-
-      const result = await WebBrowser.openAuthSessionAsync(proxyStartUrl, returnUrl);
-
-      if (result.type === 'success' && result.url) {
-        const fragment = result.url.includes('#') ? result.url.split('#')[1] : '';
-        const query = result.url.includes('?') ? result.url.split('?')[1] : '';
-        const searchParams = new URLSearchParams(fragment || query);
-        const idToken = searchParams.get('id_token') || undefined;
-        const accessToken = searchParams.get('access_token') || undefined;
-
-        if (idToken || accessToken) {
-          await processGoogleLogin(idToken, accessToken);
-        } else {
-          setFormError('No Google credential returned. Please try again.');
-        }
-      } else if (result.type === 'cancel' || result.type === 'dismiss') {
-        // User closed the browser
+      if (signInResult.type === 'success' && signInResult.data?.idToken) {
+        await processGoogleLogin(signInResult.data.idToken);
+      } else if (signInResult.type === 'cancelled') {
+        // User closed the native bottom sheet without picking an account
+      } else {
+        setFormError('No Google credential returned. Please try again.');
       }
-    } catch (err: any) {
-      setFormError(err instanceof ApiError ? err.message : 'Google sign-in encountered an error.');
+    } catch (error: any) {
+      if (
+        error?.code === statusCodes.SIGN_IN_CANCELLED ||
+        error?.code === '12501' ||
+        error?.code === '8' ||
+        error?.message === 'INTERNAL_ERROR'
+      ) {
+        // User cancelled, pressed Home, or switched apps — silently dismiss
+      } else if (error?.code === statusCodes.IN_PROGRESS) {
+        // Sign-in already in progress
+      } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setFormError('Google Play Services is not available on this device.');
+      } else {
+        setFormError(error?.message || 'Google sign-in encountered an error. Please try again.');
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -225,6 +287,26 @@ export default function LoginScreen() {
             <Text style={styles.toastText}>Email verified successfully</Text>
           </View>
         </Animated.View>
+      ) : null}
+
+      {/* Centered Translucent HUD Error Toast (Shopee / Native overlay style) */}
+      {hudMessage ? (
+        <View style={styles.hudOverlay} pointerEvents="none">
+          <Animated.View
+            style={[
+              styles.hudCard,
+              {
+                opacity: hudOpacity,
+                transform: [{ scale: hudScale }],
+              },
+            ]}
+          >
+            <View style={styles.hudIconWrap}>
+              <AlertCircle size={42} color="#FFFFFF" strokeWidth={2.2} />
+            </View>
+            <Text style={styles.hudText}>{hudMessage}</Text>
+          </Animated.View>
+        </View>
       ) : null}
       
       <View style={{ backgroundColor: colors.brandNavy, paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl }}>
@@ -269,17 +351,6 @@ export default function LoginScreen() {
               Forgot Password?
             </Text>
           </Pressable>
-
-          {formError ? (
-            <View
-              style={[
-                styles.errorBanner,
-                { backgroundColor: `${colors.danger}1A`, borderRadius: radius.md, marginTop: spacing.lg },
-              ]}
-            >
-              <Text style={{ color: colors.danger, fontSize: typography.size.sm }}>{formError}</Text>
-            </View>
-          ) : null}
 
           {/* Action Buttons Section */}
           <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
@@ -344,8 +415,42 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   subtitle: {},
-  errorBanner: {
-    padding: 12,
+  hudOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 99999,
+    paddingHorizontal: 36,
+  },
+  hudCard: {
+    backgroundColor: 'rgba(26, 31, 46, 0.90)',
+    borderRadius: 18,
+    paddingVertical: 22,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 170,
+    maxWidth: 270,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  hudIconWrap: {
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hudText: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 19,
+    letterSpacing: 0.15,
   },
   floatingToast: {
     position: 'absolute',

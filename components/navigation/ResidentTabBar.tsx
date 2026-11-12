@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
 import { router } from 'expo-router';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { ensureCameraAccess } from '../../utils/cameraPermission';
 import { Home, Map as MapIcon, BookOpen, User, Flame } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -200,13 +201,16 @@ export const ResidentTabBar: React.FC<BottomTabBarProps> = ({ state, navigation 
     }).start();
   };
 
-  const handleReportPress = () => {
+  const handleReportPress = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {
       // Safe fallback
     }
-    router.push('/(report)/capture');
+    const hasPermission = await ensureCameraAccess();
+    if (hasPermission) {
+      router.push('/(report)/capture');
+    }
   };
 
   return (
@@ -240,11 +244,6 @@ export const ResidentTabBar: React.FC<BottomTabBarProps> = ({ state, navigation 
           const routeIndex = state.routes.findIndex((r) => r.key === route.key);
           const isFocused = state.index === routeIndex;
           const onPress = () => {
-            try {
-              Haptics.selectionAsync();
-            } catch {
-              // Safe fallback
-            }
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
             if (!isFocused && !event.defaultPrevented) {
               navigation.navigate(route.name);
@@ -347,11 +346,6 @@ export const ResidentTabBar: React.FC<BottomTabBarProps> = ({ state, navigation 
           const routeIndex = state.routes.findIndex((r) => r.key === route.key);
           const isFocused = state.index === routeIndex;
           const onPress = () => {
-            try {
-              Haptics.selectionAsync();
-            } catch {
-              // Safe fallback
-            }
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
             if (!isFocused && !event.defaultPrevented) {
               navigation.navigate(route.name);

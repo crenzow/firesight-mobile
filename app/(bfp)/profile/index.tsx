@@ -2,8 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, ActivityIndicator, BackHandler } from 'react-native';
 import { router, usePathname, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Settings as SettingsIcon, LogOut, Phone, Building2, IdCard, Edit3, Camera } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { Palette, LogOut, Phone, Building2, IdCard, Edit3, Camera } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { AppHeader } from '../../../components/navigation/AppHeader';
@@ -140,7 +139,6 @@ export default function BFPProfileScreen() {
               },
             ]}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               router.push({ pathname: '/(bfp)/profile/edit', params: { from: pathname } } as any);
             }}
           >
@@ -150,10 +148,7 @@ export default function BFPProfileScreen() {
           {/* Avatar + name */}
           <View style={styles.heroTop}>
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setShowPhotoOptions(true);
-                }}
+                onPress={() => setShowPhotoOptions(true)}
                 disabled={isUploadingPhoto}
                 style={({ pressed }) => [
                   styles.avatarWrap,
@@ -229,16 +224,16 @@ export default function BFPProfileScreen() {
         </View>
 
         <Text style={{ color: colors.textMuted, fontSize: typography.size.xs, fontWeight: '700', marginTop: spacing.xl, marginBottom: spacing.sm, marginHorizontal: spacing.lg }}>
-          ACCOUNT
+          PREFERENCES
         </Text>
         <View style={{ marginHorizontal: spacing.lg }}>
           <Card padding={0}>
             <ProfileMenuRow
               isFirst
               isLast
-              icon={<SettingsIcon size={18} color="#FFFFFF" />}
+              icon={<Palette size={18} color="#FFFFFF" />}
               gradient={['#64748B', '#0F1C3F']}
-              label="App Settings"
+              label="Appearance"
               subtitle="Theme and display preferences"
               onPress={() => router.push('/(bfp)/profile/settings?from=profile')}
             />

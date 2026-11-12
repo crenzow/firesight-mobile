@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, BackHandler, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { Bell, AlertTriangle, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { SecondaryHeader } from '../../components/navigation/SecondaryHeader';
@@ -141,7 +140,6 @@ export default function NotificationsScreen() {
             return (
               <Pressable
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   handlePress(item);
                 }}
                 style={({ pressed }) => [

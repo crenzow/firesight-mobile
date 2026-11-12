@@ -14,7 +14,8 @@
       "backgroundColor": "#0F1C3F"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.firesight"
     },
     "android": {
       "package": "com.firesight",
@@ -28,7 +29,14 @@
         "backgroundColor": "#0F1C3F"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "output": "static",
@@ -73,11 +81,18 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7e5fe473-a731-4400-8ebe-ac87d82e6fe7"
+      }
     }
   }
 }

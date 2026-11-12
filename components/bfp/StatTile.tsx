@@ -7,7 +7,6 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { Skeleton } from '../ui/Skeleton';
 
@@ -45,7 +44,6 @@ export const StatTile: React.FC<StatTileProps> = ({
   const iconScale = useSharedValue(1);
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     iconScale.value = withSequence(
       withTiming(1.22, { duration: 110 }),
       withSpring(1, { damping: 9, stiffness: 220, mass: 0.6 })

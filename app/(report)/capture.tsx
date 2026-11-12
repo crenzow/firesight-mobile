@@ -1,14 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions, FlashMode } from 'expo-camera';
-import { X, Zap, ZapOff, MapPin, AlertTriangle } from 'lucide-react-native';
+import { X, Zap, ZapOff, MapPin } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useReportDraft } from '../../context/ReportDraftContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation } from '../../hooks/useLocation';
-import { Button } from '../../components/ui/Button';
 import { findBarangayByCoordinates } from '../../utils/barangayLookup';
 
 export default function CaptureScreen() {
@@ -27,10 +26,34 @@ export default function CaptureScreen() {
   }, [requestLocation]);
 
   useEffect(() => {
-    if (!permission) return;
-    if (!permission.granted && permission.canAskAgain) {
-      requestPermission();
-    }
+    let isMounted = true;
+    (async () => {
+      if (!permission) return;
+      if (!permission.granted) {
+        if (permission.canAskAgain) {
+          const res = await requestPermission();
+          if (isMounted && !res.granted) {
+            Alert.alert(
+              'Camera Access Required',
+              'FireSight needs camera access to take photo evidence for fire reports.',
+              [{ text: 'OK', onPress: () => router.back() }]
+            );
+          }
+        } else {
+          if (isMounted) {
+            Alert.alert(
+              'Camera Access Disabled',
+              'Camera access was denied. Please enable camera permissions in your device settings to report fire incidents.',
+              [{ text: 'OK', onPress: () => router.back() }]
+            );
+          }
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
   }, [permission, requestPermission]);
 
   const handleCapture = async () => {
@@ -57,31 +80,11 @@ export default function CaptureScreen() {
     }
   };
 
-  if (!permission) {
+  if (!permission || !permission.granted) {
     return (
       <View style={[styles.center, { backgroundColor: '#000' }]}>
-        <ActivityIndicator color="#FFFFFF" />
+        <ActivityIndicator color="#FFFFFF" size="large" />
       </View>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <SafeAreaView style={[styles.center, { backgroundColor: colors.background, padding: spacing.xl }]}>
-        <AlertTriangle size={32} color={colors.brandOrange} />
-        <Text style={{ color: colors.textPrimary, fontSize: typography.size.md, fontWeight: '700', marginTop: spacing.md, textAlign: 'center' }}>
-          Camera access is required
-        </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: typography.size.sm, marginTop: spacing.xs, textAlign: 'center' }}>
-          FireSight needs your camera to capture photo evidence for fire reports.
-        </Text>
-        <View style={{ marginTop: spacing.lg, width: '100%' }}>
-          <Button label="Grant Camera Access" onPress={requestPermission} />
-        </View>
-        <Pressable onPress={() => router.back()} style={{ marginTop: spacing.md }}>
-          <Text style={{ color: colors.textMuted, fontSize: typography.size.sm }}>Cancel</Text>
-        </Pressable>
-      </SafeAreaView>
     );
   }
 

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FileText, Plus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
+import { ensureCameraAccess } from '../../utils/cameraPermission';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { AppHeader } from '../../components/navigation/AppHeader';
@@ -82,9 +83,12 @@ export default function HomeScreen() {
     } as any);
   };
 
-  const handleStartReport = () => {
+  const handleStartReport = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    router.push('/(report)/capture');
+    const hasPermission = await ensureCameraAccess();
+    if (hasPermission) {
+      router.push('/(report)/capture');
+    }
   };
 
   return (

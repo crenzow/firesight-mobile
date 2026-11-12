@@ -14,7 +14,6 @@ import {
   Search,
   ChevronRight,
 } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { LeafletMapView, LeafletMapRef } from '../../components/map/LeafletMapView';
 import { MapType } from '../../components/map/MapTypeSelector';
@@ -155,7 +154,6 @@ export default function MapScreen() {
   }, [isUserFromLian, barangays, user?.address?.barangay_id, user?.address?.barangay_name]);
 
   const handleLocateMe = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (showUserLocation) {
       setShowUserLocation(false);
       mapRef.current?.removeUserMarker?.();
@@ -174,32 +172,24 @@ export default function MapScreen() {
 
   const handleSelectBarangayByName = (name: string) => {
     if (!name) {
-      setSelectedBarangay((prev) => {
-        if (prev) {
-          Haptics.selectionAsync().catch(() => {});
-        }
-        return null;
-      });
+      setSelectedBarangay(null);
       return;
     }
     const found = barangays.find(
       (b) => b.barangay_name.toLowerCase() === name.toLowerCase()
     );
     if (found) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       // Select the barangay to display the detail card without zooming or moving the camera
       setSelectedBarangay(found);
     }
   };
 
   const handleSelectFromDirectory = (feature: BarangayRiskFeature) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setSelectedBarangay(feature);
     mapRef.current?.focusBarangay(feature.barangay_name);
   };
 
   const handleChangeRiskFilter = (nextRisk: 'all' | RiskLevel) => {
-    Haptics.selectionAsync().catch(() => {});
     setSelectedRisk(nextRisk);
   };
 
@@ -257,10 +247,7 @@ export default function MapScreen() {
             {/* Header Actions: Search & Notifications */}
             <View style={styles.headerActions}>
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setIsDirectoryOpen(true);
-                }}
+                onPress={() => setIsDirectoryOpen(true)}
                 hitSlop={8}
                 style={({ pressed }) => [
                   styles.headerIconButton,
@@ -286,7 +273,6 @@ export default function MapScreen() {
 
               <Pressable
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   router.push({
                     pathname: '/(resident)/notifications',
                     params: { from: pathname },
@@ -335,10 +321,7 @@ export default function MapScreen() {
           >
             {/* All Pill */}
             <Pressable
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                handleChangeRiskFilter('all');
-              }}
+              onPress={() => handleChangeRiskFilter('all')}
               style={({ pressed }) => [
                 styles.pill,
                 selectedRisk === 'all'
@@ -362,10 +345,7 @@ export default function MapScreen() {
 
             {/* High Risk Pill */}
             <Pressable
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                handleChangeRiskFilter(selectedRisk === 'high' ? 'all' : 'high');
-              }}
+              onPress={() => handleChangeRiskFilter(selectedRisk === 'high' ? 'all' : 'high')}
               style={({ pressed }) => [
                 styles.pill,
                 selectedRisk === 'high'
@@ -389,10 +369,7 @@ export default function MapScreen() {
 
             {/* Moderate Risk Pill */}
             <Pressable
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                handleChangeRiskFilter(selectedRisk === 'moderate' ? 'all' : 'moderate');
-              }}
+              onPress={() => handleChangeRiskFilter(selectedRisk === 'moderate' ? 'all' : 'moderate')}
               style={({ pressed }) => [
                 styles.pill,
                 selectedRisk === 'moderate'
@@ -416,10 +393,7 @@ export default function MapScreen() {
 
             {/* Mild Risk Pill */}
             <Pressable
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                handleChangeRiskFilter(selectedRisk === 'mild' ? 'all' : 'mild');
-              }}
+              onPress={() => handleChangeRiskFilter(selectedRisk === 'mild' ? 'all' : 'mild')}
               style={({ pressed }) => [
                 styles.pill,
                 selectedRisk === 'mild'
@@ -447,17 +421,11 @@ export default function MapScreen() {
       {/* 3. Floating Action Island (Right Side) */}
       <View style={styles.floatingControlsIsland}>
         <MapFloatingControls
-          onOpenMapType={() => {
-            Haptics.selectionAsync().catch(() => {});
-            setIsMapTypeModalOpen(true);
-          }}
+          onOpenMapType={() => setIsMapTypeModalOpen(true)}
           onLocateUser={handleLocateMe}
           isLocating={isLocating}
           isLocationActive={showUserLocation}
-          onToggleLegend={() => {
-            Haptics.selectionAsync().catch(() => {});
-            setIsLegendVisible((prev) => !prev);
-          }}
+          onToggleLegend={() => setIsLegendVisible((prev) => !prev)}
           isLegendVisible={isLegendVisible}
         />
       </View>
@@ -466,10 +434,7 @@ export default function MapScreen() {
       {isLegendVisible && (
         <RiskLegend
           style={styles.riskLegendPosition}
-          onClose={() => {
-            Haptics.selectionAsync().catch(() => {});
-            setIsLegendVisible(false);
-          }}
+          onClose={() => setIsLegendVisible(false)}
         />
       )}
 
@@ -477,10 +442,7 @@ export default function MapScreen() {
       {selectedBarangay && (
         <BarangayDetailCard
           barangay={selectedBarangay}
-          onClose={() => {
-            Haptics.selectionAsync().catch(() => {});
-            setSelectedBarangay(null);
-          }}
+          onClose={() => setSelectedBarangay(null)}
         />
       )}
 

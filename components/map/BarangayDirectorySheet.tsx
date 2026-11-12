@@ -21,7 +21,6 @@ import Animated, {
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { Search, X, MapPin, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { BarangayRiskFeature } from '../../services/api/models';
@@ -97,13 +96,10 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
     }
   }, []);
 
-  const triggerSnapHaptic = useCallback(() => {
-    Haptics.selectionAsync().catch(() => {});
-  }, []);
+  const triggerSnapHaptic = useCallback(() => {}, []);
 
   const handleDismiss = useCallback(() => {
     Keyboard.dismiss();
-    Haptics.selectionAsync().catch(() => {});
     onClose();
   }, [onClose]);
 
@@ -178,7 +174,6 @@ export const BarangayDirectorySheet: React.FC<BarangayDirectorySheetProps> = ({
   );
 
   const toggleSnapPoint = () => {
-    Haptics.selectionAsync().catch(() => {});
     const isNearFull = translateY.value < snapHalf * 0.5;
     translateY.value = withSpring(isNearFull ? snapHalf : snapFull, SPRING_CONFIG);
   };

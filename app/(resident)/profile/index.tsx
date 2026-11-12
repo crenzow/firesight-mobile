@@ -3,11 +3,10 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, usePathname, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import * as Haptics from 'expo-haptics';
 import {
   FileText,
   Lock,
-  Settings as SettingsIcon,
+  Palette,
   LogOut,
   MapPin,
   ShieldCheck,
@@ -159,7 +158,6 @@ export default function ProfileScreen() {
                   },
                 ]}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   router.push({ pathname: '/(resident)/profile/edit', params: { from: '/(resident)/profile' } } as any);
                 }}
                 hitSlop={8}
@@ -172,10 +170,7 @@ export default function ProfileScreen() {
               {/* Avatar + name */}
               <View style={styles.heroTop}>
                 <Pressable
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                    setShowPhotoOptions(true);
-                  }}
+                  onPress={() => setShowPhotoOptions(true)}
                   disabled={isUploadingPhoto}
                   style={({ pressed }) => [
                     styles.avatarWrap,
@@ -278,7 +273,7 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            ACCOUNT
+            ACCOUNT & PREFERENCES
           </Text>
           <View style={{ marginHorizontal: spacing.lg }}>
             <Card padding={0}>
@@ -301,9 +296,9 @@ export default function ProfileScreen() {
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               <ProfileMenuRow
                 isLast
-                icon={<SettingsIcon size={18} color="#FFFFFF" />}
+                icon={<Palette size={18} color="#FFFFFF" />}
                 gradient={['#64748B', '#0F1C3F']}
-                label="App Settings"
+                label="Appearance"
                 subtitle="Theme and display preferences"
                 onPress={() => router.push({ pathname: '/(resident)/profile/settings', params: { from: '/(resident)/profile' } } as any)}
               />

@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface RadioOptionRowProps {
@@ -20,10 +19,7 @@ export const RadioOptionRow: React.FC<RadioOptionRowProps> = ({ icon, title, sub
 
   return (
     <Pressable
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        onPress();
-      }}
+      onPress={onPress}
       style={({ pressed }) => [
         styles.row,
         {

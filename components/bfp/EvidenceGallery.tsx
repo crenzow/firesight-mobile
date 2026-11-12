@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert, Dimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as Haptics from 'expo-haptics';
 import { Plus, Image as ImageIcon } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { APP_CONFIG, getStorageImageUrl } from '../../constants/config';
@@ -115,10 +114,7 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({
           {photos.map((photo) => (
             <Pressable
               key={photo.key}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                setExpandedPhoto(photo);
-              }}
+              onPress={() => setExpandedPhoto(photo)}
               style={({ pressed }) => [
                 {
                   width: 140,
@@ -155,10 +151,7 @@ export const EvidenceGallery: React.FC<EvidenceGalleryProps> = ({
 
           {canAdd && (
             <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                handleAddPress();
-              }}
+              onPress={handleAddPress}
               disabled={isUploading}
               style={({ pressed }) => [
                 styles.addTile,

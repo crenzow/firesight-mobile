@@ -7,11 +7,11 @@ import {
   Pressable,
   Image,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Image as ImageIcon, Trash2, X, RotateCcw } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { Button } from '../ui/Button';
 
@@ -41,7 +41,14 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Camera permission is needed to take a profile picture.');
+        Alert.alert(
+          'Permission Required',
+          'Camera permission is needed to take a profile picture.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -62,7 +69,14 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Gallery access is needed to select a profile picture.');
+        Alert.alert(
+          'Permission Required',
+          'Gallery access is needed to select a profile picture.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -117,10 +131,7 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
               </Text>
             </View>
             <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                onClose();
-              }}
+              onPress={onClose}
               hitSlop={10}
               style={({ pressed }) => [
                 styles.closeBtn,
@@ -139,10 +150,7 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
           <View style={{ padding: spacing.lg, gap: spacing.sm }}>
             {/* Take Photo */}
             <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                handleTakePhoto();
-              }}
+              onPress={handleTakePhoto}
               style={({ pressed }) => [
                 styles.optionRow,
                 {
@@ -170,10 +178,7 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
 
             {/* Choose from Gallery */}
             <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                handleChooseGallery();
-              }}
+              onPress={handleChooseGallery}
               style={({ pressed }) => [
                 styles.optionRow,
                 {
@@ -202,10 +207,7 @@ export const PhotoOptionsModal: React.FC<PhotoOptionsModalProps> = ({
             {/* Remove Photo */}
             {hasExistingPhoto && onRemovePhoto ? (
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  handleRemove();
-                }}
+                onPress={handleRemove}
                 style={({ pressed }) => [
                   styles.optionRow,
                   {

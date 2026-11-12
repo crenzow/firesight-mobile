@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Search, ClipboardList, X, Calendar, ChevronDown, ShieldCheck } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../theme/ThemeContext';
 import { AppHeader } from '../../../components/navigation/AppHeader';
 import { SegmentedControl } from '../../../components/ui/SegmentedControl';
@@ -318,10 +317,7 @@ export default function IncidentsListScreen() {
                 />
                 {search.length > 0 ? (
                   <Pressable
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                      setSearch('');
-                    }}
+                    onPress={() => setSearch('')}
                     hitSlop={10}
                     style={({ pressed }) => [
                       styles.clearBtn,
@@ -344,10 +340,7 @@ export default function IncidentsListScreen() {
 
               {/* Date Filter Icon Button */}
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setShowDateModal(true);
-                }}
+                onPress={() => setShowDateModal(true)}
                 style={({ pressed }) => [
                   styles.dateFilterIconBtn,
                   {
@@ -387,10 +380,7 @@ export default function IncidentsListScreen() {
                     {datePillLabel}
                   </Text>
                   <Pressable
-                    onPress={() => {
-                      Haptics.selectionAsync().catch(() => {});
-                      setDateRange({ start: null, end: null });
-                    }}
+                    onPress={() => setDateRange({ start: null, end: null })}
                     hitSlop={8}
                     style={styles.activeFilterTagClear}
                     accessibilityRole="button"

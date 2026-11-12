@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Phone, BookOpen, Megaphone, ChevronRight } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { Skeleton } from '../ui/Skeleton';
 import { SectionHeader } from '../ui/SectionHeader';
@@ -73,10 +72,7 @@ export const QuickActionsRow: React.FC<QuickActionsRowProps> = ({ latestAnnounce
         {TILES.map(({ key, label, icon: Icon, route }) => (
           <Pressable
             key={key}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              router.push(route as never);
-            }}
+            onPress={() => router.push(route as never)}
             style={({ pressed }) => [
               styles.card,
               styles.tile,
@@ -112,10 +108,7 @@ export const QuickActionsRow: React.FC<QuickActionsRowProps> = ({ latestAnnounce
 
       {/* Bottom: wide Announcements card with the latest post */}
       <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-          router.push('/(resident)/announcements' as never);
-        }}
+        onPress={() => router.push('/(resident)/announcements' as never)}
         style={({ pressed }) => [
           styles.card,
           styles.advisory,

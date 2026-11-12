@@ -42,3 +42,13 @@ app-example
 # generated native folders
 /ios
 /android
+
+# JMeter & Maestro test suites and documentation folders
+jmeter/
+maestro/
+docs/
+*.jtl
+jmeter.log
+
+
+

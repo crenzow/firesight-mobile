@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { authService } from '../services/api/authService';
 import { secureStorage } from '../services/storage/secureStorage';
 import { ApiError } from '../services/api/client';
@@ -163,6 +164,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Even if the server call fails (e.g. offline), we still clear the local session below.
     } finally {
+      const isExpoGo =
+        Constants.appOwnership === 'expo' ||
+        Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+      if (!isExpoGo) {
+        try {
+          const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+          await GoogleSignin.signOut();
+        } catch {
+          // Safe to ignore if not signed in with Google
+        }
+      }
       await secureStorage.clearAll();
       setUser(null);
     }

@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Pressable, Platform, Image, StyleProp, ViewStyl
 import { router } from 'expo-router';
 import { ChevronRight, Flame, ShieldAlert, BookOpen, Sparkles, ArrowRight, Bookmark } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { FireEducationArticle } from '../../services/api/models';
 import { getArticleImageSource } from '../../constants/educationImages';
@@ -39,7 +38,6 @@ export const FeaturedArticleCard: React.FC<{
   return (
     <Pressable
       onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         router.push(`/(resident)/learn/${article.content_id}`);
       }}
       style={({ pressed }) => [
@@ -142,7 +140,6 @@ export const ArticleListItem: React.FC<{ article: FireEducationArticle }> = ({ a
   return (
     <Pressable
       onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         router.push(`/(resident)/learn/${article.content_id}`);
       }}
       style={({ pressed }) => [

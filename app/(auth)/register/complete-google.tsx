@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { ChevronLeft, CheckCircle2, Phone, MapPin } from 'lucide-react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useRegistration } from '../../../context/RegistrationContext';
@@ -131,7 +132,24 @@ export default function CompleteGoogleProfileScreen() {
           paddingBottom: spacing.xl,
         }}
       >
-        <Pressable onPress={() => router.back()} hitSlop={8} style={{ marginBottom: spacing.lg }}>
+        <Pressable
+          onPress={() => {
+            resetForm();
+            const isExpoGo =
+              Constants.appOwnership === 'expo' ||
+              Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+            if (!isExpoGo) {
+              try {
+                const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+                GoogleSignin.signOut().catch(() => {});
+              } catch {}
+            }
+            router.back();
+          }}
+          hitSlop={8}
+          style={{ marginBottom: spacing.lg }}
+        >
           <ChevronLeft size={24} color={colors.textInverse} strokeWidth={2.5} />
         </Pressable>
 
@@ -191,7 +209,6 @@ export default function CompleteGoogleProfileScreen() {
         {/* Mobile Number for Emergency Response */}
         <Input
           label="Mobile Number"
-          required
           value={form.mobileNumber}
           onChangeText={(t) => {
             updateForm({ mobileNumber: t });
@@ -205,7 +222,7 @@ export default function CompleteGoogleProfileScreen() {
 
         {/* House / Street / Purok */}
         <Input
-          label="House No. / Street / Purok"
+          label="House No. / Street / Purok (optional)"
           value={form.houseNoStreet}
           onChangeText={(t) => updateForm({ houseNoStreet: t })}
           placeholder="House No., Street, or Purok"
@@ -215,7 +232,6 @@ export default function CompleteGoogleProfileScreen() {
         {/* Barangay Dropdown */}
         <SelectField
           label="Barangay"
-          required
           placeholder="Select your barangay in Lian"
           value={form.barangayId}
           options={LIAN_BARANGAYS}

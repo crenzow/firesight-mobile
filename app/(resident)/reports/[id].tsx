@@ -30,7 +30,6 @@ import { useNotifications } from '../../../context/NotificationContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { Card } from '../../../components/ui/Card';
 import { Skeleton } from '../../../components/ui/Skeleton';
-import * as Haptics from 'expo-haptics';
 import { StatusBadge } from '../../../components/home/StatusBadge';
 import { PhotoLightboxModal } from '../../../components/ui/PhotoLightboxModal';
 import { reportService } from '../../../services/api/reportService';
@@ -267,10 +266,7 @@ export default function ReportDetailScreen() {
             {/* ── 1. Photo Card (Top of Report) ── */}
             {photoUri ? (
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setIsPreviewOpen(true);
-                }}
+                onPress={() => setIsPreviewOpen(true)}
                 style={({ pressed }) => [
                   styles.photoCard,
                   {

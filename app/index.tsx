@@ -1,91 +1,36 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { router } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
-const firesightLogo = require('../assets/images/firesight-logo.png');
+// Prevent the native splash screen from hiding until auth is determined
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /**
- * First screen shown on launch. Waits for the AuthContext to finish
- * checking secure storage for a saved session, then routes either into
- * the resident app (already logged in) or the (auth) welcome screen.
+ * Clean entrance router.
+ * Keeps the native Android splash screen visible while checking SecureStore
+ * for a saved login, then immediately transitions into Welcome or Home.
  */
-export default function SplashScreen() {
-  const { colors, typography, spacing } = useTheme();
+export default function IndexScreen() {
+  const { colors } = useTheme();
   const { isAuthenticated, isBootstrapping, user } = useAuth();
 
   useEffect(() => {
-
     if (isBootstrapping) return;
-    const timeout = setTimeout(() => {
-      if (!isAuthenticated) {
-        router.replace('/(auth)/welcome');
-      } else if (user?.role === 'bfp_personnel') {
-        router.replace('/(bfp)/dashboard');
-      } else {
-        router.replace('/(resident)/home');
-      }
-    }, 900);
-    return () => clearTimeout(timeout);
+
+    if (!isAuthenticated) {
+      router.replace('/(auth)/welcome');
+    } else if (user?.role === 'bfp_personnel') {
+      router.replace('/(bfp)/dashboard');
+    } else {
+      router.replace('/(resident)/home');
+    }
+
+    // Hide native splash cleanly once destination is resolved
+    SplashScreen.hideAsync().catch(() => {});
   }, [isBootstrapping, isAuthenticated, user]);
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.brandNavy }]}>
-
-      {/* Centered brand — mirrors welcome.tsx exactly */}
-      <View style={styles.hero}>
-        <Image source={firesightLogo} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>
-          FIRE<Text style={{ color: colors.brandOrange }}>SIGHT</Text>
-        </Text>
-        <Text style={styles.subtitle}>MUNICIPAL FIRE SAFETY SYSTEM</Text>
-        <View style={{ marginTop: 40 }}>
-          <ActivityIndicator size="large" color={colors.brandOrange} />
-        </View>
-      </View>
-
-    </View>
-  );
+  return <View style={{ flex: 1, backgroundColor: colors.brandNavy }} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  hero: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingBottom: 80,
-  },
-  logo: {
-    width: 180,
-    height: 180,
-    marginBottom: -20,
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 2,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.38)',
-    letterSpacing: 3,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  footer: {
-    width: '100%',
-    paddingBottom: 48,
-    paddingHorizontal: 40,
-    alignItems: 'center',
-  },
-});
-

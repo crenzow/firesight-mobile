@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { X } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 const LEGEND_ITEMS = [
@@ -35,10 +34,7 @@ export const RiskLegend: React.FC<{ style?: any; onClose?: () => void }> = ({ st
         </Text>
         {onClose && (
           <Pressable
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => {});
-              onClose();
-            }}
+            onPress={onClose}
             hitSlop={8}
             style={({ pressed }) => [
               styles.closeBtn,

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, FlatList } from 'react-native';
 import { ChevronDown, Check, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface SelectOption {
@@ -56,10 +55,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
       ) : null}
 
       <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-          setIsOpen(true);
-        }}
+        onPress={() => setIsOpen(true)}
         style={({ pressed }) => [
           styles.field,
           {
@@ -99,7 +95,6 @@ export const SelectField: React.FC<SelectFieldProps> = ({
                 {allowClear && hasSelection && (
                   <Pressable
                     onPress={() => {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
                       onSelect(null);
                       setIsOpen(false);
                     }}
@@ -112,10 +107,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
                   </Pressable>
                 )}
                 <Pressable
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                    setIsOpen(false);
-                  }}
+                  onPress={() => setIsOpen(false)}
                   hitSlop={8}
                   style={({ pressed }) => [
                     {
@@ -135,7 +127,6 @@ export const SelectField: React.FC<SelectFieldProps> = ({
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
                     onSelect(item.id);
                     setIsOpen(false);
                   }}

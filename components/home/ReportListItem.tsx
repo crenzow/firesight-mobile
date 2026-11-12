@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Flame, ChevronRight, Clock } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { CommunityReport } from '../../services/api/models';
 import { StatusBadge } from './StatusBadge';
@@ -60,7 +59,6 @@ const ReportListItemComponent: React.FC<ReportListItemProps> = ({
   return (
     <Pressable
       onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         router.push({
           pathname: `/(resident)/reports/${report.report_id}`,
           params: {

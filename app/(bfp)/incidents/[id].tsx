@@ -124,7 +124,6 @@ const OriginSelector: React.FC<{
             key={opt.key}
             onPress={() => {
               if (!disabled && !active) {
-                Haptics.selectionAsync().catch(() => {});
                 onChange(opt.key);
               }
             }}
@@ -505,16 +504,13 @@ export default function IncidentDetailScreen() {
     })();
   }, [currentGPS, userLocation]);
   const handleOpenFullscreen = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setIsMapFullscreen(true);
   }, []);
   const stopNavigation = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setIsNavigating(false);
     navOriginRef.current = null;
   };
   const closeFullscreen = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setIsMapFullscreen(false);
     setIsNavigating(false);
   };
@@ -764,7 +760,6 @@ export default function IncidentDetailScreen() {
   };
 
   const handleCancelEditDetails = () => {
-    Haptics.selectionAsync().catch(() => {});
     if (incident) {
       setCauseOfFire(incident.cause_of_fire ?? '');
       setInjuries(String(incident.injuries ?? 0));
@@ -811,7 +806,6 @@ export default function IncidentDetailScreen() {
   };
 
   const handleStartEditDetails = () => {
-    Haptics.selectionAsync().catch(() => {});
     setIsEditingDetails(true);
   };
 
@@ -1314,7 +1308,6 @@ export default function IncidentDetailScreen() {
                   >
                     <Pressable
                       onPress={() => {
-                        Haptics.selectionAsync().catch(() => {});
                         setIsMapTypeModalOpen(true);
                       }}
                       accessible={true}
@@ -1518,7 +1511,6 @@ export default function IncidentDetailScreen() {
                 <FieldLabel text="TIME FIRE STARTED" />
                 <Pressable
                   onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
                     setActiveTimePickerField('started');
                     setShowTimePicker(true);
                   }}
@@ -1541,7 +1533,6 @@ export default function IncidentDetailScreen() {
                 <FieldLabel text="TIME FIRE OUT" />
                 <Pressable
                   onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
                     setActiveTimePickerField('out');
                     setShowTimePicker(true);
                   }}
@@ -1831,7 +1822,6 @@ export default function IncidentDetailScreen() {
             <View style={styles.fsHeaderRightCol}>
               <Pressable
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   if (isNavigating) {
                     stopNavigation();
                   } else {
@@ -1857,7 +1847,6 @@ export default function IncidentDetailScreen() {
               {!isNavigating ? (
                 <Pressable
                   onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
                     setIsMapTypeModalOpen(true);
                   }}
                   accessible={true}
@@ -1925,7 +1914,6 @@ export default function IncidentDetailScreen() {
                       key={o.key}
                       onPress={() => {
                         if (!disabled && routeOrigin !== o.key) {
-                          Haptics.selectionAsync().catch(() => {});
                           setRouteMeta(null);
                           setRouteOrigin(o.key);
                         }

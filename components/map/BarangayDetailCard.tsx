@@ -8,7 +8,6 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { X, Navigation } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { BarangayRiskFeature } from '../../services/api/models';
 import { FIRE_STATION } from '../../constants/fireStation';
@@ -146,10 +145,7 @@ export const BarangayDetailCard: React.FC<BarangayDetailCardProps> = ({
         </View>
 
         <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            onClose();
-          }}
+          onPress={onClose}
           hitSlop={10}
           style={({ pressed }) => [
             styles.closeButton,

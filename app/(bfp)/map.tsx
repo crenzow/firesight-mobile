@@ -16,7 +16,6 @@ import {
   X,
   Flame,
 } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { LeafletMapView, LeafletMapRef } from '../../components/map/LeafletMapView';
 import { MapType } from '../../components/map/MapTypeSelector';
@@ -169,7 +168,6 @@ export default function BFPMapScreen() {
   }, [incidents]);
 
   const handleLocateMe = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (showUserLocation) {
       setShowUserLocation(false);
       mapRef.current?.removeUserMarker?.();
@@ -188,31 +186,23 @@ export default function BFPMapScreen() {
 
   const handleSelectBarangayByName = (name: string) => {
     if (!name) {
-      setSelectedBarangay((prev) => {
-        if (prev) {
-          Haptics.selectionAsync().catch(() => {});
-        }
-        return null;
-      });
+      setSelectedBarangay(null);
       return;
     }
     const found = barangays.find(
       (b) => b.barangay_name.toLowerCase() === name.toLowerCase()
     );
     if (found) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       setSelectedBarangay(found);
     }
   };
 
   const handleSelectFromDirectory = (feature: BarangayRiskFeature) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setSelectedBarangay(feature);
     mapRef.current?.focusBarangay(feature.barangay_name);
   };
 
   const handleModeChange = (nextMode: 'risk' | 'incidents') => {
-    Haptics.selectionAsync().catch(() => {});
     setMode(nextMode);
     setSelectedBarangay(null);
     fetchMapData(false); // Silently pull latest database updates when toggling modes
@@ -280,10 +270,7 @@ export default function BFPMapScreen() {
             {/* Header Actions: Search & Notifications */}
             <View style={styles.headerActions}>
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setIsDirectoryOpen(true);
-                }}
+                onPress={() => setIsDirectoryOpen(true)}
                 hitSlop={8}
                 style={({ pressed }) => [
                   styles.headerIconButton,
@@ -307,7 +294,6 @@ export default function BFPMapScreen() {
 
               <Pressable
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   router.push({
                     pathname: '/(bfp)/notifications',
                     params: { from: pathname },
@@ -367,10 +353,7 @@ export default function BFPMapScreen() {
             >
               {/* All Pill */}
               <Pressable
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => {});
-                  setSelectedRisk('all');
-                }}
+                onPress={() => setSelectedRisk('all')}
                 style={({ pressed }) => [
                   styles.pill,
                   selectedRisk === 'all'
@@ -397,10 +380,7 @@ export default function BFPMapScreen() {
 
               {/* High Risk Pill */}
               <Pressable
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => {});
-                  setSelectedRisk(selectedRisk === 'high' ? 'all' : 'high');
-                }}
+                onPress={() => setSelectedRisk(selectedRisk === 'high' ? 'all' : 'high')}
                 style={({ pressed }) => [
                   styles.pill,
                   selectedRisk === 'high'
@@ -427,10 +407,7 @@ export default function BFPMapScreen() {
 
               {/* Moderate Risk Pill */}
               <Pressable
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => {});
-                  setSelectedRisk(selectedRisk === 'moderate' ? 'all' : 'moderate');
-                }}
+                onPress={() => setSelectedRisk(selectedRisk === 'moderate' ? 'all' : 'moderate')}
                 style={({ pressed }) => [
                   styles.pill,
                   selectedRisk === 'moderate'
@@ -457,10 +434,7 @@ export default function BFPMapScreen() {
 
               {/* Mild Risk Pill */}
               <Pressable
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => {});
-                  setSelectedRisk(selectedRisk === 'mild' ? 'all' : 'mild');
-                }}
+                onPress={() => setSelectedRisk(selectedRisk === 'mild' ? 'all' : 'mild')}
                 style={({ pressed }) => [
                   styles.pill,
                   selectedRisk === 'mild'
@@ -513,15 +487,11 @@ export default function BFPMapScreen() {
               ]}
             >
               <MapFloatingControls
-                onOpenMapType={() => {
-                  Haptics.selectionAsync().catch(() => {});
-                  setIsMapTypeModalOpen(true);
-                }}
+                onOpenMapType={() => setIsMapTypeModalOpen(true)}
                 onLocateUser={handleLocateMe}
                 isLocating={isLocating}
                 isLocationActive={showUserLocation}
                 onToggleLegend={() => {
-                  Haptics.selectionAsync().catch(() => {});
                   setIsLegendVisible((prev) => !prev);
                 }}
                 isLegendVisible={isLegendVisible}
@@ -539,7 +509,6 @@ export default function BFPMapScreen() {
                     },
                   ]}
                   onClose={() => {
-                    Haptics.selectionAsync().catch(() => {});
                     setIsLegendVisible(false);
                   }}
                 />
@@ -563,7 +532,6 @@ export default function BFPMapScreen() {
                     </Text>
                     <Pressable
                       onPress={() => {
-                        Haptics.selectionAsync().catch(() => {});
                         setIsLegendVisible(false);
                       }}
                       hitSlop={8}
@@ -602,7 +570,6 @@ export default function BFPMapScreen() {
         <BarangayDetailCard
           barangay={selectedBarangay}
           onClose={() => {
-            Haptics.selectionAsync().catch(() => {});
             setSelectedBarangay(null);
           }}
         />

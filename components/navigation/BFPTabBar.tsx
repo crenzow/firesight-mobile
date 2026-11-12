@@ -3,7 +3,6 @@ import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Home, FileText, Map as MapIcon, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 const ICONS: Record<string, React.ComponentType<{ size: number; color: string; strokeWidth?: number }>> = {
@@ -144,11 +143,6 @@ export const BFPTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) =>
           const routeIndex = state.routes.findIndex((r) => r.key === route.key);
           const isFocused = state.index === routeIndex;
           const onPress = () => {
-            try {
-              Haptics.selectionAsync();
-            } catch {
-              // Safe fallback
-            }
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
             if (!isFocused && !event.defaultPrevented) {
               navigation.navigate(route.name);

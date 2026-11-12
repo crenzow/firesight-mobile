@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface SecondaryHeaderProps {
@@ -22,7 +21,6 @@ export const SecondaryHeader: React.FC<SecondaryHeaderProps> = ({
   const { colors, spacing } = useTheme();
 
   const handleBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (onBack) {
       onBack();
     } else {

@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import * as Haptics from "expo-haptics";
 import { Search, X, BookOpen, Bookmark } from "lucide-react-native";
 import { useTheme } from "../../../theme/ThemeContext";
 import { AppHeader } from "../../../components/navigation/AppHeader";
@@ -199,10 +198,7 @@ export default function LearnScreen() {
             />
             {searchQuery.length > 0 ? (
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setSearchQuery("");
-                }}
+                onPress={() => setSearchQuery("")}
                 hitSlop={10}
                 style={({ pressed }) => [
                   styles.clearBtn,

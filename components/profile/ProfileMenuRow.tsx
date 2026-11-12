@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface ProfileMenuRowProps {
@@ -37,10 +36,7 @@ export const ProfileMenuRow: React.FC<ProfileMenuRowProps> = ({
 
   return (
     <Pressable
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        onPress();
-      }}
+      onPress={onPress}
       style={({ pressed }) => [
         styles.row,
         {

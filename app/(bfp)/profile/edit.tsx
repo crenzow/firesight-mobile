@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Camera, Save, UserCheck } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { useAuth } from '../../../context/AuthContext';
@@ -169,10 +168,7 @@ export default function BFPEditProfileScreen() {
             {/* Profile Photo */}
             <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
               <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setShowPhotoOptions(true);
-                }}
+                onPress={() => setShowPhotoOptions(true)}
                 style={({ pressed }) => [
                   styles.photoWrap,
                   {

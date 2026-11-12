@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Lock, Shield, FileText, KeyRound, X, FileCheck2, Trash2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../theme/ThemeContext';
 import { SecondaryHeader } from '../../../components/navigation/SecondaryHeader';
 import { ProfileMenuRow } from '../../../components/profile/ProfileMenuRow';
@@ -99,7 +98,6 @@ export default function SecurityScreen() {
   );
 
   const handleOpenPasswordModal = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setCurrentPassword('');
     setCurrentPasswordError(null);
     setNewPassword('');
@@ -216,7 +214,6 @@ export default function SecurityScreen() {
               label="Privacy Policy"
               subtitle="How your information is protected and used"
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 setLegalModalType('privacy');
               }}
             />
@@ -227,7 +224,6 @@ export default function SecurityScreen() {
               label="Terms of Service"
               subtitle="User agreement and platform terms"
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 setLegalModalType('terms');
               }}
             />
@@ -240,7 +236,6 @@ export default function SecurityScreen() {
               subtitle="Permanently remove your account and data"
               destructive
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 setShowDeleteDialog(true);
               }}
             />

@@ -44,11 +44,11 @@ export default function BFPSettingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <SecondaryHeader title="Settings" onBack={handleBack} />
+      <SecondaryHeader title="Appearance" onBack={handleBack} />
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }}>
           <Text style={[styles.sectionTitle, { color: colors.textMuted, fontSize: typography.size.xs, marginBottom: spacing.sm }]}>
-            APPEARANCE
+            THEME PREFERENCE
           </Text>
           {THEME_OPTIONS.map(({ key, title, subtitle, icon: Icon, gradient }) => (
             <RadioOptionRow

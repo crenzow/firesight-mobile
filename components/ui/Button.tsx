@@ -7,7 +7,6 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'neutral';
@@ -43,11 +42,6 @@ export const Button: React.FC<ButtonProps> = ({
   const { colors, radius, spacing, typography, isDark } = useTheme();
 
   const handlePress = () => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {
-      // Safe fallback
-    }
     onPress();
   };
 
