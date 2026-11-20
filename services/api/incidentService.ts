@@ -100,5 +100,19 @@ export const incidentService = {
       ...location,
     }),
 
+  /** Links one or more duplicate/related reports to the main incident. */
+  linkReports: (mainReportId: number, relatedReportIds: number[]) =>
+    apiClient.post<BFPIncident>(`/incidents/${mainReportId}/link`, {
+      main_report_id: mainReportId,
+      related_report_ids: relatedReportIds,
+    }),
+
+  /** Unlinks a duplicate report from the main incident. */
+  unlinkReport: (mainReportId: number, relatedReportId: number) =>
+    apiClient.post<BFPIncident>(`/incidents/${mainReportId}/unlink`, {
+      main_report_id: mainReportId,
+      related_report_id: relatedReportId,
+    }),
+
   getDashboardAnalytics: () => apiClient.get<DashboardAnalytics>('/dashboard/analytics.php'),
 };

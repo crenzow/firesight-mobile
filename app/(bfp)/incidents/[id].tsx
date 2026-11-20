@@ -58,6 +58,8 @@ import { IncidentStatusBadge } from '../../../components/bfp/IncidentStatusBadge
 import { AlarmLevel, ALARM_LEVEL_OPTIONS, ALARM_LEVEL_LABELS } from '../../../components/bfp/AlarmLevelBadge';
 import { StatusStepper } from '../../../components/bfp/StatusStepper';
 import { EvidenceGallery } from '../../../components/bfp/EvidenceGallery';
+import { NearbyDuplicatesCard } from '../../../components/bfp/NearbyDuplicatesCard';
+import { LinkedReportsSection } from '../../../components/bfp/LinkedReportsSection';
 import { IncidentLocationMap, MapType, GPSUpdate, IncidentLocationMapRef } from '../../../components/bfp/IncidentLocationMap';
 import { incidentService } from '../../../services/api/incidentService';
 import { reverseGeocode } from '../../../utils/geocoding';
@@ -284,7 +286,8 @@ export default function IncidentDetailScreen() {
     message: string;
     confirmText: string;
     icon: React.ReactNode;
-    onConfirm: () => Promise<void>;
+    showCancel?: boolean;
+    onConfirm: () => Promise<void> | void;
   } | null>(null);
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -711,6 +714,103 @@ export default function IncidentDetailScreen() {
       ? (userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null)
       : { lat: FIRE_STATION.latitude, lng: FIRE_STATION.longitude });
 
+  const [linkingDuplicates, setLinkingDuplicates] = useState(false);
+  const [unlinkingId, setUnlinkingId] = useState<number | null>(null);
+
+  const handleLinkDuplicates = useCallback((selectedIds: number[]) => {
+    if (!reportId || selectedIds.length === 0) return;
+
+    setDialog({
+      type: 'confirm',
+      title: 'Link Duplicate Reports',
+      message: `Link ${selectedIds.length} report(s) as duplicates of this incident? Response operations and status will be synchronized.`,
+      confirmText: 'Link Reports',
+      icon: <Layers size={28} color="#FFFFFF" strokeWidth={2.5} />,
+      onConfirm: async () => {
+        setIsActing(true);
+        setLinkingDuplicates(true);
+        try {
+          const updated = await incidentService.linkReports(reportId, selectedIds);
+          setIncident(updated);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          setDialog({
+            type: 'success',
+            title: 'Reports Linked',
+            message: `Successfully linked ${selectedIds.length} duplicate report(s) to this incident.`,
+            confirmText: 'Done',
+            showCancel: false,
+            icon: <Check size={28} color="#FFFFFF" strokeWidth={3} />,
+            onConfirm: () => {
+              setDialog(null);
+            },
+          });
+        } catch (err: any) {
+          setDialog({
+            type: 'danger',
+            title: 'Link Failed',
+            message: err.message || 'Unable to link duplicate reports.',
+            confirmText: 'Dismiss',
+            showCancel: false,
+            icon: <ShieldX size={28} color="#FFFFFF" strokeWidth={2.5} />,
+            onConfirm: () => {
+              setDialog(null);
+            },
+          });
+        } finally {
+          setIsActing(false);
+          setLinkingDuplicates(false);
+        }
+      },
+    });
+  }, [reportId]);
+
+  const handleUnlinkReport = useCallback((relatedReportId: number) => {
+    if (!reportId) return;
+
+    setDialog({
+      type: 'danger',
+      title: 'Unlink Report',
+      message: `Are you sure you want to unlink Report#${relatedReportId} from this incident?`,
+      confirmText: 'Unlink Report',
+      icon: <ShieldX size={28} color="#FFFFFF" strokeWidth={2.5} />,
+      onConfirm: async () => {
+        setIsActing(true);
+        setUnlinkingId(relatedReportId);
+        try {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          const updated = await incidentService.unlinkReport(reportId, relatedReportId);
+          setIncident(updated);
+          setDialog({
+            type: 'success',
+            title: 'Report Unlinked',
+            message: `Report#${relatedReportId} has been unlinked from this incident.`,
+            confirmText: 'Done',
+            showCancel: false,
+            icon: <Check size={28} color="#FFFFFF" strokeWidth={3} />,
+            onConfirm: () => {
+              setDialog(null);
+            },
+          });
+        } catch (err: any) {
+          setDialog({
+            type: 'danger',
+            title: 'Unlink Failed',
+            message: err.message || 'Unable to unlink report.',
+            confirmText: 'Dismiss',
+            showCancel: false,
+            icon: <ShieldX size={28} color="#FFFFFF" strokeWidth={2.5} />,
+            onConfirm: () => {
+              setDialog(null);
+            },
+          });
+        } finally {
+          setIsActing(false);
+          setUnlinkingId(null);
+        }
+      },
+    });
+  }, [reportId]);
+
   const handleVerify = () => {
     setDialog({
       type: 'confirm',
@@ -1059,6 +1159,24 @@ export default function IncidentDetailScreen() {
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg }}>
+
+          {/* ── NEARBY DUPLICATE CANDIDATES ───────────────────── */}
+          {incident.nearby_unlinked_reports && incident.nearby_unlinked_reports.length > 0 ? (
+            <NearbyDuplicatesCard
+              candidates={incident.nearby_unlinked_reports}
+              onLinkSelected={handleLinkDuplicates}
+              linking={linkingDuplicates}
+            />
+          ) : null}
+
+          {/* ── LINKED DUPLICATE REPORTS ──────────────────────── */}
+          {incident.linked_reports && incident.linked_reports.length > 0 ? (
+            <LinkedReportsSection
+              linkedReports={incident.linked_reports}
+              onUnlink={handleUnlinkReport}
+              unlinkingId={unlinkingId}
+            />
+          ) : null}
 
           {/* ── FIRE SCENE PHOTOS ───────────────────────────────── */}
           {(() => {
@@ -2064,6 +2182,7 @@ export default function IncidentDetailScreen() {
         loading={isActing}
         onConfirm={() => dialog?.onConfirm()}
         onCancel={() => setDialog(null)}
+        showCancel={dialog?.showCancel ?? true}
       />
 
       <DispatchModal

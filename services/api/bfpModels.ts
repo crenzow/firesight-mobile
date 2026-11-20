@@ -52,6 +52,22 @@ export interface BFPIncident {
   evidence_photos?: { evidence_id: number; image_path: string; caption: string | null }[];
   barangay_contacts?: { name: string; role: string; phone_number: string }[];
   dispatches?: IncidentDispatch[];
+  nearby_pending_count?: number;
+  linked_reports?: LinkedReportItem[];
+  nearby_unlinked_reports?: LinkedReportItem[];
+}
+
+export interface LinkedReportItem {
+  report_id: number;
+  reference: string;
+  reporter_name: string | null;
+  contact_number: string | null;
+  status: BFPIncidentStatus;
+  distance_meters: number | null;
+  description: string | null;
+  report_image: string | null;
+  evidence_photos?: { evidence_id: number; image_path: string; caption: string | null }[];
+  created_at: string;
 }
 
 export interface BFPPersonnelItem {

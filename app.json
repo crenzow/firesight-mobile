@@ -78,10 +78,11 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/images/notification-icon.png",
           "color": "#E65100",
           "sounds": [
-            "./assets/sounds/fire_siren.mp3"
+            "./assets/sounds/fire_siren.mp3",
+            "./assets/sounds/fire_pager_alert_bee.mp3"
           ]
         }
       ],
