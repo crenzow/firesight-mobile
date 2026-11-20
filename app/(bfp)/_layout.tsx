@@ -3,6 +3,7 @@ import { Tabs, Redirect } from 'expo-router';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { BFPTabBar } from '../../components/navigation/BFPTabBar';
+import { DispatchLocationProvider } from '../../context/DispatchLocationContext';
 
 export default function BFPLayout() {
   const { colors } = useTheme();
@@ -19,25 +20,27 @@ export default function BFPLayout() {
   }
 
   return (
-    <Tabs
-      tabBar={(props) => <BFPTabBar {...props} />}
-      backBehavior="initialRoute"
-      screenOptions={{
-        headerShown: false,
-        sceneStyle: { backgroundColor: colors.background },
-      }}
-    >
-      <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-      <Tabs.Screen name="incidents/index" options={{ title: 'Incidents' }} />
-      <Tabs.Screen name="map" options={{ title: 'Map' }} />
-      <Tabs.Screen name="profile/index" options={{ title: 'Profile' }} />
+    <DispatchLocationProvider>
+      <Tabs
+        tabBar={(props) => <BFPTabBar {...props} />}
+        backBehavior="initialRoute"
+        screenOptions={{
+          headerShown: false,
+          sceneStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
+        <Tabs.Screen name="incidents/index" options={{ title: 'Incidents' }} />
+        <Tabs.Screen name="map" options={{ title: 'Map' }} />
+        <Tabs.Screen name="profile/index" options={{ title: 'Profile' }} />
 
-      {/* Reachable via navigation, hidden from the custom tab bar */}
-      <Tabs.Screen name="incidents/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
-      <Tabs.Screen name="incidents/create" options={{ href: null, tabBarStyle: { display: 'none' } }} />
-      <Tabs.Screen name="profile/edit" options={{ href: null, tabBarStyle: { display: 'none' } }} />
-      <Tabs.Screen name="profile/settings" options={{ href: null, tabBarStyle: { display: 'none' } }} />
-      <Tabs.Screen name="notifications" options={{ href: null, tabBarStyle: { display: 'none' } }} />
-    </Tabs>
+        {/* Reachable via navigation, hidden from the custom tab bar */}
+        <Tabs.Screen name="incidents/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="incidents/create" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="profile/edit" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="profile/settings" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="notifications" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      </Tabs>
+    </DispatchLocationProvider>
   );
 }

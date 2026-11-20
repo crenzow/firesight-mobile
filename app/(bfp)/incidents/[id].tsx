@@ -68,6 +68,7 @@ import { FIRE_STATION } from '../../../constants/fireStation';
 import { ConfirmationDialog } from '../../../components/ui/ConfirmationDialog';
 import { MapTypeModal } from '../../../components/map/MapTypeModal';
 import { DispatchModal } from '../../../components/bfp/DispatchModal';
+import { useDispatchLocation } from '../../../context/DispatchLocationContext';
 
 const INCIDENT_TYPE_OPTIONS: { id: IncidentType; name: string }[] = [
   { id: 'residential_fire', name: 'Residential Fire' },
@@ -289,6 +290,24 @@ export default function IncidentDetailScreen() {
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const isEditingDetailsRef = useRef(false);
   isEditingDetailsRef.current = isEditingDetails;
+
+  const {
+    activeDispatchReportId,
+    activeDispatchReportIds,
+    addDispatchedReportId,
+    removeDispatchedReportId,
+    setActiveDispatchReportId,
+    stopDispatchTracking,
+  } = useDispatchLocation();
+
+  // Automatically start global GPS streaming the moment this incident is in dispatched status
+  useEffect(() => {
+    if (incident?.status === 'dispatched' && reportId) {
+      addDispatchedReportId(reportId);
+    } else if (incident?.status && incident.status !== 'dispatched' && reportId) {
+      removeDispatchedReportId(reportId);
+    }
+  }, [incident?.status, reportId, addDispatchedReportId, removeDispatchedReportId]);
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [isReinforcement, setIsReinforcement] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
@@ -395,6 +414,8 @@ export default function IncidentDetailScreen() {
   const [currentGPS, setCurrentGPS] = useState<GPSUpdate | null>(null);
   /** Departure location locked at the start of navigation so WebView never reloads on GPS ticks */
   const navOriginRef = useRef<{ lat: number; lng: number } | null>(null);
+  /** Throttling timestamp for live GPS streaming to web dispatch dashboard */
+  const lastStreamedRef = useRef<number>(0);
 
   /**
    * Start/stop real GPS watch whenever navigation mode toggles.
@@ -423,6 +444,18 @@ export default function IncidentDetailScreen() {
             speed: cached.coords.speed,
             accuracy: cached.coords.accuracy,
           });
+
+          if (reportId && !isNaN(reportId)) {
+            lastStreamedRef.current = Date.now();
+            incidentService.updateLocation(reportId, {
+              latitude: cached.coords.latitude,
+              longitude: cached.coords.longitude,
+              heading: cached.coords.heading,
+              speed: cached.coords.speed,
+            }).catch((err) => {
+              console.warn('[LiveGPS] Initial stream error:', err);
+            });
+          }
         }
       } catch (_) {}
 
@@ -440,6 +473,20 @@ export default function IncidentDetailScreen() {
             speed: loc.coords.speed,
             accuracy: loc.coords.accuracy,
           }));
+
+          // Stream live GPS position to web dispatch dashboard (throttled every 3 seconds)
+          const now = Date.now();
+          if (reportId && !isNaN(reportId) && now - lastStreamedRef.current >= 3000) {
+            lastStreamedRef.current = now;
+            incidentService.updateLocation(reportId, {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+              heading: loc.coords.heading,
+              speed: loc.coords.speed,
+            }).catch((err) => {
+              console.warn('[LiveGPS] Stream update error:', err);
+            });
+          }
         }
       );
       locationSub.current = sub;
@@ -726,6 +773,9 @@ export default function IncidentDetailScreen() {
         try {
           const updated = await incidentService.updateStatus(reportId, nextStatus);
           setIncident(updated);
+          if (nextStatus === 'resolved') {
+            removeDispatchedReportId(reportId);
+          }
           load();
           setDialog(null);
         } catch {
@@ -743,6 +793,7 @@ export default function IncidentDetailScreen() {
         personnel_ids: personnelIds,
       });
       setIncident(updated);
+      addDispatchedReportId(reportId);
       setIsDispatchModalOpen(false);
       load();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});

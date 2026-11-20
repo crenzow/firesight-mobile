@@ -3,7 +3,6 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
 export type AlarmLevel =
-  | 'verification'
   | '1st_alarm'
   | '2nd_alarm'
   | '3rd_alarm'
@@ -19,7 +18,6 @@ export type AlarmLevel =
   | 'general_alarm';
 
 export const ALARM_LEVEL_LABELS: Record<AlarmLevel, string> = {
-  verification: 'Verification',
   '1st_alarm': '1st Alarm',
   '2nd_alarm': '2nd Alarm',
   '3rd_alarm': '3rd Alarm',
@@ -45,8 +43,6 @@ export const ALARM_LEVEL_OPTIONS: { id: AlarmLevel; name: string }[] = (
 export function getAlarmColor(alarm: AlarmLevel | string | null | undefined, colors?: any): string {
   if (!alarm) return colors?.textMuted ?? '#6B7A8D';
   switch (alarm) {
-    case 'verification':
-      return '#a9b8d0';
     case '1st_alarm':
       return '#4fa3e0';
     case '2nd_alarm':
@@ -86,8 +82,6 @@ export const AlarmLevelBadge: React.FC<{ alarmLevel: AlarmLevel | string }> = ({
   const textColor =
     alarmLevel === '3rd_alarm'
       ? '#854D0E'
-      : alarmLevel === 'verification'
-      ? '#4a5a75'
       : color;
 
   return (

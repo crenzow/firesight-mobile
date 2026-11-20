@@ -830,7 +830,6 @@ function buildMapHtml({
         if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
 
         var alarmColors = {
-          'verification': '#a9b8d0',
           '1st_alarm': '#4fa3e0',
           '2nd_alarm': '#4caf50',
           '3rd_alarm': '#f2c94c',
@@ -851,11 +850,9 @@ function buildMapHtml({
             ? '#6c6fd9'
             : (i.alarm === 'general_alarm')
               ? '#1e2a5e'
-              : (i.alarm === 'verification')
-                ? '#a9b8d0'
-                : '#4fa3e0';
+              : '#4fa3e0';
 
-        var strokeColor = (i.alarm === 'verification') ? '#4a5a75' : '#FFFFFF';
+        var strokeColor = '#FFFFFF';
 
         const marker = L.circleMarker([lat, lng], {
           radius: 6.5,

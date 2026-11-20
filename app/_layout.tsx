@@ -15,6 +15,7 @@ LogBox.ignoreLogs([
   'Unable to activate keep awake',
   'expo-notifications: Android Push notifications',
   '`expo-notifications` functionality is not fully supported in Expo Go',
+  'Background location is limited in Expo Go',
 ]);
 
 const origActivate = KeepAwake.activateKeepAwakeAsync;

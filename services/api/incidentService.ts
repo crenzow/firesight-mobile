@@ -90,5 +90,15 @@ export const incidentService = {
     return apiClient.postForm<{ message: string; image_path: string }>('/incidents/add_evidence.php', formData);
   },
 
+  /** Streams live GPS coordinates of a responding unit to the station dashboard. */
+  updateLocation: (
+    reportId: number,
+    location: { latitude: number; longitude: number; heading?: number | null; speed?: number | null }
+  ) =>
+    apiClient.post<{ success: boolean }>(`/incidents/${reportId}/location`, {
+      report_id: reportId,
+      ...location,
+    }),
+
   getDashboardAnalytics: () => apiClient.get<DashboardAnalytics>('/dashboard/analytics.php'),
 };

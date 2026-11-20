@@ -35,7 +35,6 @@ import { useNotifications } from '../../context/NotificationContext';
 const LIAN_CENTER = { lat: 14.0065, lng: 120.6425 };
 
 const ALL_ALARM_LEVELS = [
-  { key: 'verification', label: 'Verification', color: '#a9b8d0', stroke: '#4a5a75' },
   { key: '1st_alarm', label: '1st Alarm', color: '#4fa3e0' },
   { key: '2nd_alarm', label: '2nd Alarm', color: '#4caf50' },
   { key: '3rd_alarm', label: '3rd Alarm', color: '#f2c94c' },
@@ -52,7 +51,6 @@ const ALL_ALARM_LEVELS = [
 ];
 
 const FIXED_MUNICIPAL_ALARMS = new Set([
-  'verification',
   '1st_alarm',
   '2nd_alarm',
   '3rd_alarm',
@@ -152,7 +150,7 @@ export default function BFPMapScreen() {
     return { high, moderate, mild, total: barangays.length };
   }, [barangays]);
 
-  // Fixed municipal tiers (Verification to 5th Alarm) + any regional tiers present in active incidents
+  // Fixed municipal tiers (1st Alarm to 5th Alarm) + any regional tiers present in active incidents
   const visibleAlarmLegend = useMemo(() => {
     const presentAlarms = new Set(
       incidents

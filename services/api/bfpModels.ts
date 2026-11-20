@@ -27,6 +27,7 @@ export interface BFPIncident {
   barangay_id: number;
   barangay_name: string;
   status: BFPIncidentStatus;
+  dispatched_by?: number | null;
   created_at: string;
   ai_fire_label?: 'fire' | 'non_fire' | null;
   ai_fire_confidence?: number | null;
