@@ -287,6 +287,14 @@ export default function ProfileScreen() {
               />
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               <ProfileMenuRow
+                icon={<Camera size={18} color="#FFFFFF" />}
+                gradient={['#E11D48', '#FB7185']}
+                label="My CCTV Camera"
+                subtitle="Live fire & smoke monitoring"
+                onPress={() => router.push({ pathname: '/(resident)/cctv' } as any)}
+              />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <ProfileMenuRow
                 icon={<Lock size={18} color="#FFFFFF" />}
                 gradient={['#6D5BD0', '#3B4CCA']}
                 label="Privacy & Security"

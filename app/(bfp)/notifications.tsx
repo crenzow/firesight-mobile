@@ -12,6 +12,8 @@ import { formatRelativeDate } from '../../utils/formatters';
 const ICONS: Record<string, any> = {
   incident_alert: AlertTriangle,
   status_update: RefreshCw,
+  cctv_alert: AlertTriangle,
+  cctv_fire_alert: AlertTriangle,
 };
 
 export default function BFPNotificationsScreen() {
@@ -189,7 +191,7 @@ export default function BFPNotificationsScreen() {
                           ]}
                           numberOfLines={1}
                         >
-                          {item.title}
+                          {item.title.replace(/^[⚠️\s]+/, '')}
                         </Text>
                       </View>
 

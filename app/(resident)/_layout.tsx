@@ -37,6 +37,7 @@ export default function ResidentLayout() {
       <Tabs.Screen name="emergency-contacts" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="reports/index" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="reports/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="cctv" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     </Tabs>
   );
 }

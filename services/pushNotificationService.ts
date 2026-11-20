@@ -25,6 +25,8 @@ Notifications.setNotificationHandler({
 });
 
 export const EMERGENCY_CHANNEL_ID = 'firesight-emergency-alerts-v5';
+export const CCTV_CHANNEL_ID = 'firesight-cctv-alerts-v1';
+export const STANDARD_CHANNEL_ID = 'firesight-standard-alerts-v1';
 
 let sirenPlayer: AudioPlayer | null = null;
 
@@ -55,13 +57,57 @@ export async function playEmergencySiren(): Promise<void> {
   }
 }
 
+let cctvPagerPlayer: AudioPlayer | null = null;
+
 /**
- * Immediately stops any playing siren audio and vibration.
+ * Plays the fire pager alert beep for CCTV fire detections.
+ */
+export async function playCctvPagerAlert(): Promise<void> {
+  if (Platform.OS === 'web') return;
+
+  try {
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: 'doNotMix',
+    });
+
+    if (!cctvPagerPlayer) {
+      cctvPagerPlayer = createAudioPlayer(require('../assets/sounds/fire_pager_alert_bee.mp3'));
+    }
+
+    cctvPagerPlayer.volume = 1.0;
+    cctvPagerPlayer.loop = false;
+    await cctvPagerPlayer.seekTo(0);
+    cctvPagerPlayer.play();
+  } catch (err) {
+    console.warn('[Audio] Failed to play CCTV pager alert:', err);
+  }
+}
+
+/**
+ * Stops the CCTV pager alert if playing.
+ */
+export function stopCctvPagerAlert(): void {
+  try {
+    if (cctvPagerPlayer && cctvPagerPlayer.playing) {
+      cctvPagerPlayer.pause();
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+}
+
+/**
+ * Immediately stops any playing siren or pager alert audio and vibration.
  */
 export function stopEmergencySiren(): void {
   try {
     if (sirenPlayer && sirenPlayer.playing) {
       sirenPlayer.pause();
+    }
+    if (cctvPagerPlayer && cctvPagerPlayer.playing) {
+      cctvPagerPlayer.pause();
     }
     Vibration.cancel();
   } catch {
@@ -114,6 +160,21 @@ export async function playGentleChime(): Promise<void> {
     gentleChimePlayer.play();
   } catch (err) {
     console.warn('[Audio] Failed to play gentle chime:', err);
+  }
+}
+
+/**
+ * Triggers a distinct tactical pager beep vibration pattern for CCTV fire detections:
+ * 4 sharp urgent pager pulse bursts synchronized with the pager beep audio.
+ */
+export function triggerCctvPagerVibration(): void {
+  if (Platform.OS === 'web') return;
+
+  try {
+    // 4 sharp alert pulses: vibrate 250ms, pause 100ms, vibrate 250ms, pause 100ms, vibrate 250ms, pause 100ms, vibrate 500ms
+    Vibration.vibrate([0, 250, 100, 250, 100, 250, 100, 500]);
+  } catch {
+    // Ignore vibration failure
   }
 }
 
@@ -181,6 +242,29 @@ export async function setupNotificationChannels(): Promise<void> {
         contentType: Notifications.AndroidAudioContentType.SONIFICATION,
       },
     });
+
+    await Notifications.setNotificationChannelAsync(CCTV_CHANNEL_ID, {
+      name: 'FireSight CCTV Guard Alerts',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 100, 250, 100, 250, 100, 500],
+      lightColor: '#FF3B30',
+      sound: null, // Audio player handles synchronized fire pager beep
+      enableVibrate: true,
+      showBadge: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      audioAttributes: {
+        usage: Notifications.AndroidAudioUsage.ALARM,
+        contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      },
+    });
+
+    await Notifications.setNotificationChannelAsync(STANDARD_CHANNEL_ID, {
+      name: 'FireSight Routine Notifications',
+      importance: Notifications.AndroidImportance.HIGH,
+      enableVibrate: true,
+      showBadge: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    });
   }
 }
 
@@ -192,10 +276,12 @@ export async function presentLocalNotification({
   title,
   body,
   data,
+  channelId = STANDARD_CHANNEL_ID,
 }: {
   title: string;
   body: string;
   data?: Record<string, any>;
+  channelId?: string;
 }): Promise<void> {
   if (Platform.OS === 'web') return;
 
@@ -204,13 +290,15 @@ export async function presentLocalNotification({
       content: {
         title,
         body,
-        sound: false, // Disables Android's default notification ding chime
-        priority: Notifications.AndroidNotificationPriority.MAX,
+        sound: false, // In-app player orchestrates chime or siren cleanly
+        priority:
+          channelId === EMERGENCY_CHANNEL_ID
+            ? Notifications.AndroidNotificationPriority.MAX
+            : Notifications.AndroidNotificationPriority.HIGH,
         data: data || {},
+        ...(Platform.OS === 'android' ? { channelId } : {}),
       },
-      trigger: {
-        channelId: EMERGENCY_CHANNEL_ID,
-      },
+      trigger: null, // null triggers immediate delivery
     });
   } catch (err) {
     console.warn('[PushNotificationService] Failed to present local notification:', err);
@@ -281,14 +369,18 @@ export async function registerPushTokenWithBackend(): Promise<string | null> {
  * Subscribes to notification response (when a user taps a status bar / banner notification).
  */
 export function subscribeToNotificationResponse(
-  onNavigate: (reportId: number, type?: string) => void
+  onNavigate: (reportId: number, type?: string, data?: Record<string, any>) => void
 ): () => void {
   const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
     const data = response?.notification?.request?.content?.data;
+    if (data?.type === 'cctv_fire_alert' || data?.type === 'cctv_alert') {
+      onNavigate(0, 'cctv_fire_alert', data);
+      return;
+    }
     if (data?.report_id) {
       const reportId = Number(data.report_id);
       if (!isNaN(reportId) && reportId > 0) {
-        onNavigate(reportId, typeof data.type === 'string' ? data.type : undefined);
+        onNavigate(reportId, typeof data.type === 'string' ? data.type : undefined, data);
       }
     }
   });

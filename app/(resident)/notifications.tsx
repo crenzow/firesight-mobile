@@ -12,6 +12,8 @@ import { formatRelativeDate } from '../../utils/formatters';
 const ICONS: Record<string, any> = {
   incident_alert: AlertTriangle,
   status_update: RefreshCw,
+  cctv_alert: AlertTriangle,
+  cctv_fire_alert: AlertTriangle,
 };
 
 export default function NotificationsScreen() {
@@ -67,6 +69,11 @@ export default function NotificationsScreen() {
       router.push({
         pathname: '/(resident)/reports/[id]',
         params: { id: String(notification.report_id), from: '/(resident)/notifications' },
+      } as any);
+    } else if (notification.notification_type === 'cctv_alert' || notification.notification_type === 'cctv_fire_alert') {
+      router.push({
+        pathname: '/(resident)/cctv',
+        params: { from: '/(resident)/notifications' },
       } as any);
     } else if (notification.notification_type === 'incident_alert' || notification.notification_type === 'status_update') {
       router.push({
@@ -189,7 +196,7 @@ export default function NotificationsScreen() {
                           ]}
                           numberOfLines={1}
                         >
-                          {item.title}
+                          {item.title.replace(/^[⚠️\s]+/, '')}
                         </Text>
                       </View>
 

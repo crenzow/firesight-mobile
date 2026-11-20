@@ -97,7 +97,7 @@ export interface Notification {
   notification_id: number;
   title: string;
   message: string;
-  notification_type: 'incident_alert' | 'status_update';
+  notification_type: 'incident_alert' | 'status_update' | 'cctv_fire_alert' | 'cctv_alert' | string;
   is_read: boolean;
   created_at: string;
   report_id?: number | null;

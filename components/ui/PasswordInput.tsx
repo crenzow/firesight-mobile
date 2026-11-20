@@ -12,6 +12,7 @@ interface PasswordInputProps {
   required?: boolean;
   placeholder?: string;
   helperText?: string;
+  hideToggleWhenEmpty?: boolean;
 }
 
 /**
@@ -26,9 +27,12 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   required,
   placeholder = 'Enter your password',
   helperText,
+  hideToggleWhenEmpty = false,
 }) => {
   const { colors } = useTheme();
   const [isVisible, setIsVisible] = useState(false);
+
+  const showToggle = !hideToggleWhenEmpty || (value && value.length > 0);
 
   return (
     <Input
@@ -44,18 +48,20 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       helperText={helperText}
       leftIcon={<Lock size={18} color={colors.textMuted} />}
       rightElement={
-        <Pressable
-          onPress={() => setIsVisible((v) => !v)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={isVisible ? 'Hide password' : 'Show password'}
-        >
-          {isVisible ? (
-            <EyeOff size={18} color={colors.textMuted} />
-          ) : (
-            <Eye size={18} color={colors.textMuted} />
-          )}
-        </Pressable>
+        showToggle ? (
+          <Pressable
+            onPress={() => setIsVisible((v) => !v)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={isVisible ? 'Hide password' : 'Show password'}
+          >
+            {isVisible ? (
+              <EyeOff size={18} color={colors.textMuted} />
+            ) : (
+              <Eye size={18} color={colors.textMuted} />
+            )}
+          </Pressable>
+        ) : undefined
       }
     />
   );

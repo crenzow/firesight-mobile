@@ -20,3 +20,5 @@ export const educationService = {
   list: () => apiClient.get<FireEducationArticle[]>('/education/list.php', false),
   getById: (contentId: number) => apiClient.get<FireEducationArticle>(`/education/detail.php?content_id=${contentId}`, false),
 };
+
+export { cctvService } from './cctvService';

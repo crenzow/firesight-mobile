@@ -12,11 +12,17 @@ import {
   presentLocalNotification,
   playEmergencySiren,
   stopEmergencySiren,
+  playCctvPagerAlert,
+  stopCctvPagerAlert,
   triggerUrgentVibration,
+  triggerCctvPagerVibration,
   playGentleChime,
   triggerStandardVibration,
   dismissNotificationByReportId,
   dismissAllPresentedNotifications,
+  EMERGENCY_CHANNEL_ID,
+  CCTV_CHANNEL_ID,
+  STANDARD_CHANNEL_ID,
 } from '../services/pushNotificationService';
 import {
   CompactNotificationBanner,
@@ -70,14 +76,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return;
     }
 
-    // Cut off previous sound immediately
-    stopEmergencySiren();
-
     // Trigger fresh audio & haptics for the dropping banner
     if (activeBanner.isEmergency) {
       playEmergencySiren();
       triggerUrgentVibration();
+    } else if (
+      activeBanner.type === 'cctv_alert' ||
+      activeBanner.type === 'cctv_fire_alert' ||
+      /cctv/i.test(activeBanner.title)
+    ) {
+      stopEmergencySiren();
+      playCctvPagerAlert();
+      triggerCctvPagerVibration();
     } else {
+      stopEmergencySiren();
       playGentleChime();
       triggerStandardVibration();
     }
@@ -109,6 +121,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         message: alert.message,
         location: alert.location,
         isEmergency: isBfpEmergency,
+        type: alert.notificationType,
       };
 
       setBannerQueue((prev) => {
@@ -129,6 +142,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         title: alert.title,
         body: alert.message,
         data: { report_id: alert.reportId, type: isBfpEmergency ? 'incident_alert' : 'status_update' },
+        channelId: isBfpEmergency ? EMERGENCY_CHANNEL_ID : STANDARD_CHANNEL_ID,
       });
     },
     [user?.role]
@@ -172,9 +186,117 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     []
   );
 
+  const isRefreshingRef = useRef(false);
+  const lastPresentedIdRef = useRef<number | null>(null);
+  const currentUserIdRef = useRef<number | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!user?.user_id || isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
+    try {
+      const list = await notificationService.list();
+      setNotifications(list);
+      setUnreadCount(list.filter((n: Notification) => !n.is_read).length);
+
+      if (list.length > 0) {
+        const newestId = Math.max(...list.map((n: Notification) => n.notification_id));
+
+        // If user switched or this is the first run of the session, load from persistent storage
+        if (currentUserIdRef.current !== user.user_id || lastPresentedIdRef.current === null) {
+          currentUserIdRef.current = user.user_id;
+          const storedId = await secureStorage.getLastPresentedNotifId(user.user_id);
+          lastPresentedIdRef.current = storedId;
+        }
+
+        const watermark = lastPresentedIdRef.current ?? 0;
+
+        if (watermark === 0) {
+          // Fresh install / first-time login for this user:
+          // Establish the initial watermark so historical alerts from past weeks are not spammed.
+          lastPresentedIdRef.current = newestId;
+          await secureStorage.setLastPresentedNotifId(user.user_id, newestId);
+        } else if (newestId > watermark) {
+          // Brand new notifications arrived that have NEVER been presented on this hardware!
+          const unpresentedAlerts = list
+            .filter((n: Notification) => n.notification_id > watermark && !n.is_read)
+            .sort((a, b) => a.notification_id - b.notification_id);
+
+          // Advance watermark immediately in memory and disk to avoid re-alerting on future logins
+          lastPresentedIdRef.current = newestId;
+          await secureStorage.setLastPresentedNotifId(user.user_id, newestId);
+
+          if (unpresentedAlerts.length > 0) {
+            // Cap the in-app queue to top 3 newest alerts to prevent notification fatigue
+            const alertsToQueue = unpresentedAlerts.slice(-3);
+
+            const queueItems: CompactBannerData[] = alertsToQueue.map((alert, idx) => {
+              const isBfpEmergency =
+                user?.role === 'bfp_personnel' &&
+                (alert.notification_type === 'incident_alert' ||
+                  Boolean(alert.title && /fire|incident/i.test(alert.title)));
+              return {
+                id: `sync-${alert.notification_id}-${Date.now()}-${idx}`,
+                reportId: alert.report_id ?? 0,
+                title: alert.title,
+                message: alert.message,
+                isEmergency: isBfpEmergency,
+                type: alert.notification_type,
+              };
+            });
+
+            setBannerQueue((prev) => {
+              const hasEmergency = queueItems.some((q) => q.isEmergency);
+              if (hasEmergency && prev.length > 0 && !prev[0].isEmergency) {
+                const emergencies = queueItems.filter((q) => q.isEmergency);
+                const routine = queueItems.filter((q) => !q.isEmergency);
+                return [...emergencies, ...prev, ...routine];
+              }
+              return [...prev, ...queueItems];
+            });
+
+            // Post all unpresented alerts to phone system notification tray
+            for (const alert of unpresentedAlerts) {
+              const isCctvAlert =
+                alert.notification_type === 'cctv_fire_alert' ||
+                alert.notification_type === 'cctv_alert';
+              const isBfpIncident =
+                user?.role === 'bfp_personnel' &&
+                (alert.notification_type === 'incident_alert' ||
+                  Boolean(alert.title && /fire|incident/i.test(alert.title)));
+              presentLocalNotification({
+                title: alert.title,
+                body: alert.message,
+                data: {
+                  report_id: alert.report_id,
+                  type: isCctvAlert ? 'cctv_fire_alert' : isBfpIncident ? 'incident_alert' : 'status_update',
+                },
+                channelId: isBfpIncident
+                  ? EMERGENCY_CHANNEL_ID
+                  : isCctvAlert
+                  ? CCTV_CHANNEL_ID
+                  : STANDARD_CHANNEL_ID,
+              });
+            }
+          }
+        }
+      }
+    } catch {
+      // Fail silently — badge just won't update
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, [user?.user_id, user?.role]);
+
   const handleBannerPress = useCallback(
-    async (reportId: number) => {
+    async (reportId: number, type?: string) => {
       dismissEmergencyAlert();
+
+      if (type === 'cctv_fire_alert' || type === 'cctv_alert') {
+        refresh();
+        router.push('/(resident)/cctv' as any);
+        return;
+      }
+
       if (reportId > 0) {
         await markReportRead(reportId);
         // Option A: Remember exact tab the user was on when the banner appeared
@@ -192,90 +314,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             params: { id: String(reportId), from: backSource },
           } as any);
         }
-      }
-    },
-    [user?.role, dismissEmergencyAlert, markReportRead, currentPath]
-  );
-
-  const isRefreshingRef = useRef(false);
-
-  const refresh = useCallback(async () => {
-    if (!user?.user_id || isRefreshingRef.current) return;
-    isRefreshingRef.current = true;
-    try {
-      const list = await notificationService.list();
-      setNotifications(list);
-      setUnreadCount(list.filter((n: Notification) => !n.is_read).length);
-
-      if (list.length > 0) {
-        const newestId = Math.max(...list.map((n: Notification) => n.notification_id));
-        const lastPresentedId = await secureStorage.getLastPresentedNotifId(user.user_id);
-
-        if (lastPresentedId === 0) {
-          // On first launch / fresh login, establish watermark silently so historical
-          // notifications do NOT spam the user with past banners or sirens.
-          await secureStorage.setLastPresentedNotifId(user.user_id, newestId);
-        } else if (newestId > lastPresentedId) {
-          // Brand-new notifications arrived that have never been presented on this hardware
-          const unpresentedAlerts = list
-            .filter((n: Notification) => n.notification_id > lastPresentedId && !n.is_read)
-            .sort((a, b) => a.notification_id - b.notification_id);
-
-          if (unpresentedAlerts.length > 0) {
-            // Advance watermark immediately
-            await secureStorage.setLastPresentedNotifId(user.user_id, newestId);
-
-            // Cap the in-app queue to top 3 newest alerts to prevent notification fatigue
-            const alertsToQueue = unpresentedAlerts.slice(-3);
-
-            const queueItems: CompactBannerData[] = alertsToQueue.map((alert, idx) => {
-              const isBfpEmergency =
-                user?.role === 'bfp_personnel' &&
-                (alert.notification_type === 'incident_alert' ||
-                  Boolean(alert.title && /fire|incident/i.test(alert.title)));
-              return {
-                id: `sync-${alert.notification_id}-${Date.now()}-${idx}`,
-                reportId: alert.report_id ?? 0,
-                title: alert.title,
-                message: alert.message,
-                isEmergency: isBfpEmergency,
-              };
-            });
-
-            setBannerQueue((prev) => {
-              const hasEmergency = queueItems.some((q) => q.isEmergency);
-              if (hasEmergency && prev.length > 0 && !prev[0].isEmergency) {
-                const emergencies = queueItems.filter((q) => q.isEmergency);
-                const routine = queueItems.filter((q) => !q.isEmergency);
-                return [...emergencies, ...prev, ...routine];
-              }
-              return [...prev, ...queueItems];
-            });
-
-            // Post all unpresented alerts to phone system notification tray
-            for (const alert of unpresentedAlerts) {
-              const isBfpIncident =
-                user?.role === 'bfp_personnel' &&
-                (alert.notification_type === 'incident_alert' ||
-                  (alert.title && /fire|incident/i.test(alert.title)));
-              presentLocalNotification({
-                title: alert.title,
-                body: alert.message,
-                data: {
-                  report_id: alert.report_id,
-                  type: isBfpIncident ? 'incident_alert' : 'status_update',
-                },
-              });
-            }
-          }
+      } else {
+        if (user?.role === 'bfp_personnel') {
+          router.push('/(bfp)/notifications' as any);
+        } else {
+          router.push('/(resident)/notifications' as any);
         }
       }
-    } catch {
-      // Fail silently — badge just won't update
-    } finally {
-      isRefreshingRef.current = false;
-    }
-  }, [user?.user_id, user?.role]);
+    },
+    [user?.role, dismissEmergencyAlert, markReportRead, currentPath, refresh]
+  );
 
   const markAllRead = useCallback(async () => {
     stopEmergencySiren();
@@ -321,24 +369,35 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     setupNotificationChannels();
 
-    const unsubResponse = subscribeToNotificationResponse(async (reportId) => {
+    const unsubResponse = subscribeToNotificationResponse(async (reportId, type) => {
       dismissEmergencyAlert();
+
+      if (type === 'cctv_fire_alert' || type === 'cctv_alert') {
+        refresh();
+        router.push('/(resident)/cctv' as any);
+        return;
+      }
+
       if (reportId > 0) {
         await markReportRead(reportId);
-      }
-      refresh();
-      // Outside the app: after reviewing the incident, pressing back drops the user into Home/Dashboard
-      const homeRoute = user?.role === 'bfp_personnel' ? '/(bfp)/dashboard' : '/(resident)/home';
-      if (user?.role === 'bfp_personnel') {
-        router.push({
-          pathname: '/(bfp)/incidents/[id]',
-          params: { id: String(reportId), from: homeRoute },
-        } as any);
+        const homeRoute = user?.role === 'bfp_personnel' ? '/(bfp)/dashboard' : '/(resident)/home';
+        if (user?.role === 'bfp_personnel') {
+          router.push({
+            pathname: '/(bfp)/incidents/[id]',
+            params: { id: String(reportId), from: homeRoute },
+          } as any);
+        } else {
+          router.push({
+            pathname: '/(resident)/reports/[id]',
+            params: { id: String(reportId), from: homeRoute },
+          } as any);
+        }
       } else {
-        router.push({
-          pathname: '/(resident)/reports/[id]',
-          params: { id: String(reportId), from: homeRoute },
-        } as any);
+        if (user?.role === 'bfp_personnel') {
+          router.push('/(bfp)/notifications' as any);
+        } else {
+          router.push('/(resident)/notifications' as any);
+        }
       }
     });
 
@@ -350,6 +409,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setUnreadCount(0);
       setBannerQueue([]);
       stopEmergencySiren();
+      lastPresentedIdRef.current = null;
+      currentUserIdRef.current = null;
     }
 
     const sub = AppState.addEventListener('change', (nextState) => {
@@ -359,7 +420,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       appState.current = nextState;
     });
 
-    const poller = isAuthenticated ? setInterval(refresh, 10000) : null;
+    const poller = isAuthenticated ? setInterval(refresh, 5000) : null;
 
     return () => {
       sub.remove();

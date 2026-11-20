@@ -23,12 +23,13 @@ export interface CompactBannerData {
   message: string;
   location?: string;
   isEmergency?: boolean;
+  type?: string;
 }
 
 interface CompactNotificationBannerProps {
   data: CompactBannerData | null;
   hasMoreInQueue?: boolean;
-  onPress: (reportId: number) => void;
+  onPress: (reportId: number, type?: string) => void;
   onDismiss: () => void;
 }
 
@@ -202,7 +203,7 @@ export const CompactNotificationBanner: React.FC<CompactNotificationBannerProps>
     if (!data) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     dismissUpwards();
-    onPress(data.reportId);
+    onPress(data.reportId, data.type);
   };
 
   if (!data) return null;
